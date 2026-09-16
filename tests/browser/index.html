@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8">
+  <title>ZAI SDK browser integration test</title>
+  <script type="module">
+    // Test the emitted public package entry, including its runtime dependencies.
+    import * as zai from '/dist/index.js';
+    window.zai = zai;
+  </script>
+  <body>Browser integration test harness</body>
+</html>
