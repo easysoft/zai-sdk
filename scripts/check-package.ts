@@ -15,11 +15,11 @@ try {
   const {stdout: listing} = await run('tar', ['-tzf', archive]);
   const files = listing.trim().split('\n');
   for (const file of files) {
-    if (!/^package\/(dist\/|package\.json$|zai-openapi\.json$|README\.md$|LICENSE$)/.test(file) || /(?:^|\/)\.env/.test(file)) {
+    if (!/^package\/(dist\/|docs\/index\.html$|package\.json$|zai-openapi\.json$|README\.md$|LICENSE$)/.test(file) || /(?:^|\/)\.env/.test(file)) {
       throw new Error(`Unexpected file in package: ${file}`);
     }
   }
-  for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/index.js.map', 'zai-openapi.json', 'README.md', 'LICENSE']) {
+  for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/index.js.map', 'docs/index.html', 'zai-openapi.json', 'README.md', 'LICENSE']) {
     if (!files.includes(`package/${file}`)) throw new Error(`Missing package file: ${file}`);
   }
 

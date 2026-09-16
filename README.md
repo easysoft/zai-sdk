@@ -4,6 +4,17 @@
 
 第一版 `0.1.0` 以仓库根目录的 [`zai-openapi.json`](./zai-openapi.json) 为唯一接口来源，覆盖 43 个路径、71 个 HTTP 操作。`messages.stream()` 与 `messages.send()` 对应同一个 HTTP 操作的两种返回模式。
 
+## HTML 使用文档
+
+用浏览器打开 [`docs/index.html`](./docs/index.html)，即可阅读中文使用指南、全部资源方法及公开导出的接口参考。页面包含接口搜索、可复制示例、嵌套字段、枚举、默认值和 HTTP 状态，支持移动端与离线使用，无需启动服务；打包后的 SDK 也包含该文件。
+
+```sh
+pnpm docs:build  # 根据当前 OpenAPI、SDK 导出和指南重新生成 HTML
+pnpm docs:check  # 校验接口覆盖、示例类型、内部链接和生成结果
+```
+
+文档维护方式见 [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md)。`pnpm check` 会检查文档是否过期，`pnpm pack` 会自动重新生成文档。
+
 ## 安装与使用
 
 当前交付为本地可打包项目。先在 SDK 仓库安装依赖、构建并打包，再在消费项目安装生成的包：
