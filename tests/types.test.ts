@@ -3,11 +3,17 @@ import {
   createZAIClient, createZAITokenProvider,
   type ZAIClient, type AgentsListResponse, type MessagesSendResponse,
   type ModelsListResponse, type SessionsDownloadFileResponse, type ZAIStreamEvent,
-  type ZAITokenProvider, type ZAIUploadFile,
+  type ZAITokenProvider, type ZAIUploadFile, type ZAIDoctorResult, type ZAIDoctorDetail,
 } from '../src/index.js';
 
 /** Compiled by tsc but never invoked: invalid calls must remain type errors. */
 function assertPublicAPI(client: ZAIClient) {
+  void client.doctor();
+  void client.doctor({chat: true, agentId: 'agent', model: 'model', timeoutMs: 10_000, onChange(detail) {
+    expectTypeOf(detail).toEqualTypeOf<ZAIDoctorDetail>();
+  }});
+  // @ts-expect-error The chat probe is an explicit boolean option.
+  void client.doctor({chat: 'true'});
   void client.agents.create({name: '助手', type: 'custom', skills: ['skill']});
   void client.agents.get('agent', {signal: new AbortController().signal, headers: {'x-trace': 'id'}});
   void client.sessions.list({model: 'historical/model', page: 2, page_size: 20});
@@ -71,6 +77,7 @@ it('exports precise request, response, upload, and async streaming types', () =>
   expect(assertPublicAPI).toBeTypeOf('function');
   expectTypeOf<typeof assertPublicAPI>().parameter(0).toEqualTypeOf<ZAIClient>();
   expectTypeOf<ReturnType<typeof createZAIClient>>().toEqualTypeOf<ZAIClient>();
+  expectTypeOf<ReturnType<ZAIClient['doctor']>>().toEqualTypeOf<Promise<ZAIDoctorResult>>();
   expectTypeOf<ReturnType<ZAIClient['agents']['list']>>().toEqualTypeOf<Promise<AgentsListResponse>>();
   expectTypeOf<ReturnType<ZAIClient['models']['list']>>().toEqualTypeOf<Promise<ModelsListResponse>>();
   expectTypeOf<ReturnType<ZAIClient['messages']['send']>>().toEqualTypeOf<Promise<MessagesSendResponse>>();

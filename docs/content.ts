@@ -213,6 +213,31 @@ try {
 <p>列表每次只读取一页，保留服务端分页结构。会话列表的 <code>page</code> 从 1 开始，<code>page_size</code> 默认为 20、最大 100。分页循环、缓存和重试由应用决定。</p>`,
     },
     {
+      id: 'doctor', title: '连接与功能检查', description: '逐项诊断配置、协议、鉴权、模型与 Agent，可选验证真实对话。',
+      body: `<p><code>client.doctor(options?)</code> 返回 <code>Promise&lt;ZAIDoctorResult&gt;</code>。默认只读取 Agent 和模型列表，不创建会话。<code>onChange</code> 在每项检查完成后接收 <code>ZAIDoctorDetail</code>，可用于展示诊断进度。</p>
+${code(`const result = await client.doctor({
+  onChange: detail => console.log(detail.type, detail.pass, detail.message),
+});
+console.log(result.pass, result.summary);
+
+const controller = new AbortController();
+const full = await client.doctor({
+  chat: true,
+  // agentId: 'your-agent-id',
+  // model: 'your-model-id',
+  timeoutMs: 30_000,
+  signal: controller.signal,
+});
+if (!full.pass) {
+  console.log(full.details.filter(detail => !detail.pass));
+}`, 'typescript', true)}
+<p>默认检查顺序为 <code>config</code>、<code>httpProtocol</code>、<code>server</code>、<code>chatModels</code>、<code>agents</code>。连接检查读取 Agent 列表，验证当前 Token 可用；功能检查要求至少一个可用模型和一个活跃的 custom Agent。优先选择默认的活跃 custom Agent，再选择首个符合条件的 Agent；指定 <code>agentId</code> 或 <code>model</code> 时必须能找到对应的可用对象。未指定模型时，真实对话使用服务端默认模型。</p>
+<p>配置、协议或连接失败时提前结束；模型或 Agent 不可用时不发送消息。<code>details</code> 仅包含已执行的检查，<code>pass</code> 表示这些检查全部通过。客户端构造配置错误仍由 <code>createZAIClient()</code> 抛出；检查过程中的请求错误保留为 <code>detail.error</code>，不会因普通检查失败拒绝 Promise。<code>onChange</code> 回调异常会在尝试必要清理后继续抛出。</p>
+${note('<code>chat: true</code> 会创建临时会话并消耗少量模型用量，增加 <code>chat</code> 和 <code>cleanup</code> 检查。会话禁用技能和记忆检索，消息使用空工具列表及 schema-only 模式；只发送一条短消息。')}
+<p><code>timeoutMs</code> 默认 30,000，必须为 1 至 2,147,483,647 的整数，作用于每个请求及其 Token 获取，不是整个诊断的总时长。支持 <code>headers</code> 和 <code>signal</code>。即使对话失败或取消，也会用独立的超时请求尝试删除本次创建的会话。清理失败使整体检查失败，返回的 <code>sessionId</code> 可用于后续处理；会话创建响应丢失时无法确定 ID，也无法自动清理。</p>
+<p>浏览器支持相对地址，检查 HTTPS 页面访问 HTTP API 的混合内容问题（回环地址除外）；CORS 等问题通过实际请求报告。v8 规范没有服务版本或 embedding 模型能力字段，因此不推断这些能力。诊断也不验证 SSE、文件、技能和执行器运行状态。</p>`,
+    },
+    {
       id: 'conversation', title: '会话与消息', description: '创建会话，选择模型与技能，发送文本和文件引用。',
       body: `<p>先选择一个可用 Agent，再创建会话。在同一个 <code>session.id</code> 下发送多条消息以延续对话。需要指定模型时，先通过 <a href="#api-models-list">models.list()</a> 获取模型 ID。</p>
 ${code(`const {session} = await client.sessions.create('your-agent-id', {

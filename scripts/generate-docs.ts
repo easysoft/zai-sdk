@@ -217,7 +217,10 @@ const coreDescriptions: Record<string, string> = {
   createZAIToken: '使用服务端凭据签发 Token。expiredTime 默认为当前 Unix 秒加 1000。',
   createZAITokenProvider: '创建按请求缓存并续期的 Token 提供器。',
   ZAIClientError: 'SDK 错误类；按 code 分支处理，可附带 HTTP 信息和 cause。',
-  ZAIClient: 'createZAIClient 的返回类型，包含全部资源方法。',
+  ZAIClient: 'createZAIClient 的返回类型，包含全部资源方法与 doctor 诊断方法。',
+  ZAIDoctorOptions: 'doctor 选项：真实对话开关、Agent 与模型选择、每次请求超时、取消、请求头及进度回调。',
+  ZAIDoctorDetail: '单项检查的类型、名称、是否通过、说明和可选错误。',
+  ZAIDoctorResult: '诊断整体结果、逐项详情、选定 Agent 和临时会话 ID；清理失败也使 pass 为 false。',
   CreateZAIClientOptions: '客户端构造选项：API 根地址、Token 提供器、自定义 Fetch 和默认请求头。',
   ZAIRequestOptions: '所有资源方法的末尾选项：AbortSignal 和单次请求头。',
   ZAIUploadFile: '支持 File / Blob，或显式指定文件名的 Blob。',
@@ -234,6 +237,7 @@ const coreDescriptions: Record<string, string> = {
 const coreLinks: Record<string, string> = {
   createZAIClient: 'requests', createZAIToken: 'authentication', createZAITokenProvider: 'authentication',
   ZAIClientError: 'errors', ZAIStreamEvent: 'streaming', ZAIUploadFile: 'files',
+  ZAIDoctorOptions: 'doctor', ZAIDoctorDetail: 'doctor', ZAIDoctorResult: 'doctor',
 };
 function declarationText(name: string, declaration: ts.Declaration): string {
   if (ts.isFunctionDeclaration(declaration)) {
@@ -282,7 +286,7 @@ const html = `<!doctype html>
 <header class="topbar"><a class="brand" href="#overview" aria-label="ZAI SDK 文档首页"><span class="brand-mark" aria-hidden="true">Z</span><strong>ZAI <span>SDK</span></strong><span class="version">v${escape(manifest.version)}</span></a><div class="top-links"><a href="#quickstart">使用指南</a><a href="#api-reference">接口参考</a><a href="#types">导出 API</a></div>
 <div class="search-box" role="search"><label class="sr-only" for="doc-search">搜索文档</label><span class="search-icon" aria-hidden="true">⌕</span><input id="doc-search" type="search" placeholder="搜索文档、方法、参数…" autocomplete="off" aria-controls="search-results"><button type="button" id="clear-search" aria-label="清除搜索" hidden>×</button><kbd aria-hidden="true">/</kbd><section id="search-results" aria-label="搜索结果" hidden><p id="search-status" role="status" aria-live="polite"></p><ul id="search-list"></ul></section></div><div class="theme-control" hidden><label class="sr-only" for="theme-select">配色模式</label><select id="theme-select"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div><button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar">目录</button></header>
 <div class="layout"><aside id="sidebar" class="sidebar"><nav aria-label="文档目录"><a class="overview-link" href="#overview">文档概览 <span>↗</span></a><p class="nav-label">使用指南</p>${guideNav}<p class="nav-label">接口参考 <span>${expected.length}</span></p>${resourceNav}<p class="nav-label">SDK 参考</p><a href="#types">函数与类型索引</a></nav><div class="sidebar-foot">TypeScript · ESM<br>Node.js 22+ / 现代浏览器</div></aside>
-<main id="main"><section id="overview" class="hero"><p class="eyebrow">ZAI SDK / 开发者文档</p><h1>将 ZAI 接入<br>你的应用<span class="title-dot">.</span></h1><p class="hero-description">从第一条消息开始，连接 Agent、工作区、技能与记忆。<br>这里有完整的接入指南，以及每个接口的调用方式。</p><div class="hero-actions"><a class="button-primary" href="#quickstart">开始接入 <span>→</span></a><a class="button-secondary" href="#api-reference">查阅接口 <span>↗</span></a></div><div class="coverage-strip"><span><strong>${Object.keys(groups).length}</strong> 类资源</span><span><strong>${expected.length}</strong> 个 HTTP 操作</span><span><strong>${methodKeys.length}</strong> 个 SDK 方法</span><span>完整 TypeScript 类型</span></div></section>
+<main id="main"><section id="overview" class="hero"><p class="eyebrow">ZAI SDK / 开发者文档</p><h1>将 ZAI 接入<br>你的应用<span class="title-dot">.</span></h1><p class="hero-description">从第一条消息开始，连接 Agent、工作区、技能与记忆。<br>这里有完整的接入指南，以及每个接口的调用方式。</p><div class="hero-actions"><a class="button-primary" href="#quickstart">开始接入 <span>→</span></a><a class="button-secondary" href="#api-reference">查阅接口 <span>↗</span></a></div><div class="coverage-strip"><span><strong>${Object.keys(groups).length}</strong> 类资源</span><span><strong>${expected.length}</strong> 个 HTTP 操作</span><span><strong>${methodKeys.length}</strong> 个资源方法</span><span>完整 TypeScript 类型</span></div></section>
 <section class="reading-path"><h2>找到你需要的内容</h2><div class="path-grid"><a href="#quickstart"><span class="path-symbol" aria-hidden="true">↳</span><strong>第一次接入</strong><span>安装 → 鉴权 → 发送消息</span></a><a href="#streaming"><span class="path-symbol" aria-hidden="true">≈</span><strong>接收流式响应</strong><span>事件结构、取消与资源释放</span></a><a href="#api-reference"><span class="path-symbol" aria-hidden="true">{ }</span><strong>查找某个接口</strong><span>签名、参数、返回值与示例</span></a></div></section>
 <div class="part-heading"><span>使用指南</span><p>从环境准备到常见场景</p></div>
 ${guides.map(guide => `<section class="guide-section" id="${guide.id}" data-search-entry data-search-title="${guide.title}" data-search-kind="指南"><header><p class="eyebrow">使用指南</p><h2>${guide.title}<a class="heading-anchor" href="#${guide.id}" aria-label="${guide.title}的永久链接">#</a></h2><p class="section-description">${guide.description}</p></header>${guide.body}</section>`).join('')}
@@ -305,4 +309,4 @@ if (process.argv.includes('--check')) {
   await mkdir(resolve(root, 'docs'), {recursive: true});
   await writeFile(output, html);
 }
-console.log(`${process.argv.includes('--check') ? 'Checked' : 'Generated'} docs/index.html: ${expected.length} HTTP operations, ${methodKeys.length} SDK methods, ${exported.length} exports; ${allSnippets.length} examples typechecked; all anchors valid.`);
+console.log(`${process.argv.includes('--check') ? 'Checked' : 'Generated'} docs/index.html: ${expected.length} HTTP operations, ${methodKeys.length} resource methods, ${exported.length} exports; ${allSnippets.length} examples typechecked; all anchors valid.`);

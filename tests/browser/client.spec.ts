@@ -37,6 +37,39 @@ test('imports the ESM build and sends a signed authenticated GET with query para
   expect(payload.hash).toMatch(/^[a-f0-9]{32}$/);
 });
 
+test('diagnoses a relative API root and cleans up an optional chat probe through native fetch', async ({page}) => {
+  const methods: string[] = [];
+  await page.route('**/v8/**', async route => {
+    const request = route.request();
+    methods.push(request.method());
+    expect(await request.headerValue('authorization')).toBe('Bearer diagnostic-token');
+    const path = new URL(request.url()).pathname;
+    if (path === '/v8/agents') {
+      await route.fulfill({json: {agents: [{id: 'agent', type: 'custom', status: 'active', is_default: true}]}});
+    } else if (path === '/v8/models') {
+      await route.fulfill({json: [{id: 'model'}]});
+    } else if (path === '/v8/agents/agent/sessions') {
+      await route.fulfill({status: 201, json: {session: {id: 'probe'}}});
+    } else if (path === '/v8/sessions/probe/messages') {
+      await route.fulfill({json: {content: 'OK'}});
+    } else if (request.method() === 'DELETE' && path === '/v8/sessions/probe') {
+      await route.fulfill({json: {message: 'Deleted'}});
+    } else throw new Error(`Unexpected diagnostic request: ${path}`);
+  });
+  const result = await page.evaluate(async () => {
+    const client = window.zai.createZAIClient({baseUrl: '/v8', getToken: () => 'diagnostic-token'});
+    const basic = await client.doctor();
+    const progress: string[] = [];
+    const full = await client.doctor({chat: true, onChange: detail => progress.push(detail.type)});
+    return {basic, full, progress};
+  });
+  expect(result.basic).toMatchObject({pass: true, agentId: 'agent'});
+  expect(result.basic.sessionId).toBeUndefined();
+  expect(result.full).toMatchObject({pass: true, sessionId: 'probe'});
+  expect(result.progress).toEqual(['config', 'httpProtocol', 'server', 'chatModels', 'agents', 'chat', 'cleanup']);
+  expect(methods).toEqual(['GET', 'GET', 'GET', 'GET', 'POST', 'POST', 'DELETE']);
+});
+
 test('uploads File and explicitly named Blob using native multipart and downloads binary data', async ({page}) => {
   await page.route('**/v8/sessions/*/files/download*', async route => {
     expect(new URL(route.request().url()).searchParams.get('path')).toBe('nested/file.bin');

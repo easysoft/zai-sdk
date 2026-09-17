@@ -85,14 +85,21 @@ import type {CreateZAIClientOptions, ZAIRequestOptions, ZAIUploadFile} from './t
 import {createTransport} from './transport.js';
 import {parseZAIStream, type ZAIStreamEvent} from './stream.js';
 import {ZAIClientError} from './errors.js';
+import {runZAIDoctor, type ZAIDoctorOptions, type ZAIDoctorResult} from './doctor.js';
 
 ${aliases.join('\n')}
 
 /** Create a stateless API client. Lists retain their server pagination envelopes. */
 export function createZAIClient(options: CreateZAIClientOptions) {
   const transport = createTransport(options);
-  return {
+  const baseUrl = new URL(options.baseUrl, globalThis.location?.href).href;
+  const client = {
 ${[...groups].map(([name, members]) => `  ${name}: {\n    ${members.join(',\n    ')}\n  }`).join(',\n')}
+  };
+  return {
+    ...client,
+    /** Check connection and capabilities; opt into a temporary chat probe with chat: true. */
+    doctor(options?: ZAIDoctorOptions): Promise<ZAIDoctorResult> { return runZAIDoctor(client, baseUrl, options); },
   };
 }
 

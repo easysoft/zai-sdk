@@ -41,19 +41,24 @@ import {createZAITokenProvider, createZAIClient, ZAIClientError} from 'zai-sdk';
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
 const client = createZAIClient({baseUrl:'https://example.test/v8',getToken,fetch:async request => {
   assert.ok(request.headers.get('authorization').startsWith('Bearer ak-'));
+  if (new URL(request.url).pathname.endsWith('/models')) return Response.json({models:[]});
   return Response.json({agents:[]});
 }});
 assert.deepEqual(await client.agents.list(), {agents:[]});
+const diagnosis = await client.doctor();
+assert.equal(diagnosis.pass, false);
+assert.equal(diagnosis.details.find(detail => detail.type === 'server').pass, true);
 assert.equal(new ZAIClientError('http','test').code,'http');
 `);
   await run(process.execPath, ['consumer.mjs'], {cwd: temporary});
   await writeFile(join(temporary, 'consumer.ts'), `
-import {createZAIClient, type ModelsListQuery, type SessionsCreateInput, type ZAIStreamEvent} from 'zai-sdk';
+import {createZAIClient, type ModelsListQuery, type SessionsCreateInput, type ZAIStreamEvent, type ZAIDoctorResult} from 'zai-sdk';
 const query: ModelsListQuery = {all:'true'};
 const session: SessionsCreateInput = {executor_provider:'codex',skills:[]};
 const event: ZAIStreamEvent = {type:'done'};
 const client = createZAIClient({baseUrl:'https://example.test/v8',getToken:()=> 'token'});
-void client.models.list(query); void session; void event;
+const diagnosis: Promise<ZAIDoctorResult> = client.doctor({chat:false});
+void client.models.list(query); void session; void event; void diagnosis;
 `);
   await run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--lib', 'ES2022,DOM,DOM.Iterable', 'consumer.ts'], {cwd: temporary});
   await writeFile(join(temporary, 'index.html'), '<script type="module" src="/consumer.ts"></script>');

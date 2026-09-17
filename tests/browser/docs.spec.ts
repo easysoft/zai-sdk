@@ -8,7 +8,7 @@ test('documentation links, resource methods and exported APIs are complete', asy
   await page.goto('/docs/index.html');
   await expect(page).toHaveTitle('ZAI SDK · 使用指南与接口参考');
   await expect(page.locator('.operation')).toHaveCount(72);
-  await expect(page.locator('.type-entry')).toHaveCount(123);
+  await expect(page.locator('.type-entry')).toHaveCount(126);
   const broken = await page.locator('a[href^="#"]').evaluateAll(links => links
     .map(link => link.getAttribute('href')!.slice(1))
     .filter(id => !document.getElementById(id)));

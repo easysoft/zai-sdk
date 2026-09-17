@@ -86,6 +86,34 @@ const client = createZAIClient({baseUrl: 'https://zai.example.com/v8', getToken}
 
 客户端也支持任意同步或异步 `getToken: () => string | Promise<string>`，但这类函数的缓存和续期由调用方负责。SDK 不在 401 后自动重放请求，不因 Token 更新而重连已经建立的 SSE。
 
+## 连接与功能检查
+
+```ts
+// 默认只读取 Agent 和模型列表，不创建会话或消耗模型用量。
+const result = await client.doctor({
+  onChange: detail => console.log(detail.type, detail.pass, detail.message),
+});
+console.log(result.pass, result.summary);
+
+// 可选：创建临时会话，发送短消息验证对话，再自动删除临时会话。
+const controller = new AbortController();
+const full = await client.doctor({
+  chat: true,
+  // agentId: 'your-agent-id', // 省略时优先选择默认的活跃 custom Agent
+  // model: 'your-model-id',  // 省略时使用服务端默认模型
+  timeoutMs: 30_000,         // 每个请求的超时，包括清理；不是总时长
+  signal: controller.signal,
+});
+```
+
+`doctor()` 返回 `ZAIDoctorResult`，包含 `pass`、`summary`、`details`，以及找到的 `agentId` 和创建过的 `sessionId`。逐项检查类型为 `config`、`httpProtocol`、`server`、`chatModels`、`agents`，启用真实对话后再检查 `chat` 和 `cleanup`。配置、协议或服务连接失败会提前结束；模型或 Agent 不可用时不会发送消息。未执行的检查不出现在 `details` 中，`pass` 只代表本次执行的检查全部通过。
+
+客户端配置错误仍由 `createZAIClient()` 抛出；诊断选项、网络、鉴权、接口响应及对话失败通过检查结果报告，相关 `ZAIClientError` 保留在 `detail.error`。`onChange` 抛出的异常会在尝试必要的会话清理后继续抛出。默认检查要求至少一个可用模型和一个活跃的 `custom` Agent；指定 `agentId` 或 `model` 后会检查该选择，不会自动回退到其他对象。
+
+`chat: true` 会消耗少量模型用量。临时会话禁用技能和记忆检索，消息使用空工具列表及 `schema-only` 模式。即使取消或对话失败也会尝试清理，清理请求使用独立超时，不继承已取消的 `signal`；清理失败会使 `pass` 为 `false`，可用 `sessionId` 后续处理。如果创建会话时服务端已经创建成功但响应丢失，SDK 无法得知会话 ID，也就无法自动清理。
+
+浏览器支持相对 API 地址，并检查 HTTPS 页面访问 HTTP API 的混合内容问题（回环地址除外）；CORS 和其他网络问题由实际请求报告。v8 规范没有服务版本或 embedding 模型能力字段，诊断不推断这些能力；也不验证 SSE、文件、技能或执行器运行状态。
+
 ## 消息、流与文件
 
 ```ts

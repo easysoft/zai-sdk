@@ -4,6 +4,7 @@ import type {CreateZAIClientOptions, ZAIRequestOptions, ZAIUploadFile} from './t
 import {createTransport} from './transport.js';
 import {parseZAIStream, type ZAIStreamEvent} from './stream.js';
 import {ZAIClientError} from './errors.js';
+import {runZAIDoctor, type ZAIDoctorOptions, type ZAIDoctorResult} from './doctor.js';
 
 export type AgentsListResponse = paths["/agents"]["get"]['responses'][200]['content']['application/json'];
 export type AgentsCreateResponse = paths["/agents"]["post"]['responses'][201]['content']['application/json'];
@@ -115,7 +116,8 @@ export type MemoriesListContentEmbeddingJobsResponse = paths["/memories/{id}/con
 /** Create a stateless API client. Lists retain their server pagination envelopes. */
 export function createZAIClient(options: CreateZAIClientOptions) {
   const transport = createTransport(options);
-  return {
+  const baseUrl = new URL(options.baseUrl, globalThis.location?.href).href;
+  const client = {
   agents: {
     /** List agents */
     list(options?: ZAIRequestOptions): Promise<AgentsListResponse> { return transport.request<AgentsListResponse>({method: "get", path: "/agents", successStatuses: [200], options}); },
@@ -285,6 +287,11 @@ export function createZAIClient(options: CreateZAIClientOptions) {
     /** List content embedding jobs */
     listContentEmbeddingJobs(id: string, contentId: string, options?: ZAIRequestOptions): Promise<MemoriesListContentEmbeddingJobsResponse> { return transport.request<MemoriesListContentEmbeddingJobsResponse>({method: "get", path: "/memories/{id}/contents/{content_id}/jobs", successStatuses: [200], pathParams: {"id": id, "content_id": contentId}, options}); }
   }
+  };
+  return {
+    ...client,
+    /** Check connection and capabilities; opt into a temporary chat probe with chat: true. */
+    doctor(options?: ZAIDoctorOptions): Promise<ZAIDoctorResult> { return runZAIDoctor(client, baseUrl, options); },
   };
 }
 

@@ -16,7 +16,7 @@ pnpm docs:check
 - `../scripts/generate-docs.ts`：读取 `zai-openapi.json` 和真实 SDK 导出，生成 HTML；校验 HTTP 操作与资源方法全覆盖、全部公开导出、示例的 TypeScript 类型和锚点。
 - `index.html`：生成产物，不单独手改。源码或 OpenAPI 更新后重新生成并提交该文件。
 
-接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。上传类型、消息流开关、模型列表归一化等 SDK 行为另作说明。71 个 HTTP 操作对应 72 个资源方法，因为 `messages.send` 与 `messages.stream` 共享同一 HTTP 操作。导出总数由生成器实时计算。
+接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。上传类型、消息流开关、模型列表归一化等 SDK 行为另作说明。71 个 HTTP 操作对应 72 个资源方法，因为 `messages.send` 与 `messages.stream` 共享同一 HTTP 操作。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
 
 新增操作时先按仓库流程运行 `pnpm generate:api`，再补充 `content.ts` 的中文方法名，运行 `pnpm docs:build` 和 `pnpm check`。公开导出或方法遗漏、示例类型错误、断链、重复锚点和陈旧产物均会使文档检查失败。生成与测试不会调用真实 ZAI 服务。
 
