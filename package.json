@@ -1,6 +1,6 @@
 {
   "name": "zai-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed ZAI API SDK for browsers and Node.js, with token renewal and streaming.",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,13 +10,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./openapi.json": "./zai-openapi.json"
+    "./openapi.json": "./zai-openapi.json",
+    "./openapi-supplement.json": "./zai-openapi.supplement.json"
   },
   "files": [
     "dist",
     "docs/index.html",
     "zai-openapi.json",
+    "zai-openapi.supplement.json",
     "README.md",
+    "docs/MIGRATION.md",
     "LICENSE"
   ],
   "sideEffects": false,

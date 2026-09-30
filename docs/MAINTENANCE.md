@@ -13,12 +13,14 @@ pnpm docs:check
 - `styles.css`：静态文档的视觉样式与唯一运行时 token 定义。
 - `interactions.ts`：本地搜索、锚点展开、复制反馈、窄屏目录和打印增强。
 - `theme.ts`：首次绘制前恢复配色偏好，绑定主题选择并同步同源页面的偏好。
-- `../scripts/generate-docs.ts`：读取 `zai-openapi.json` 和真实 SDK 导出，生成 HTML；校验 HTTP 操作与资源方法全覆盖、全部公开导出、示例的 TypeScript 类型和锚点。
+- `../scripts/generate-docs.ts`：通过 `scripts/openapi.ts` 读取原始规范与 Coding SSE 补充规范，再读取真实 SDK 导出，生成 HTML；校验 HTTP 操作与资源方法全覆盖、全部公开导出、示例的 TypeScript 类型和锚点。
 - `index.html`：生成产物，不单独手改。源码或 OpenAPI 更新后重新生成并提交该文件。
 
-接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。上传类型、消息流开关、模型列表归一化等 SDK 行为另作说明。71 个 HTTP 操作对应 72 个资源方法，因为 `messages.send` 与 `messages.stream` 共享同一 HTTP 操作。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
+接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。共享本地 `$ref` 解析用于字段展开和调用示例。上传类型、消息流开关、持续 Coding SSE 等 SDK 行为另作说明。原始 119 个操作加上独立 Coding SSE，共 78 条路径、120 个 HTTP 操作、123 个资源方法；三个消息发送端点各有 send/stream 两种方法。每个操作展示 ak/ek 权限、自动模式选择和来源。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
 
-新增操作时先按仓库流程运行 `pnpm generate:api`，再补充 `content.ts` 的中文方法名，运行 `pnpm docs:build` 和 `pnpm check`。公开导出或方法遗漏、示例类型错误、断链、重复锚点和陈旧产物均会使文档检查失败。生成与测试不会调用真实 ZAI 服务。
+嵌套资源以完整点路径标识，例如 `coding.sessions.create`；类型按每段首字母大写，锚点将全部点替换为连字符。资源分组、操作名称及公开导出均要覆盖，不能只处理两层路径。补充规范只允许新增路径，原始规范保持不变。
+
+新增操作时先在 `scripts/operations.ts` 显式配置权限和来源，再按仓库流程运行 `pnpm generate:api`，再补充 `content.ts` 的中文方法名，运行 `pnpm docs:build` 和 `pnpm check`。公开导出或方法遗漏、示例类型错误、断链、重复锚点和陈旧产物均会使文档检查失败。生成与测试不会调用真实 ZAI 服务。
 
 ## 页面约定
 

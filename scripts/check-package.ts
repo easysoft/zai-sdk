@@ -15,11 +15,11 @@ try {
   const {stdout: listing} = await run('tar', ['-tzf', archive]);
   const files = listing.trim().split('\n');
   for (const file of files) {
-    if (!/^package\/(dist\/|docs\/index\.html$|package\.json$|zai-openapi\.json$|README\.md$|LICENSE$)/.test(file) || /(?:^|\/)\.env/.test(file)) {
+    if (!/^package\/(dist\/|docs\/(?:index\.html|MIGRATION\.md)$|package\.json$|zai-openapi(?:\.supplement)?\.json$|README\.md$|LICENSE$)/.test(file) || /(?:^|\/)\.env/.test(file)) {
       throw new Error(`Unexpected file in package: ${file}`);
     }
   }
-  for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/index.js.map', 'docs/index.html', 'zai-openapi.json', 'README.md', 'LICENSE']) {
+  for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/index.js.map', 'docs/index.html', 'zai-openapi.json', 'zai-openapi.supplement.json', 'README.md', 'docs/MIGRATION.md', 'LICENSE']) {
     if (!files.includes(`package/${file}`)) throw new Error(`Missing package file: ${file}`);
   }
 
@@ -38,13 +38,20 @@ try {
   await writeFile(join(temporary, 'consumer.mjs'), `
 import assert from 'node:assert/strict';
 import {createZAITokenProvider, createZAIClient, ZAIClientError} from 'zai-sdk';
+import spec from 'zai-sdk/openapi.json' with {type:'json'};
+import supplement from 'zai-sdk/openapi-supplement.json' with {type:'json'};
+assert.equal(Object.keys(spec.paths).length,77);
+assert.equal(Object.keys(supplement.paths).length,1);
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
-const client = createZAIClient({baseUrl:'https://example.test/v8',getToken,fetch:async request => {
+const permissions = [];
+const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:admin=>{permissions.push(admin);return getToken();},fetch:async request => {
   assert.ok(request.headers.get('authorization').startsWith('Bearer ak-'));
   if (new URL(request.url).pathname.endsWith('/models')) return Response.json({models:[]});
   return Response.json({agents:[]});
 }});
 assert.deepEqual(await client.agents.list(), {agents:[]});
+assert.deepEqual(await client.settings.models.list(), {models:[]});
+assert.deepEqual(permissions, [false,true]);
 const diagnosis = await client.doctor();
 assert.equal(diagnosis.pass, false);
 assert.equal(diagnosis.details.find(detail => detail.type === 'server').pass, true);
@@ -52,13 +59,18 @@ assert.equal(new ZAIClientError('http','test').code,'http');
 `);
   await run(process.execPath, ['consumer.mjs'], {cwd: temporary});
   await writeFile(join(temporary, 'consumer.ts'), `
-import {createZAIClient, type ModelsListQuery, type SessionsCreateInput, type ZAIStreamEvent, type ZAIDoctorResult} from 'zai-sdk';
-const query: ModelsListQuery = {all:'true'};
-const session: SessionsCreateInput = {executor_provider:'codex',skills:[]};
+import {createZAIClient, type CodingSessionsCreateInput, type ChatMessagesSendInput, type ZAIStreamEvent, type ZAIDoctorResult} from 'zai-sdk';
+const coding: CodingSessionsCreateInput = {workspace_id:'workspace',provider:'codex'};
+const message: ChatMessagesSendInput = {content:'hello'};
 const event: ZAIStreamEvent = {type:'done'};
-const client = createZAIClient({baseUrl:'https://example.test/v8',getToken:()=> 'token'});
+const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:admin=> admin ? 'ak-token' : 'ek-token'});
 const diagnosis: Promise<ZAIDoctorResult> = client.doctor({chat:false});
-void client.models.list(query); void session; void event; void diagnosis;
+void client.settings.models.list();
+void client.coding.sessions.create('agent',coding);
+void client.chat.messages.send('conversation',message);
+void client.files.extract({file:new Blob(['text'])});
+void client.coding.events.stream('session',{after_seq:'0'});
+void event; void diagnosis;
 `);
   await run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--lib', 'ES2022,DOM,DOM.Iterable', 'consumer.ts'], {cwd: temporary});
   await writeFile(join(temporary, 'index.html'), '<script type="module" src="/consumer.ts"></script>');

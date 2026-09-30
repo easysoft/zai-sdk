@@ -1,217 +1,203 @@
-# zai-sdk
+# ZAI SDK
 
-面向 Node.js 22+ 和现代浏览器的 ZAI TypeScript SDK。使用原生 Fetch、ESM，提供类型声明、source map、按请求自动续期的 Token 提供器，以及保留完整事件数据的 SSE 消息流。
+面向 Node.js 22+ 和现代浏览器的 TypeScript / ESM SDK。0.2.0 使用 `/v1/zai`，覆盖原始 OpenAPI 的 119 个操作，并按官方文档补充 Coding SSE：共 **78 条路径、120 个 HTTP 操作、123 个资源方法**。
 
-第一版 `0.1.0` 以仓库根目录的 [`zai-openapi.json`](./zai-openapi.json) 为唯一接口来源，覆盖 43 个路径、71 个 HTTP 操作。`messages.stream()` 与 `messages.send()` 对应同一个 HTTP 操作的两种返回模式。
+中文完整文档在 [`docs/index.html`](./docs/index.html)，包含每个接口的权限、来源、字段、调用签名和可复制示例。页面可离线打开，无需启动服务。升级旧项目请先阅读 [`docs/MIGRATION.md`](./docs/MIGRATION.md)。
 
-## HTML 使用文档
-
-用浏览器打开 [`docs/index.html`](./docs/index.html)，即可阅读中文使用指南、全部资源方法及公开导出的接口参考。页面包含接口搜索、可复制示例、嵌套字段、枚举、默认值和 HTTP 状态，支持移动端与离线使用，无需启动服务；打包后的 SDK 也包含该文件。
-
-```sh
-pnpm docs:build  # 根据当前 OpenAPI、SDK 导出和指南重新生成 HTML
-pnpm docs:check  # 校验接口覆盖、示例类型、内部链接和生成结果
-```
-
-文档维护方式见 [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md)。`pnpm check` 会检查文档是否过期，`pnpm pack` 会自动重新生成文档。
-
-## 安装与使用
-
-当前交付为本地可打包项目。先在 SDK 仓库安装依赖、构建并打包，再在消费项目安装生成的包：
+## 安装与开始使用
 
 ```sh
 pnpm install
 pnpm build
 pnpm pack --pack-destination /tmp/zai-sdk-pack
 # 在消费项目中执行：
-pnpm add /tmp/zai-sdk-pack/zai-sdk-0.1.0.tgz
+pnpm add /tmp/zai-sdk-pack/zai-sdk-0.2.0.tgz
 ```
 
-SDK 输出 ESM；浏览器项目可通过 Vite 等工具导入。运行时代码不依赖 Node 内置模块。
+服务端使用应用 API Key，SDK 按接口权限自动选择令牌：
 
 ```ts
-import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
-
-// Node.js 服务端：凭据来自服务端环境变量。
-const getToken = createZAITokenProvider({
-  credentials: {appID, appKey, userID},
-  expiresInSeconds: 1000,
-  refreshBeforeSeconds: 60,
-});
+import {createZAIClient} from 'zai-sdk';
 
 const client = createZAIClient({
-  baseUrl: 'https://zai.example.com/v8',
-  getToken,
+  baseUrl: 'https://zai.example.com/v1/zai',
+  auth: {
+    mode: 'auto',
+    appID: process.env.ZAI_APP_ID!,
+    appKey: process.env.ZAI_APP_KEY!,
+    userID: 'user-123',
+  },
 });
 
-const {agents} = await client.agents.list();
-const {models} = await client.models.list();
-const page = await client.sessions.list({page: 1, page_size: 20});
+const {agents} = await client.agents.list(); // ek
+const agent = agents.find(item => item.type === 'custom' && item.status === 'active');
+if (!agent) throw new Error('需要一个活跃的 custom Agent');
+const {session} = await client.sessions.create(agent.id, {title: 'SDK 示例'});
+const reply = await client.messages.send(session.id, {
+  content: [{type: 'input_text', text: '用一句话介绍自己'}],
+});
+console.log(reply.content);
+
+const models = await client.settings.models.list(); // ak，管理员配置接口
 ```
 
-`baseUrl` 是包含 `/v8` 的 API 根地址；浏览器也可使用相对地址 `/v8`。构造选项支持自定义 `fetch` 和默认 `headers`。每个资源方法的最后一个参数接受 `{signal, headers}`；如需跳过可选的查询或请求体，可显式传入 `undefined`：
+`baseUrl` 是完整 API 根地址；浏览器可以使用同源 `/v1/zai`。`auth` 与 `getToken` 二选一。客户端支持自定义 `fetch`、默认 `headers`，资源方法最后接受 `{signal, headers}`。路径 ID 按 URL 顺序传入字符串，输入字段保持 snake_case。
 
 ```ts
-await client.models.list(undefined, {
+await client.sessions.list(undefined, {
   signal: AbortSignal.timeout(10_000),
   headers: {'X-Request-ID': 'request-123'},
 });
 ```
 
-## Token 生成与自动续期
+## ak、ek 与自动续期
 
-`createZAIToken(appID, appKey, userID, expiredTime?)` 按 ZAI 的 MD5 + Base64 协议签发 Token，默认过期时间为当前 Unix 秒加 1000。保持协议原有的 `btoa` 语义：`appID`、`userID` 必须能按 Latin-1 编码；`appKey` 按 UTF-8 参与 MD5。
+120 个操作中，20 个仅允许管理员 ak，其余 100 个允许 ak 或 ek；没有仅允许 ek 的操作。自动模式为共享接口使用 ek，为管理员接口使用 ak。权限来自当前规范和[鉴权文档](https://zai-zjy.sh.oop.cc/docs/authentication/app-api)，服务端仍检查应用和用户归属。全部接口的权限和来源见 HTML 参考。
 
-`createZAITokenProvider()` 返回可直接传给客户端的 `getToken`，两种来源互斥：
+- ak：应用 API Key 直接本地签发，不请求服务端。
+- ek：首次用相同应用及用户签发 ak，调用 `GET /signing_secret`，核对应用 ID、密钥及前缀后本地签发。
+- 两者使用小写 MD5、UTF-8 JSON/Base64、秒级过期时间，支持中文和 emoji。可选 `userName` 写入 `user_name`，不参与 hash。
 
-- `credentials`：在当前运行环境本地重签，默认有效期 1000 秒。
-- `fetchToken`：向业务后端获取 `{token, expiresAt}`；`expiresAt` 必须是未来的整数 Unix **秒**，不是毫秒。
+保留同步管理员签发与显式 provider：
 
 ```ts
-// 浏览器：业务后端保存 appKey，根据已登录用户签发 Token。
-const getToken = createZAITokenProvider({
-  fetchToken: async () => {
-    const response = await fetch('/api/zai/token', {credentials: 'same-origin'});
-    if (!response.ok) throw new Error('获取 ZAI Token 失败');
-    return response.json(); // {token: 'ak-...', expiresAt: 1893457000}
-  },
+import {createZAIToken, createZAITokenProvider} from 'zai-sdk';
+
+const credentials = {appID, appKey, userID, userName: '小明'};
+const ak = createZAIToken(appID, appKey, userID, undefined, '小明');
+const getAdminToken = createZAITokenProvider({credentials}); // tokenType 默认 admin
+const getUserToken = createZAITokenProvider({
+  credentials,
+  tokenType: 'user',
+  baseUrl: 'https://zai.example.com/v1/zai',
+  expiresInSeconds: 1000,
   refreshBeforeSeconds: 60,
+  signingSecretTimeoutMs: 30_000,
 });
-const client = createZAIClient({baseUrl: 'https://zai.example.com/v8', getToken});
+const ek = await getUserToken();
 ```
 
-提供器首次使用时获取 Token，剩余有效期不超过提前续期窗口时，在下一次请求前续期。并发请求共享同一次续期；每个提供器独立缓存，没有后台定时器。续期失败会报错，后续调用可以重试。新 Token 若仍有效但已进入提前窗口，本次请求会直接使用它，不在一次调用内重复刷新。
+Token 默认有效期 1000 秒，在下一次调用且剩余时间不超过 60 秒时续期。Token 和 signing secret 仅缓存于当前 provider／自动鉴权实例；并发首次获取共享一个请求，后续 ek 续期仅本地签名。密钥获取默认独立超时 30 秒；单个业务请求取消不取消共享获取。失败不缓存，后续调用可重试。
 
-取消单个 API 请求不会取消其他请求共享的 Token 获取。切换用户时创建新的提供器和客户端。浏览器示例从业务后端获取 Token，前端包中不保存 `appKey`。
+SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因续期自动重连 SSE。切换用户或轮换 signing secret 后重新创建 provider/client。
 
-客户端也支持任意同步或异步 `getToken: () => string | Promise<string>`，但这类函数的缓存和续期由调用方负责。SDK 不在 401 后自动重放请求，不因 Token 更新而重连已经建立的 SSE。
-
-## 连接与功能检查
+浏览器从业务后端获取签好的 ek，不保存应用 API Key 或 signing secret：
 
 ```ts
-// 默认只读取 Agent 和模型列表，不创建会话或消耗模型用量。
-const result = await client.doctor({
-  onChange: detail => console.log(detail.type, detail.pass, detail.message),
-});
-console.log(result.pass, result.summary);
-
-// 可选：创建临时会话，发送短消息验证对话，再自动删除临时会话。
-const controller = new AbortController();
-const full = await client.doctor({
-  chat: true,
-  // agentId: 'your-agent-id', // 省略时优先选择默认的活跃 custom Agent
-  // model: 'your-model-id',  // 省略时使用服务端默认模型
-  timeoutMs: 30_000,         // 每个请求的超时，包括清理；不是总时长
-  signal: controller.signal,
+const client = createZAIClient({
+  baseUrl: '/v1/zai',
+  getToken: createZAITokenProvider({
+    fetchToken: async () => {
+      const response = await fetch('/api/zai/token', {credentials: 'same-origin'});
+      if (!response.ok) throw new Error('获取令牌失败');
+      return response.json(); // {token: 'ek-...', expiresAt: <整数 Unix 秒>}
+    },
+  }),
 });
 ```
 
-`doctor()` 返回 `ZAIDoctorResult`，包含 `pass`、`summary`、`details`，以及找到的 `agentId` 和创建过的 `sessionId`。逐项检查类型为 `config`、`httpProtocol`、`server`、`chatModels`、`agents`，启用真实对话后再检查 `chat` 和 `cleanup`。配置、协议或服务连接失败会提前结束；模型或 Agent 不可用时不会发送消息。未执行的检查不出现在 `details` 中，`pass` 只代表本次执行的检查全部通过。
+`fetchToken` 与 `credentials` 互斥。自定义回调签名为 `getToken(admin: boolean): string | Promise<string>`。SDK 在每次发送请求前调用它：`true` 表示接口仅允许 ak；`false` 表示允许 ak 或 ek，推荐返回 ek。回调只接收这个布尔值，不接收路径等其他接口信息，SDK 不解码返回的令牌。
 
-客户端配置错误仍由 `createZAIClient()` 抛出；诊断选项、网络、鉴权、接口响应及对话失败通过检查结果报告，相关 `ZAIClientError` 保留在 `detail.error`。`onChange` 抛出的异常会在尝试必要的会话清理后继续抛出。默认检查要求至少一个可用模型和一个活跃的 `custom` Agent；指定 `agentId` 或 `model` 后会检查该选择，不会自动回退到其他对象。
-
-`chat: true` 会消耗少量模型用量。临时会话禁用技能和记忆检索，消息使用空工具列表及 `schema-only` 模式。即使取消或对话失败也会尝试清理，清理请求使用独立超时，不继承已取消的 `signal`；清理失败会使 `pass` 为 `false`，可用 `sessionId` 后续处理。如果创建会话时服务端已经创建成功但响应丢失，SDK 无法得知会话 ID，也就无法自动清理。
-
-浏览器支持相对 API 地址，并检查 HTTPS 页面访问 HTTP API 的混合内容问题（回环地址除外）；CORS 和其他网络问题由实际请求报告。v8 规范没有服务版本或 embedding 模型能力字段，诊断不推断这些能力；也不验证 SSE、文件、技能或执行器运行状态。
-
-## 消息、流与文件
+服务端需要自主管理令牌来源时，用两个 provider 分别缓存和续期 ak、ek：
 
 ```ts
-const {session} = await client.sessions.create(agentID, {
-  title: 'SDK 示例',
-  skills: [],
-  reference_settings: {memories: {collections: []}},
+const getAdminToken = createZAITokenProvider({credentials});
+const getUserToken = createZAITokenProvider({
+  credentials,
+  tokenType: 'user',
+  baseUrl: 'https://zai.example.com/v1/zai',
 });
+const client = createZAIClient({
+  baseUrl: 'https://zai.example.com/v1/zai',
+  getToken: admin => admin ? getAdminToken() : getUserToken(),
+});
+```
 
-const input = {content: [{type: 'input_text' as const, text: '用一句话介绍自己'}]};
-const response = await client.messages.send(session.id, input); // 固定 stream:false
-console.log(response.content);
+这一选择在请求前完成，不是收到 403 后重试。无参回调和直接传入固定类型的 provider 仍兼容，但它们会忽略 `admin`，不会自动切换令牌类型；例如只返回 ek 的 provider 不能调用管理员接口。自定义缓存应分别管理 ak 和 ek，避免共用一个缓存值。`auth.mode: 'auto'` 与 `getToken` 仍然互斥。
 
-const controller = new AbortController();
-const stream = await client.messages.stream(session.id, input, {signal: controller.signal});
+## 资源与调用方式
+
+| 资源 | 能力 |
+| --- | --- |
+| `agents`、`sessions`、`messages` | 普通 Agent 会话、JSON/SSE 消息、上下文、文件及图片 |
+| `chat.conversations`、`chat.messages`、`chat.send/stream` | 独立 Chat 会话，文本及 attachments |
+| `coding.workspaces/repositories/keys` | 工作区、仓库文件、AGENTS.md、公钥 |
+| `coding.sessions/turns/events/interactions` | 编码会话、异步 turn、持续事件流、交互审批 |
+| `coding.git/models/runners` | Git 操作、Coding 模型、管理员 Runner 查询 |
+| `skills`、`agentSkills` | 技能包、版本、校验与挂载 |
+| `memories`、`qa`、`files.extract` | 记忆、问答、检索、过滤及文件文本提取 |
+| `settings.models/channels/signingSecret` | 应用管理员配置 |
+
+模型管理的数字 `id` 标识记录，调用模型使用 `model_id`。新版不提供旧顶层 `executor/workspaces/repositories/models`，仓库下载端点已删除。列表仅请求一页，保留相应接口原始返回结构，不再归一化旧模型数组。
+
+```ts
+// Chat content 是文本；普通 messages content 是数组。
+const conversation = await client.chat.conversations.create({title: '产品咨询'});
+const reply = await client.chat.messages.send(conversation.id, {
+  content: '介绍产品功能',
+  tool_execution_mode: 'schema-only',
+});
+```
+
+显式创建并保存 Chat 会话 ID，便于后续对话。便捷 `chat.send()` 支持 `conversation_id`，但其 JSON 响应未声明新创建的会话 ID。
+
+## 消息 SSE 与 Coding SSE
+
+三个消息发送端点均有 `send()` 和 `stream()`，分别固定 `stream:false/true`。消息 SSE 数据帧为 `{type:'data', event, id?, rawData, data}`，`data` 为 `unknown`；收到 `[DONE]` 产生 `{type:'done'}`。SDK 保留完整 chunk，不自动抽取文本或执行工具。
+
+```ts
+const stream = await client.messages.stream(session.id, {
+  content: [{type: 'input_text', text: '解释一下这段代码'}],
+});
 for await (const event of stream) {
   if (event.type === 'done') break;
   console.log(event.event, event.data);
 }
 ```
 
-SSE 数据事件为 `{type:'data', event, id?, rawData, data}`，结束事件为 `{type:'done'}`。`data` 为 `unknown`，使用前请按应用需要缩小类型。SDK 保留完整 chunk，包括所有 choice、工具调用增量、usage 和新字段。它不自动执行工具。
-
-使用 `break` 提前结束 `for await` 会释放流；如果取得流后还未开始迭代就放弃，可调用 `await stream.return()` 或取消关联 `AbortSignal`。异常 JSON、错误事件、超过 1 MiB 的 SSE 解析缓冲、缺少 `[DONE]` 的意外结束会报错。已建立的流不会自动重试或重连。
+Coding turn 启动返回 HTTP 202，只表示接受任务。`coding.events.stream()` 是独立持续会话流：保留 `id/event/rawData` 及完整事件对象，忽略心跳。turn 完成、失败或取消仍是数据事件，不结束流；不要求 `[DONE]`，EOF 只表示连接结束。调用者保存事件游标，再通过 `after_seq` 手动恢复。[Coding 事件协议](https://zai-zjy.sh.oop.cc/docs/zai/coding/events)
 
 ```ts
-// 浏览器 File，也可以直接传 Blob（默认文件名为 blob）。
-await client.sessions.uploadFile(session.id, {
-  path: 'input/report.txt',
-  file: new File(['报告'], 'report.txt', {type: 'text/plain'}),
+const codingSession = await client.coding.sessions.create('runner-agent-id', {
+  workspace_id: 'workspace-id', provider: 'codex',
 });
+await client.coding.turns.start(codingSession.id, {content: '分析测试失败原因'});
+const events = await client.coding.events.stream(codingSession.id, {after_seq: '0'});
+for await (const event of events) console.log(event.id, event.event, event.data);
+```
 
-// Node.js 和浏览器均可使用带文件名的 Blob。
+两种流都支持 AbortSignal，迭代中 `break` 会释放连接；取得流但未开始迭代时可调用 `await stream.return()`。通道错误、无效 JSON/UTF-8、超过 1 MiB 的解析缓冲和读取异常会报错。消息流缺少 `[DONE]` 的 EOF 报错，Coding 流的 EOF 正常结束迭代；均不自动重连。
+
+## 文件与诊断
+
+上传接受 `File`、`Blob` 或 `{blob, filename}`，SDK 自动设置 multipart boundary。会话上传包含 `path`；文本提取仅提供文件；技能可传 JSON 文件列表或 ZIP。规范未写 required 的文件字段仍在类型中保持可选，实际调用应提供文件。
+
+```ts
 await client.sessions.uploadFile(session.id, {
   path: 'input/report.txt',
   file: {blob: new Blob(['报告'], {type: 'text/plain'}), filename: 'report.txt'},
 });
-const blob = await client.sessions.downloadFile(session.id, {path: 'input/report.txt'});
-console.log(await blob.text());
-
-// 技能包支持 JSON 文件列表或 ZIP；二进制技能文件使用 ZIP。
-await client.skills.validateBundle({files: [{path: 'SKILL.md', media_type: 'text/markdown', content: '# Example'}]});
-await client.skills.validateBundle({bundle: {blob: zipBlob, filename: 'skill.zip'}});
+const text = await client.files.extract({
+  file: {blob: new Blob(['报告'], {type: 'text/plain'}), filename: 'report.txt'},
+});
 ```
 
-## 资源与返回结构
+`doctor()` 默认检查配置、协议、连接和 Agent，不请求管理员模型目录。Agent 列表支持 runner；聊天探针仍选择活跃 custom Agent。仅显式 `chat:true` 才创建临时普通会话验证 JSON 对话，`model` 仅传入探针。失败和取消仍使用独立超时清理临时会话，清理失败使整体 `pass:false`。诊断不验证 SSE、Coding、文件或技能。
 
-| 资源 | 能力 |
-| --- | --- |
-| `agents` | Agent 查询、创建、修改、删除 |
-| `executor` | 公钥、密钥轮换、工作区 AGENTS.md |
-| `workspaces` | Agent 工作区管理 |
-| `repositories` | 仓库管理、文件查询与下载 |
-| `sessions` | 会话管理、上下文重置、标题、文件、图片生成 |
-| `messages` | JSON/SSE 发送、历史与消息管理 |
-| `agentSkills` | Agent 技能挂载、更新、卸载 |
-| `skills` | 技能管理、恢复、包校验、版本与内容 |
-| `models` | 可用模型与历史模型查询 |
-| `memories` | 记忆集合、内容、分块、向量检索与任务状态 |
+错误统一为 `ZAIClientError`，稳定 `code` 为 `authentication/http/network/aborted/invalid-input/invalid-response`。正常 HTTP 内的 `ok:false` 等业务结果原样返回。
 
-路径 ID 按路径顺序作为独立字符串参数；查询和请求体保持 OpenAPI 字段命名。例：`client.repositories.get(agentID, workspaceID, repositoryID)`。列表只读取一页，保留 `page`、`page_size`、`total`、`has_more` 等服务端信息。`models.list({all:'true'})` 可请求历史模型；SDK 兼容数组及 `{models}` 两种服务端结构，统一返回 `{models}`。
-
-`executor_provider`、`custom_data` 等字段直接按规范传递；SDK 不替应用合并 `custom_data`，合并及清空行为由相应 API 定义。所有资源方法都导出相应的 `*Input`、`*Query`、`*Response` 类型（存在对应输入时），也可导入底层 `paths`、`components` 类型。
-
-错误使用 `ZAIClientError`，`code` 为 `authentication`、`http`、`network`、`aborted`、`invalid-input` 或 `invalid-response`。HTTP 错误保留可用的 `status`、`body`、`headers`、`method`、`path`。正常响应里的 `ok:false` 原样返回，由业务处理。不要把完整请求头或错误对象直接记录到公开日志中。
-
-## 开发、测试与规范更新
-
-```sh
-pnpm install
-pnpm exec playwright install chromium firefox webkit
-pnpm test          # 离线单元/契约测试 + 三种真实浏览器
-pnpm check         # 生成一致性、lint、类型、覆盖率、浏览器、构建及包检查
-```
-
-Node.js CI 覆盖 22/24；浏览器测试使用 Chromium、Firefox、WebKit，通过 Vite 加载实际 `dist` 产物并发出原生 Fetch 请求，由 Playwright 拦截响应；multipart 上传由本地 HTTP 测试端点读取真实文件内容。macOS 27+ 的 Firefox 测试会自动使用并清理隔离的临时 app-data，处理其直接启动时的系统兼容问题。默认自动测试无需真实服务器或凭据。非生成运行时代码覆盖率门槛：行、语句、函数 90%，分支 85%；每个 HTTP 操作都有契约用例。
-
-真实服务测试需单独运行：
-
-```sh
-cp .env.example .env.local
-# 编辑 TEST_ZAI_BASE_URL / TEST_ZAI_APP_ID / TEST_ZAI_APP_KEY / TEST_ZAI_USER_ID
-pnpm test:live
-```
-
-`TEST_ZAI_BASE_URL` 可以包含 `/v8`，也可以只填写服务器 origin；测试和 Node 示例的环境适配器会为 origin 追加 `/v8`。公开 SDK 的 `baseUrl` 仍需明确填写 API 根地址。可选 `TEST_ZAI_AGENT_ID` 指定活跃的 custom Agent；未指定时优先选择默认的活跃 custom Agent，否则选择第一个符合条件的 Agent。测试使用短有效期 Token 验证续期后真实鉴权；创建唯一标记的临时会话，发送两条短提示，验证 JSON/SSE、历史、文件和上下文重置。该测试会消耗少量模型用量，始终在 `finally` 尝试删除自己创建的会话；清理失败使测试失败并报告会话 ID，便于处理。
-
-`.env.local`、测试产物与源代码中的测试文件不进入发布包；CI 不执行真实服务测试。完整示例位于 [`examples`](./examples)：Node 环境读取、浏览器后端 Token、消息和文件操作。
-
-更新 API 时，直接替换根目录 `zai-openapi.json`，然后执行：
+## 开发与验证
 
 ```sh
 pnpm generate:api
+pnpm docs:build
 pnpm check
 ```
 
-生成类型、资源方法和操作清单通过脚本维护。新增或移除操作时同步修改 `scripts/operations.ts` 中的资源映射，再补充契约及类型用例。不要单独手改生成文件；`pnpm check:api` 会拒绝遗漏操作或过期产物。
+`pnpm check` 检查生成一致性、文档、lint、类型、单元覆盖率、三浏览器及打包消费。默认自动测试不需要真实服务凭据。HTML 文档每个调用示例都会类型检查，接口权限、嵌套锚点及导出覆盖也会检查。维护方式见 [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md)。
 
-## 边界
+真实服务测试通过 `pnpm test:live` 单列运行，使用 `.env.local` 的 `TEST_ZAI_BASE_URL/APP_ID/APP_KEY/USER_ID`。测试环境适配器可为服务器 origin 补 `/v1/zai`；公开客户端仍接收 API 根地址。测试覆盖双令牌、普通会话、Chat、QA、文件和 Coding；Coding 需要在线 Codex Runner，并使用独立临时 Agent 和空工作区。真实对话会消耗模型用量，测试负责删除或归档自己创建的数据。离线权限测试只验证 SDK 选令牌，不替代服务端逐接口验收。
 
-SDK 处理鉴权、HTTP 和流协议。业务缓存、重试策略、UI 状态和工具执行由消费项目负责；请求不会自动重放。本版本交付本地 SDK，不执行消费项目迁移或 npm 发布。
+接口生成使用原始 [`zai-openapi.json`](./zai-openapi.json) 和 [`zai-openapi.supplement.json`](./zai-openapi.supplement.json)，分别导出为 `zai-sdk/openapi.json`、`zai-sdk/openapi-supplement.json`。补充只允许新增路径，禁止覆盖。更新操作时维护显式映射、权限及来源，运行生成和检查；不要手改生成文件。
+
+本版交付本地 SDK、文档和验证，不包含 npm 发布或消费项目迁移。

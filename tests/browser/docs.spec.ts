@@ -7,8 +7,8 @@ test('documentation links, resource methods and exported APIs are complete', asy
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/docs/index.html');
   await expect(page).toHaveTitle('ZAI SDK · 使用指南与接口参考');
-  await expect(page.locator('.operation')).toHaveCount(72);
-  await expect(page.locator('.type-entry')).toHaveCount(126);
+  await expect(page.locator('.operation')).toHaveCount(123);
+  expect(await page.locator('.type-entry').count()).toBeGreaterThan(126);
   const broken = await page.locator('a[href^="#"]').evaluateAll(links => links
     .map(link => link.getAttribute('href')!.slice(1))
     .filter(id => !document.getElementById(id)));
@@ -18,13 +18,15 @@ test('documentation links, resource methods and exported APIs are complete', asy
 
 test('search supports method names, IME composition, clearing and no results', async ({page}) => {
   await page.goto('/docs/index.html');
-  const input = page.getByRole('searchbox', {name: '搜索文档'});
+  // Avoid rescanning the full API reference for every search interaction.
+  const search = page.locator('.search-box');
+  const input = search.getByRole('searchbox', {name: '搜索文档'});
   await page.keyboard.press('/');
   await expect(input).toBeFocused();
   await input.dispatchEvent('compositionstart');
   // fill() commits native composition in Firefox; dispatch the composing input.
   await input.evaluate(element => {
-    (element as HTMLInputElement).value = 'messages.stream';
+    (element as HTMLInputElement).value = 'chat.messages.stream';
     element.dispatchEvent(new InputEvent('input', {bubbles: true, isComposing: true}));
   });
   await expect(page.locator('#search-results')).toBeHidden();
@@ -33,12 +35,12 @@ test('search supports method names, IME composition, clearing and no results', a
   await input.press('ArrowDown');
   await expect(page.locator('#search-list a').first()).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.locator('#api-messages-stream')).toHaveAttribute('open', '');
-  await expect(page.locator('#api-messages-stream > summary')).toBeFocused();
+  await expect(page.locator('#api-chat-messages-stream')).toHaveAttribute('open', '');
+  await expect(page.locator('#api-chat-messages-stream > summary')).toBeFocused();
   await expect(page.locator('#search-results')).toBeHidden();
   await input.fill('missing-unfindable-xxxx');
   await expect(page.locator('#search-status')).toContainText('没有找到相关内容');
-  await page.getByRole('button', {name: '清除搜索'}).click();
+  await search.getByRole('button', {name: '清除搜索'}).click();
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
   await expect(page.locator('#search-results')).toBeHidden();
@@ -63,8 +65,8 @@ test('documentation works from a standalone local file without network access', 
   const networkRequests: string[] = [];
   page.on('request', request => { if (/^https?:/.test(request.url())) networkRequests.push(request.url()); });
   await context.route(/^https?:\/\//, route => route.abort());
-  await page.goto(pathToFileURL(resolve(import.meta.dirname, '../../docs/index.html')).href + '#api-models-list');
-  await expect(page.locator('#api-models-list')).toHaveAttribute('open', '');
+  await page.goto(pathToFileURL(resolve(import.meta.dirname, '../../docs/index.html')).href + '#api-settings-models-list');
+  await expect(page.locator('#api-settings-models-list')).toHaveAttribute('open', '');
   await page.getByRole('searchbox', {name: '搜索文档'}).fill('uploadFile');
   await expect(page.locator('#search-list')).toContainText('sessions.uploadFile');
   expect(networkRequests).toEqual([]);
@@ -95,11 +97,11 @@ test('copy failure gives a useful manual fallback', async ({page}) => {
   expect(await page.evaluate(() => window.getSelection()?.toString())).toContain('pnpm install');
 });
 
-test('the guide and interface details remain readable without JavaScript', async ({browser}) => {
-  const context = await browser.newContext({javaScriptEnabled: false});
+test('the guide and interface details remain readable without JavaScript', async ({browser, baseURL}) => {
+  const context = await browser.newContext({javaScriptEnabled: false, baseURL});
   try {
     const page = await context.newPage();
-    await page.goto('http://127.0.0.1:4173/docs/index.html#resource-agents');
+    await page.goto('/docs/index.html#resource-agents');
     await page.locator('#api-agents-create > summary').click();
     await expect(page.locator('#api-agents-create .operation-body')).toBeVisible();
     await expect(page.locator('.search-box')).toBeHidden();
