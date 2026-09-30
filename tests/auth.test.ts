@@ -6,7 +6,7 @@ import {ZAIClientError} from '../src/errors.js';
 
 const credentials = {appID: 'app-123', appKey: 'key-456', userID: 'user-789'};
 const epoch = 1_893_456_000;
-const decode = (token: string): {hash: string; app_id: string; user_id: string; expired_time: number} => JSON.parse(atob(token.slice(3)));
+const decode = (token: string): {hash: string; app_id: string; user_id: string; expired_time: number; user_name?: string} => JSON.parse(Buffer.from(token.slice(3), 'base64').toString('utf8'));
 const options = (value: unknown): ZAITokenProviderOptions => value as ZAITokenProviderOptions;
 const advance = (seconds: number): void => { vi.setSystemTime((epoch + seconds) * 1000); };
 
@@ -23,13 +23,14 @@ describe('createZAIToken', () => {
   it.each([
     ['a', 'b', 'c', 0],
     ['app-é', '密钥 🔑', 'user-ñ', epoch],
+    ['应用🚀', '密钥 🔑', '用户😊', epoch],
     ['a"\\\n', 'key-456', 'user-789', epoch + 500],
   ])('matches an independent Node crypto oracle (%s)', (appID, appKey, userID, expiry) => {
     const expected = {
       hash: createHash('md5').update(`${appKey}${appID}${userID}${expiry}`, 'utf8').digest('hex'),
       app_id: appID, user_id: userID, expired_time: expiry,
     };
-    const expectedToken = `ak-${Buffer.from(JSON.stringify(expected), 'latin1').toString('base64')}`;
+    const expectedToken = `ak-${Buffer.from(JSON.stringify(expected), 'utf8').toString('base64')}`;
     expect(createZAIToken(appID, appKey, userID, expiry)).toBe(expectedToken);
   });
 
@@ -48,9 +49,12 @@ describe('createZAIToken', () => {
     expect(() => createZAIToken(appID as string, appKey as string, userID as string)).toThrow(ZAIClientError);
   });
 
-  it('preserves btoa semantics for non-Latin-1 payload values', () => {
-    expect(() => createZAIToken('应用', 'secret', 'u')).toThrow(expect.objectContaining({code: 'invalid-input'}));
-    expect(() => createZAIToken('a', 'secret', '用户')).toThrow(expect.objectContaining({code: 'invalid-input'}));
+  it('encodes an optional UTF-8 display name without including it in the signature', () => {
+    const withoutName = decode(createZAIToken('应用', 'secret', '用户', epoch));
+    const withName = decode(createZAIToken('应用', 'secret', '用户', epoch, '张三😊'));
+    expect(withName).toEqual({...withoutName, user_name: '张三😊'});
+    expect(withoutName).not.toHaveProperty('user_name');
+    expect(() => createZAIToken('a', 'b', 'c', epoch, 42 as unknown as string)).toThrow(expect.objectContaining({code: 'invalid-input'}));
   });
 });
 
@@ -96,8 +100,8 @@ describe('createZAITokenProvider local credentials', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it('retains invalid-input classification when local signing fails', async () => {
-    const getToken = createZAITokenProvider({credentials: {...credentials, userID: '用户'}});
+  it('retains invalid-input classification when local expiry overflows', async () => {
+    const getToken = createZAITokenProvider({credentials, expiresInSeconds: Number.MAX_SAFE_INTEGER});
     await expect(getToken()).rejects.toMatchObject({code: 'invalid-input'});
   });
 });
