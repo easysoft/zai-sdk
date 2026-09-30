@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import {ZAIClientError} from './errors.js';
+import {createZAITokenProvider} from './auth.js';
 import type {CreateZAIClientOptions, ZAIOperationRequest, ZAITransport, ZAIUploadFile} from './types.js';
 
 interface DynamicOpenAPIClient {
@@ -21,9 +22,9 @@ function aborted(signal: AbortSignal): ZAIClientError {
 }
 
 /** Cancelling a waiter must not cancel a shared token renewal. */
-async function waitForToken(getToken: CreateZAIClientOptions['getToken'], signal?: AbortSignal): Promise<string> {
+async function waitForToken(getToken: (admin: boolean) => string | Promise<string>, admin: boolean, signal?: AbortSignal): Promise<string> {
   if (signal?.aborted) throw aborted(signal);
-  const pending = Promise.resolve().then(getToken);
+  const pending = Promise.resolve().then(() => getToken(admin));
   let listener: (() => void) | undefined;
   try {
     const token = await (signal ? Promise.race([
@@ -67,7 +68,7 @@ function appendFile(form: FormData, key: string, value: ZAIUploadFile): void {
 function serializeBody(input: ZAIOperationRequest): string | FormData | undefined {
   const {body, encoding} = input;
   if (body === undefined) return undefined;
-  if (encoding === 'multipart' || (encoding === 'bundle' && typeof body === 'object' && body !== null && 'bundle' in body)) {
+  if (encoding === 'multipart' || encoding === 'file' || (encoding === 'bundle' && typeof body === 'object' && body !== null && 'bundle' in body)) {
     if (typeof body !== 'object' || body === null) throw new ZAIClientError('invalid-input', 'A multipart body is required.');
     const values = body as Record<string, unknown>;
     const form = new FormData();
@@ -75,6 +76,10 @@ function serializeBody(input: ZAIOperationRequest): string | FormData | undefine
       if (typeof values.path !== 'string' || !values.path.trim()) throw new ZAIClientError('invalid-input', 'An upload target path is required.');
       appendFile(form, 'file', values.file as ZAIUploadFile);
       form.append('path', values.path);
+    } else if (encoding === 'file') {
+      // The extraction schema leaves file optional. Preserve that contract;
+      // reject invalid supplied files, but let the server report missing files.
+      if (values.file !== undefined) appendFile(form, 'file', values.file as ZAIUploadFile);
     } else {
       appendFile(form, 'bundle', values.bundle as ZAIUploadFile);
       if (values.changelog !== undefined && values.changelog !== null) {
@@ -102,8 +107,11 @@ function discardResponse(response: Response): void {
 }
 
 export function createTransport(options: CreateZAIClientOptions): ZAITransport {
-  if (!options || typeof options.getToken !== 'function' || typeof options.baseUrl !== 'string' || !options.baseUrl.trim()) {
-    throw new ZAIClientError('invalid-input', 'baseUrl and getToken are required.');
+  if (!options || typeof options.baseUrl !== 'string' || !options.baseUrl.trim()
+    || (options.getToken !== undefined) === (options.auth !== undefined)
+    || (options.getToken !== undefined && typeof options.getToken !== 'function')
+    || (options.auth !== undefined && (!options.auth || options.auth.mode !== 'auto'))) {
+    throw new ZAIClientError('invalid-input', 'baseUrl and exactly one of getToken or auth.mode=auto are required.');
   }
   let baseUrl: string;
   try {
@@ -111,13 +119,22 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error('Invalid API root');
     baseUrl = url.href.replace(/\/+$/, '');
   } catch (cause) {
-    throw new ZAIClientError('invalid-input', 'baseUrl must be an HTTP(S) API root, including /v8.', {cause});
+    throw new ZAIClientError('invalid-input', 'baseUrl must be an HTTP(S) API root, including /v1/zai.', {cause});
   }
   // Generated resource signatures carry the schema types. This internal dynamic
   // adapter only handles the already-typed HTTP operation and raw response body.
   const client = createClient({baseUrl}) as unknown as DynamicOpenAPIClient;
   const fetchImpl = options.fetch ?? globalThis.fetch;
   if (typeof fetchImpl !== 'function') throw new ZAIClientError('invalid-input', 'A fetch implementation is required.');
+  const auth = options.auth;
+  const credentials = auth && {appID: auth.appID, appKey: auth.appKey, userID: auth.userID, userName: auth.userName};
+  const providerOptions = auth && {credentials: credentials!, expiresInSeconds: auth.expiresInSeconds, refreshBeforeSeconds: auth.refreshBeforeSeconds};
+  const providers = providerOptions && {
+    admin: createZAITokenProvider({...providerOptions, tokenType: 'admin'}),
+    user: createZAITokenProvider({...providerOptions, tokenType: 'user', baseUrl, fetch: fetchImpl,
+      headers: options.headers, signingSecretTimeoutMs: auth!.signingSecretTimeoutMs}),
+  };
+  const fixedToken = options.getToken;
 
   return {
     async request<T>(input: ZAIOperationRequest): Promise<T> {
@@ -140,7 +157,11 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
         if (cause instanceof ZAIClientError) throw cause;
         throw new ZAIClientError('invalid-input', 'Unable to construct the request.', {cause});
       }
-      const token = await waitForToken(options.getToken, signal);
+      if (providers && input.auth !== 'admin' && input.auth !== 'user') {
+        throw new ZAIClientError('invalid-input', 'Automatic authentication requires an explicit operation permission.');
+      }
+      const getToken = providers ? providers[input.auth!] : fixedToken!;
+      const token = await waitForToken(getToken, input.auth === 'admin', signal);
       try {
         headers.set('authorization', `Bearer ${token}`);
       } catch (cause) {

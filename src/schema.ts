@@ -8,7 +8,7 @@ export interface paths {
         };
         /**
          * List agents
-         * @description Return all agents available under the current integration.
+         * @description Return all agents available under the current app.
          */
         get: {
             parameters: {
@@ -28,13 +28,13 @@ export interface paths {
                         "application/json": {
                             agents: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 name: string;
                                 /**
-                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and executor are user-selectable.
+                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and runner are user-selectable.
                                  * @enum {string}
                                  */
-                                type: "system" | "custom" | "executor";
+                                type: "system" | "custom" | "runner";
                                 is_default: boolean;
                                 description?: string | null;
                                 system_prompt?: string | null;
@@ -58,7 +58,7 @@ export interface paths {
         put?: never;
         /**
          * Create agent
-         * @description Create a new agent definition with business fields and prompts. If the new agent is the only agent under the integration, it will still become the default agent. Optionally provide `skills` to mount multiple existing skills during creation.
+         * @description Create a new agent definition with business fields and prompts. If the new agent is the only agent under the app, it will still become the default agent. Optionally provide `skills` to mount multiple existing skills during creation.
          */
         post: {
             parameters: {
@@ -77,9 +77,9 @@ export interface paths {
                          * @default custom
                          * @enum {string}
                          */
-                        type?: "system" | "custom" | "executor";
+                        type?: "system" | "custom" | "runner";
                         /**
-                         * @description Whether to set this agent as the default agent. Defaults to false. If this is the only agent under the integration, it will still become the default agent.
+                         * @description Whether to set this agent as the default agent. Defaults to false. If this is the only agent under the app, it will still become the default agent.
                          * @default false
                          */
                         is_default?: boolean;
@@ -94,6 +94,8 @@ export interface paths {
                          * @example 256000
                          */
                         context_length?: number | null;
+                        /** @description Runner agent only: bind this agent to a ZAI runner by its ZAI_RUNNER_ID. When omitted and exactly one runner is connected, the control plane picks it automatically. */
+                        runner_id?: string;
                         /** @description Optional skill_id list to mount during agent creation. */
                         skills?: string[];
                     };
@@ -109,13 +111,13 @@ export interface paths {
                         "application/json": {
                             agent: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 name: string;
                                 /**
-                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and executor are user-selectable.
+                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and runner are user-selectable.
                                  * @enum {string}
                                  */
-                                type: "system" | "custom" | "executor";
+                                type: "system" | "custom" | "runner";
                                 is_default: boolean;
                                 description?: string | null;
                                 system_prompt?: string | null;
@@ -195,13 +197,13 @@ export interface paths {
                         "application/json": {
                             agent: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 name: string;
                                 /**
-                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and executor are user-selectable.
+                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and runner are user-selectable.
                                  * @enum {string}
                                  */
-                                type: "system" | "custom" | "executor";
+                                type: "system" | "custom" | "runner";
                                 is_default: boolean;
                                 description?: string | null;
                                 system_prompt?: string | null;
@@ -255,7 +257,7 @@ export interface paths {
                          * @description Agent type.
                          * @enum {string}
                          */
-                        type?: "system" | "custom" | "executor";
+                        type?: "system" | "custom" | "runner";
                         /** @description Whether this agent should become the default agent. */
                         is_default?: boolean;
                         /** @description Optional business description. */
@@ -269,6 +271,8 @@ export interface paths {
                          * @example 256000
                          */
                         context_length?: number | null;
+                        /** @description Runner agent only: rebind this agent to another ZAI runner (ZAI_RUNNER_ID). */
+                        runner_id?: string;
                     };
                 };
             };
@@ -282,13 +286,13 @@ export interface paths {
                         "application/json": {
                             agent: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 name: string;
                                 /**
-                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and executor are user-selectable.
+                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and runner are user-selectable.
                                  * @enum {string}
                                  */
-                                type: "system" | "custom" | "executor";
+                                type: "system" | "custom" | "runner";
                                 is_default: boolean;
                                 description?: string | null;
                                 system_prompt?: string | null;
@@ -362,13 +366,13 @@ export interface paths {
                         "application/json": {
                             deleted: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 name: string;
                                 /**
-                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and executor are user-selectable.
+                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and runner are user-selectable.
                                  * @enum {string}
                                  */
-                                type: "system" | "custom" | "executor";
+                                type: "system" | "custom" | "runner";
                                 is_default: boolean;
                                 description?: string | null;
                                 system_prompt?: string | null;
@@ -386,13 +390,13 @@ export interface paths {
                             };
                             newDefault: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 name: string;
                                 /**
-                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and executor are user-selectable.
+                                 * @description system is platform-reserved (provisioned by the platform, not user-creatable); custom and runner are user-selectable.
                                  * @enum {string}
                                  */
-                                type: "system" | "custom" | "executor";
+                                type: "system" | "custom" | "runner";
                                 is_default: boolean;
                                 description?: string | null;
                                 system_prompt?: string | null;
@@ -440,640 +444,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/agents/{agent_id}/workspaces/{workspace_id}/executor/AGENTS.md": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get workspace AGENTS.md
-         * @description Read the AGENTS.md of the workspace. Returns null when the workspace has not been provisioned yet.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description AGENTS.md content */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            content: string | null;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        /**
-         * Update workspace AGENTS.md
-         * @description Write the AGENTS.md of the workspace. The workspace is provisioned lazily if needed.
-         */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        content: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            content: string | null;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/agents/{agent_id}/workspaces": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List workspaces
-         * @description List workspaces visible to the current user. Lazily creates the default workspace on first access.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Coding Workspaces */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            workspaces: {
-                                id: string;
-                                agent_id: string;
-                                name: string;
-                                description?: string | null;
-                                is_default: boolean;
-                                /** @enum {string} */
-                                status: "active" | "deleted";
-                                custom_data: {
-                                    [key: string]: unknown;
-                                };
-                                created_at: string;
-                                updated_at: string;
-                            }[];
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Agent not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Create a workspace
-         * @description Create a development workspace under an executor agent. One agent can have multiple workspaces (per user).
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description Workspace name (label only; duplicates allowed). */
-                        name: string;
-                        description?: string | null;
-                        /** @description Arbitrary caller-defined metadata stored and returned as-is. */
-                        custom_data?: {
-                            [key: string]: unknown;
-                        };
-                        /** @description Initial repository set for the workspace; can be modified later via the repos API. */
-                        repositories?: {
-                            repo_key: string;
-                            /** @description Git remote URL to clone into the workspace. */
-                            url: string;
-                            /**
-                             * @description Branch to clone; defaults to main.
-                             * @default main
-                             */
-                            default_branch?: string;
-                        }[];
-                    };
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            agent_id: string;
-                            name: string;
-                            description?: string | null;
-                            is_default: boolean;
-                            /** @enum {string} */
-                            status: "active" | "deleted";
-                            custom_data: {
-                                [key: string]: unknown;
-                            };
-                            created_at: string;
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Agent not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/agents/{agent_id}/workspaces/{workspace_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a workspace */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Workspace */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            agent_id: string;
-                            name: string;
-                            description?: string | null;
-                            is_default: boolean;
-                            /** @enum {string} */
-                            status: "active" | "deleted";
-                            custom_data: {
-                                [key: string]: unknown;
-                            };
-                            created_at: string;
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Workspace not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        /**
-         * Delete a workspace
-         * @description Deletion is rejected while sessions are still bound to the workspace.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            deleted: boolean;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Workspace not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /** Update a workspace */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name?: string;
-                        description?: string | null;
-                        /** @description Merged into the existing custom_data; pass null to clear it. */
-                        custom_data?: {
-                            [key: string]: unknown;
-                        } | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            agent_id: string;
-                            name: string;
-                            description?: string | null;
-                            is_default: boolean;
-                            /** @enum {string} */
-                            status: "active" | "deleted";
-                            custom_data: {
-                                [key: string]: unknown;
-                            };
-                            created_at: string;
-                            updated_at: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Workspace not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/agents/{agent_id}/executor/public-key": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get the current user's public key
-         * @description Return the public key of the current user on the agent's executor machine (one key per user per machine, shared by all the user's workspaces/repositories). The key is public material; the owner (ak-* or ek-*) can read it.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Public key */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            key_type: string;
-                            public_key: string;
-                            fingerprint: string;
-                            key_generated_at: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Agent not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/agents/{agent_id}/executor/rotate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Rotate the current user's public key
-         * @description Generate a new keypair for the current user and return the new public key. Rotation only affects this user's repositories (they switch to the new key until deploy keys are updated); the owner can rotate their own key.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Rotated */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            key_type: string;
-                            public_key: string;
-                            fingerprint: string;
-                            key_generated_at: string;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Agent not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/agents/{agent_id}/sessions": {
         parameters: {
             query?: never;
@@ -1112,7 +482,7 @@ export interface paths {
                             /** @description Sessions returned for the current page. */
                             sessions: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 agent_id: string;
                                 external_user_id: string;
                                 title: string;
@@ -1124,11 +494,6 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                                 custom_data?: unknown;
-                                /**
-                                 * @description Effective coding provider resolved for this session (explicit session value or global default).
-                                 * @enum {string}
-                                 */
-                                executor_provider?: "claude" | "codex" | "opencode";
                                 /** @description Session-level skill_id selection. Null means the session inherits all skills mounted on its agent. */
                                 skill_ids?: string[] | null;
                                 category?: string;
@@ -1182,7 +547,7 @@ export interface paths {
         put?: never;
         /**
          * Create session
-         * @description Create a new conversation session under the specified agent. The optional `skills` field is a session-level skill_id selection: omit it or set it to null to inherit all skills mounted on the agent; set it to [] to explicitly disable all skills for this session; set it to [skill_id...] to use exactly those active skills for this session. Session-selected skills may include any active skill under the integration and do not need to be mounted on the agent.
+         * @description Create a new conversation session under the specified agent. The optional `skills` field is a session-level skill_id selection: omit it or set it to null to inherit all skills mounted on the agent; set it to [] to explicitly disable all skills for this session; set it to [skill_id...] to use exactly those active skills for this session. Session-selected skills may include any active skill under the app and do not need to be mounted on the agent.
          */
         post: {
             parameters: {
@@ -1198,14 +563,9 @@ export interface paths {
                     "application/json": {
                         /** @description Optional user-facing session title. When omitted, Dathor creates a default title. */
                         title?: string | null;
-                        /** @description Executor agents only: bind the session to a development workspace by its uuid id (workspaces.id). The workspace must belong to this agent and be visible to the current user, otherwise the request is rejected. The binding is persisted as custom_data.workspace_id and all subsequent turns run inside that workspace. When omitted, the session falls back to the (agent, user) default workspace (lazily created). PI custom agents ignore this field (they do not participate in coding). */
+                        /** @description Runner agents only: bind the session to a development workspace by its uuid id (workspaces.id). The workspace must belong to this agent and be visible to the current user, otherwise the request is rejected. The binding is persisted as custom_data.workspace_id and all subsequent turns run inside that workspace. When omitted, the session falls back to the (agent, user) default workspace (lazily created). PI custom agents ignore this field (they do not participate in coding). */
                         workspace_id?: string;
-                        /**
-                         * @description Session-level coding provider for executor agents. When omitted, Dathor resolves the provider from the global ZAI_EXECUTOR_PROVIDER default and persists it on the session, so a coding session always has a provider.
-                         * @enum {string}
-                         */
-                        executor_provider?: "claude" | "codex" | "opencode";
-                        /** @description Optional model id for this session. It overrides the integration default chat model and is persisted as the session model. */
+                        /** @description Optional model id for this session. It overrides the app default chat model and is persisted as the session model. */
                         model?: string;
                         /** @description Optional session-level system prompt persisted as settings.prompt. It is appended after the agent system_prompt and developer_prompt when building the runtime system prompt. Set null to use no session-level prompt. */
                         prompt?: string | null;
@@ -1237,7 +597,7 @@ export interface paths {
                         custom_data?: {
                             [key: string]: unknown;
                         };
-                        /** @description Optional session-level skill_id list. Omit or set null to inherit all skills mounted on the agent. Set [] to disable all skills for this session. Set [skill_id...] to use exactly those active skills, which may include any active skill under the integration. */
+                        /** @description Optional session-level skill_id list. Omit or set null to inherit all skills mounted on the agent. Set [] to disable all skills for this session. Set [skill_id...] to use exactly those active skills, which may include any active skill under the app. */
                         skills?: string[] | null;
                         /** @description Optional session category used for list filtering and business grouping. Defaults to chat when omitted. */
                         category?: string;
@@ -1254,7 +614,7 @@ export interface paths {
                         "application/json": {
                             session: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 agent_id: string;
                                 external_user_id: string;
                                 title: string;
@@ -1266,11 +626,6 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                                 custom_data?: unknown;
-                                /**
-                                 * @description Effective coding provider resolved for this session (explicit session value or global default).
-                                 * @enum {string}
-                                 */
-                                executor_provider?: "claude" | "codex" | "opencode";
                                 /** @description Session-level skill_id selection. Null means the session inherits all skills mounted on its agent. */
                                 skill_ids?: string[] | null;
                                 category?: string;
@@ -1361,7 +716,7 @@ export interface paths {
                             skills: {
                                 mount: {
                                     id: string;
-                                    integration_id: string;
+                                    app_id: string;
                                     agent_id: string;
                                     skill_id: string;
                                     pinned_revision_id?: string | null;
@@ -1441,7 +796,7 @@ export interface paths {
                         "application/json": {
                             skill: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 agent_id: string;
                                 skill_id: string;
                                 pinned_revision_id?: string | null;
@@ -1584,7 +939,7 @@ export interface paths {
                         "application/json": {
                             skill: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 agent_id: string;
                                 skill_id: string;
                                 pinned_revision_id?: string | null;
@@ -1622,7 +977,120 @@ export interface paths {
         };
         trace?: never;
     };
-    "/agents/{agent_id}/workspaces/{workspace_id}/repos": {
+    "/coding/agents/{agent_id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a coding session
+         * @description Create a coding session bound to one workspace and one provider. The provider cannot be changed afterwards.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        workspace_id: string;
+                        /** @enum {string} */
+                        provider: "claude" | "codex" | "opencode";
+                        model?: string | null;
+                        title?: string | null;
+                        runner_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            workspace_id: string;
+                            runner_id: string;
+                            provider: string;
+                            model: string | null;
+                            title: string | null;
+                            status: string;
+                            paseo_agent_id: string | null;
+                            provider_session_id: string | null;
+                            last_event_seq: number;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions": {
         parameters: {
             query?: never;
             header?: never;
@@ -1630,54 +1098,1119 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List repositories
-         * @description List repositories of a workspace.
+         * List coding sessions
+         * @description List coding sessions of the current user, optionally filtered by agent, workspace and status.
          */
         get: {
             parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
+                query?: {
+                    agent_id?: string;
+                    workspace_id?: string;
+                    status?: string;
+                    page?: string;
+                    page_size?: string;
                 };
+                header?: never;
+                path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description List repositories */
+                /** @description Coding sessions */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            repositories: {
+                            sessions: {
                                 id: string;
-                                integration_id: string;
                                 agent_id: string;
-                                external_user_id: string;
-                                repo_key: string;
-                                name: string;
-                                description?: string | null;
-                                /** @enum {string} */
-                                status: "provisioning" | "ready" | "failed" | "deleted";
-                                default_branch: string;
-                                relative_path: string;
-                                git_initialized: boolean;
-                                initial_commit_sha?: string | null;
-                                is_default: boolean;
-                                /** @enum {string} */
-                                source_type: "empty" | "inline_files" | "git_remote";
-                                metadata: {
-                                    [key: string]: unknown;
-                                };
-                                custom_data: {
+                                workspace_id: string;
+                                runner_id: string;
+                                provider: string;
+                                model: string | null;
+                                title: string | null;
+                                status: string;
+                                paseo_agent_id: string | null;
+                                provider_session_id: string | null;
+                                last_event_seq: number;
+                                custom_data?: {
                                     [key: string]: unknown;
                                 };
                                 created_at: string;
                                 updated_at: string;
-                                last_used_at?: string | null;
+                            }[];
+                            page: number;
+                            page_size: number;
+                            total: number;
+                            has_more: boolean;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a coding session */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Coding session */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            workspace_id: string;
+                            runner_id: string;
+                            provider: string;
+                            model: string | null;
+                            title: string | null;
+                            status: string;
+                            paseo_agent_id: string | null;
+                            provider_session_id: string | null;
+                            last_event_seq: number;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        /**
+         * Update the session default model
+         * @description Only allowed while no turn is queued or running (otherwise 409).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        model: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            workspace_id: string;
+                            runner_id: string;
+                            provider: string;
+                            model: string | null;
+                            title: string | null;
+                            status: string;
+                            paseo_agent_id: string | null;
+                            provider_session_id: string | null;
+                            last_event_seq: number;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Archive a coding session
+         * @description Archive the session and ask the runner to archive its paseo agent. Events and turns are kept.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archived */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            workspace_id: string;
+                            runner_id: string;
+                            provider: string;
+                            model: string | null;
+                            title: string | null;
+                            status: string;
+                            paseo_agent_id: string | null;
+                            provider_session_id: string | null;
+                            last_event_seq: number;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the effective custom tool set of a session
+         * @description Returns the agent-level custom tools (MCP) currently effective for this session, in the same shape sent to the runner: `mode=zai` tools carry no binding/secret. `null` when no custom tools are configured.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Effective tool set */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            tools?: unknown;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a turn
+         * @description Queue a turn for the coding session. The turn runs asynchronously; subscribe to the session stream for events.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        content: string;
+                        model?: string | null;
+                        /** @description 把这一轮限定到工作区内的某个仓库（repo_key）；不传用工作区默认仓库。 */
+                        repo_key?: string;
+                        client_turn_id?: string;
+                        /** @description 本轮生效的自定义工具集（MCP）。turn 级同名工具覆盖 agent.config.tools；不传则只用 agent 级配置。 */
+                        tools?: {
+                            /** @enum {number} */
+                            version: 1;
+                            serverName?: string;
+                            /** @default [] */
+                            tools?: {
+                                name: string;
+                                /** @default  */
+                                description?: string;
+                                /**
+                                 * @default {
+                                 *       "type": "object",
+                                 *       "properties": {}
+                                 *     }
+                                 */
+                                parameters?: {
+                                    [key: string]: unknown;
+                                };
+                                /**
+                                 * @default zai
+                                 * @enum {string}
+                                 */
+                                mode?: "zai" | "runner" | "interaction" | "schema-only";
+                                binding?: {
+                                    /** @enum {string} */
+                                    type: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    /** @enum {string} */
+                                    method?: "POST" | "PUT" | "PATCH";
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    timeout_ms?: number;
+                                    max_response_bytes?: number;
+                                };
+                                /**
+                                 * @default never
+                                 * @enum {string}
+                                 */
+                                approval?: "never" | "always";
+                            }[];
+                            /** @default {} */
+                            servers?: {
+                                [key: string]: {
+                                    /** @enum {string} */
+                                    type: "http" | "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            session_id: string;
+                            status: string;
+                            user_content: string;
+                            assistant_content: string;
+                            finish_reason: string | null;
+                            model: string | null;
+                            repo_key: string | null;
+                            provider_session_id: string | null;
+                            usage: {
+                                [key: string]: unknown;
+                            } | null;
+                            summary: {
+                                [key: string]: unknown;
+                            } | null;
+                            error: {
+                                [key: string]: unknown;
+                            } | null;
+                            created_at: string;
+                            started_at: string | null;
+                            finished_at: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/turns/{turn_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a turn */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    turn_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Turn */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            session_id: string;
+                            status: string;
+                            user_content: string;
+                            assistant_content: string;
+                            finish_reason: string | null;
+                            model: string | null;
+                            repo_key: string | null;
+                            provider_session_id: string | null;
+                            usage: {
+                                [key: string]: unknown;
+                            } | null;
+                            summary: {
+                                [key: string]: unknown;
+                            } | null;
+                            error: {
+                                [key: string]: unknown;
+                            } | null;
+                            created_at: string;
+                            started_at: string | null;
+                            finished_at: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/turns/{turn_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a turn
+         * @description Cancel a queued or running turn. The runner interrupts the provider run and emits turn.canceled.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    turn_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Canceled */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            session_id: string;
+                            status: string;
+                            user_content: string;
+                            assistant_content: string;
+                            finish_reason: string | null;
+                            model: string | null;
+                            repo_key: string | null;
+                            provider_session_id: string | null;
+                            usage: {
+                                [key: string]: unknown;
+                            } | null;
+                            summary: {
+                                [key: string]: unknown;
+                            } | null;
+                            error: {
+                                [key: string]: unknown;
+                            } | null;
+                            created_at: string;
+                            started_at: string | null;
+                            finished_at: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/turns/{turn_id}/steer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Steer the running turn
+         * @description 把追加指令发给正在跑这一轮的 agent（paseo steer），不新开 turn。只对 running 的 turn 有效；steer 文本会作为 `steer.accepted` 事件进入会话时间线。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    turn_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        content: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Steering accepted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            session_id: string;
+                            status: string;
+                            user_content: string;
+                            assistant_content: string;
+                            finish_reason: string | null;
+                            model: string | null;
+                            repo_key: string | null;
+                            provider_session_id: string | null;
+                            usage: {
+                                [key: string]: unknown;
+                            } | null;
+                            summary: {
+                                [key: string]: unknown;
+                            } | null;
+                            error: {
+                                [key: string]: unknown;
+                            } | null;
+                            created_at: string;
+                            started_at: string | null;
+                            finished_at: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List session events
+         * @description Replay persisted events after a given seq. Used for history browsing and gap recovery.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    after_seq?: string;
+                    limit?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Events */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            events: {
+                                seq: number;
+                                type: string;
+                                turn_id: string | null;
+                                payload: {
+                                    [key: string]: unknown;
+                                };
+                                created_at: string;
+                            }[];
+                            last_seq: number;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/interactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List interactions
+         * @description List pending (or historical) interactions of a coding session. Payload mirrors the paseo permission request.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Interactions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            interactions: {
+                                id: string;
+                                session_id: string;
+                                turn_id: string | null;
+                                request_id: string;
+                                kind: string;
+                                status: string;
+                                payload: {
+                                    [key: string]: unknown;
+                                };
+                                resolution: {
+                                    [key: string]: unknown;
+                                } | null;
+                                expires_at: string;
+                                created_at: string;
                             }[];
                         };
                     };
@@ -1704,14 +2237,362 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/interactions/{interaction_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         /**
-         * Create repository
-         * @description Create a working repository inside a workspace.
+         * Resolve an interaction
+         * @description Answer a pending interaction. The body is the paseo permission response: { behavior: allow | deny, selectedActionId?, updatedInput?, message? }.
          */
         post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    interaction_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        behavior: "allow" | "deny";
+                        selectedActionId?: string;
+                        updatedInput?: {
+                            [key: string]: unknown;
+                        };
+                        updatedPermissions?: {
+                            [key: string]: unknown;
+                        }[];
+                        message?: string;
+                        interrupt?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Resolved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            session_id: string;
+                            turn_id: string | null;
+                            request_id: string;
+                            kind: string;
+                            status: string;
+                            payload: {
+                                [key: string]: unknown;
+                            };
+                            resolution: {
+                                [key: string]: unknown;
+                            } | null;
+                            expires_at: string;
+                            created_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List workspaces
+         * @description List development workspaces of the current user. The default workspace is created lazily.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Workspaces */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            workspaces: {
+                                id: string;
+                                agent_id: string;
+                                name: string;
+                                description: string | null;
+                                is_default: boolean;
+                                status: string;
+                                custom_data?: {
+                                    [key: string]: unknown;
+                                };
+                                created_at: string;
+                                updated_at: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a workspace */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        description?: string | null;
+                        is_default?: boolean;
+                        custom_data?: {
+                            [key: string]: unknown;
+                        };
+                        repositories?: {
+                            repo_key?: string;
+                            name?: string;
+                            url?: string;
+                            default_branch?: string;
+                            is_default?: boolean;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            name: string;
+                            description: string | null;
+                            is_default: boolean;
+                            status: string;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a workspace */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Workspace */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            name: string;
+                            description: string | null;
+                            is_default: boolean;
+                            status: string;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        /** Update a workspace */
+        put: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -1726,31 +2607,192 @@ export interface paths {
                     "application/json": {
                         name?: string;
                         description?: string | null;
-                        default_branch?: string;
-                        /** @description Git remote URL. When provided the repository is created as `git_remote` and cloned into the ZAI executor workspace. For `git_remote` repositories `initialize_git` and `initial_commit` are ignored; cloning and git setup are handled by the ZAI Executor Service. */
-                        url?: string;
-                        /**
-                         * @description Whether to run `git init` inside the repository directory. Defaults to true; set to false to create a plain directory without git. Ignored for `git_remote` repositories, which are always managed as git working copies.
-                         * @default true
-                         */
-                        initialize_git?: boolean;
-                        /**
-                         * @description Whether to stage template files and create the first commit (`Initial commit`) after git initialization. Defaults to false; requires initialize_git=true, otherwise the request fails with 'Initial commit requires git initialization'. Ignored for `git_remote` repositories.
-                         * @default false
-                         */
-                        initial_commit?: boolean;
-                        set_as_default?: boolean;
-                        template?: {
-                            /** @enum {string} */
-                            type?: "empty" | "inline_files" | "git_remote";
-                            files?: {
-                                path: string;
-                                content: string;
+                        custom_data?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            name: string;
+                            description: string | null;
+                            is_default: boolean;
+                            status: string;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete a workspace */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            agent_id: string;
+                            name: string;
+                            description: string | null;
+                            is_default: boolean;
+                            status: string;
+                            custom_data?: {
+                                [key: string]: unknown;
+                            };
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List repositories */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Repositories */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repositories: {
+                                id: string;
+                                workspace_id: string | null;
+                                repo_key: string;
+                                name: string;
+                                description: string | null;
+                                default_branch: string;
+                                source_type: string;
+                                status: string;
+                                is_default: boolean;
+                                url?: string | null;
+                                created_at: string;
+                                updated_at: string;
                             }[];
                         };
-                        metadata?: {
-                            [key: string]: unknown;
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
                         };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Add a repository
+         * @description Add a repository to the workspace. `url` empty means a platform-managed empty repository materialized by the runner.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        repo_key?: string;
+                        name?: string;
+                        description?: string | null;
+                        url?: string | null;
+                        default_branch?: string;
+                        is_default?: boolean;
                         custom_data?: {
                             [key: string]: unknown;
                         };
@@ -1758,7 +2800,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Create repository */
+                /** @description Created */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -1767,30 +2809,17 @@ export interface paths {
                         "application/json": {
                             repository: {
                                 id: string;
-                                integration_id: string;
-                                agent_id: string;
-                                external_user_id: string;
+                                workspace_id: string | null;
                                 repo_key: string;
                                 name: string;
-                                description?: string | null;
-                                /** @enum {string} */
-                                status: "provisioning" | "ready" | "failed" | "deleted";
+                                description: string | null;
                                 default_branch: string;
-                                relative_path: string;
-                                git_initialized: boolean;
-                                initial_commit_sha?: string | null;
+                                source_type: string;
+                                status: string;
                                 is_default: boolean;
-                                /** @enum {string} */
-                                source_type: "empty" | "inline_files" | "git_remote";
-                                metadata: {
-                                    [key: string]: unknown;
-                                };
-                                custom_data: {
-                                    [key: string]: unknown;
-                                };
+                                url?: string | null;
                                 created_at: string;
                                 updated_at: string;
-                                last_used_at?: string | null;
                             };
                         };
                     };
@@ -1825,17 +2854,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}": {
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get repository
-         * @description Get repository details by repository id.
-         */
+        /** Get a repository */
         get: {
             parameters: {
                 query?: never;
@@ -1849,7 +2875,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Get repository */
+                /** @description Repository */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1858,45 +2884,21 @@ export interface paths {
                         "application/json": {
                             repository: {
                                 id: string;
-                                integration_id: string;
-                                agent_id: string;
-                                external_user_id: string;
+                                workspace_id: string | null;
                                 repo_key: string;
                                 name: string;
-                                description?: string | null;
-                                /** @enum {string} */
-                                status: "provisioning" | "ready" | "failed" | "deleted";
+                                description: string | null;
                                 default_branch: string;
-                                relative_path: string;
-                                git_initialized: boolean;
-                                initial_commit_sha?: string | null;
+                                source_type: string;
+                                status: string;
                                 is_default: boolean;
-                                /** @enum {string} */
-                                source_type: "empty" | "inline_files" | "git_remote";
-                                metadata: {
-                                    [key: string]: unknown;
-                                };
-                                custom_data: {
-                                    [key: string]: unknown;
-                                };
+                                url?: string | null;
                                 created_at: string;
                                 updated_at: string;
-                                last_used_at?: string | null;
                             };
                         };
                     };
                 };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
                 /** @description Not found */
                 404: {
                     headers: {
@@ -1910,67 +2912,8 @@ export interface paths {
                 };
             };
         };
-        put?: never;
-        post?: never;
-        /**
-         * Delete repository
-         * @description Delete a repository by id. This also removes its local working copy.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                    workspace_id: string;
-                    repository_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Delete repository */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            deleted: boolean;
-                        };
-                    };
-                };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /**
-         * Update repository
-         * @description Update repository custom_data. Values are merged into the existing custom_data.
-         */
-        patch: {
+        /** Update a repository */
+        put: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -1984,7 +2927,10 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** @description Merged into the existing custom_data; pass null to clear it. */
+                        name?: string;
+                        description?: string | null;
+                        default_branch?: string;
+                        is_default?: boolean;
                         custom_data?: {
                             [key: string]: unknown;
                         } | null;
@@ -1992,7 +2938,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Updated repository */
+                /** @description Updated */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2001,46 +2947,22 @@ export interface paths {
                         "application/json": {
                             repository: {
                                 id: string;
-                                integration_id: string;
-                                agent_id: string;
-                                external_user_id: string;
+                                workspace_id: string | null;
                                 repo_key: string;
                                 name: string;
-                                description?: string | null;
-                                /** @enum {string} */
-                                status: "provisioning" | "ready" | "failed" | "deleted";
+                                description: string | null;
                                 default_branch: string;
-                                relative_path: string;
-                                git_initialized: boolean;
-                                initial_commit_sha?: string | null;
+                                source_type: string;
+                                status: string;
                                 is_default: boolean;
-                                /** @enum {string} */
-                                source_type: "empty" | "inline_files" | "git_remote";
-                                metadata: {
-                                    [key: string]: unknown;
-                                };
-                                custom_data: {
-                                    [key: string]: unknown;
-                                };
+                                url?: string | null;
                                 created_at: string;
                                 updated_at: string;
-                                last_used_at?: string | null;
                             };
                         };
                     };
                 };
-                /** @description Bad request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Repository not found */
+                /** @description Not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -2053,20 +2975,9 @@ export interface paths {
                 };
             };
         };
-        trace?: never;
-    };
-    "/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List repository files
-         * @description List all files and directories inside the repository recursively.
-         */
-        get: {
+        post?: never;
+        /** Delete a repository */
+        delete: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -2079,54 +2990,19 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Repository file tree */
+                /** @description Deleted */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            repository: {
-                                id: string;
-                                integration_id: string;
-                                agent_id: string;
-                                external_user_id: string;
-                                repo_key: string;
-                                name: string;
-                                description?: string | null;
-                                /** @enum {string} */
-                                status: "provisioning" | "ready" | "failed" | "deleted";
-                                default_branch: string;
-                                relative_path: string;
-                                git_initialized: boolean;
-                                initial_commit_sha?: string | null;
-                                is_default: boolean;
-                                /** @enum {string} */
-                                source_type: "empty" | "inline_files" | "git_remote";
-                                metadata: {
-                                    [key: string]: unknown;
-                                };
-                                custom_data: {
-                                    [key: string]: unknown;
-                                };
-                                created_at: string;
-                                updated_at: string;
-                                last_used_at?: string | null;
-                            };
-                            root: {
-                                path: string;
-                                name: string;
-                                /** @enum {string} */
-                                type: "file" | "directory";
-                                size?: number;
-                                mime_type?: string;
-                                children?: unknown[];
-                            };
+                            deleted: boolean;
                         };
                     };
                 };
-                /** @description Bad request */
-                400: {
+                /** @description Not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2136,8 +3012,69 @@ export interface paths {
                         };
                     };
                 };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List repository files
+         * @description List files and directories inside the repository as materialized on the runner.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    path?: string;
+                };
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                    repository_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            entries: {
+                                name: string;
+                                path: string;
+                                /** @enum {string} */
+                                type: "file" | "directory";
+                                size?: number;
+                            }[];
+                        };
+                    };
+                };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2157,17 +3094,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content": {
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Read repository file
-         * @description Read a text file from the repository.
-         */
+        /** Read a repository file */
         get: {
             parameters: {
                 query: {
@@ -2183,7 +3117,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Repository file content */
+                /** @description File content */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2191,18 +3125,16 @@ export interface paths {
                     content: {
                         "application/json": {
                             path: string;
-                            name: string;
-                            mime_type: string;
-                            size: number;
-                            /** @enum {string} */
-                            encoding: "utf-8";
                             content: string;
-                            updated_at?: string;
+                            /** @enum {string} */
+                            encoding: "utf-8" | "base64";
+                            size: number;
+                            truncated?: boolean;
                         };
                     };
                 };
-                /** @description Bad request */
-                400: {
+                /** @description Not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2212,8 +3144,8 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Not found */
-                404: {
+                /** @description Runner offline */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2233,7 +3165,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/download": {
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md": {
         parameters: {
             query?: never;
             header?: never;
@@ -2241,31 +3173,372 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download repository file
-         * @description Download a file from the repository.
+         * Read workspace AGENTS.md
+         * @description Returns the workspace-level AGENTS.md, or null when it has not been written yet.
          */
         get: {
             parameters: {
-                query: {
-                    path: string;
-                };
+                query?: never;
                 header?: never;
                 path: {
                     agent_id: string;
                     workspace_id: string;
-                    repository_id: string;
                 };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Repository file download */
+                /** @description AGENTS.md */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/octet-stream": string;
+                        "application/json": {
+                            content: string | null;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        /**
+         * Write workspace AGENTS.md
+         * @description Store AGENTS.md for new sessions and push it to the runner when it is online.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        content: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            content: string | null;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/keys/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the current user's public key
+         * @description Public key of this user on the runner machine (one key per user per runner). Add it as a deploy key with write access.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            key_type: string;
+                            public_key: string;
+                            fingerprint: string;
+                            key_generated_at: string;
+                        };
+                    };
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/keys/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate the current user's key */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description New public key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            key_type: string;
+                            public_key: string;
+                            fingerprint: string;
+                            key_generated_at: string;
+                        };
+                    };
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/runners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List runners connected to this ZAI instance
+         * @description 运维排障用：返回当前进程里已连接的执行面及其上报的 connector / paseo 版本。需要 admin 令牌（ak-*）。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Connected runners */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runners: {
+                                runner_id: string;
+                                protocol: string;
+                                connector_version: string | null;
+                                paseo_version: string | null;
+                                providers: string[];
+                                connected_at: string;
+                                last_seen_at: string;
+                                online: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Admin token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the uncommitted diff */
+        get: {
+            parameters: {
+                query?: {
+                    repo_key?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Diff */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            diffs: {
+                                repo_key?: string | null;
+                                path: string;
+                                /** @enum {string} */
+                                status: "added" | "modified" | "deleted" | "renamed";
+                                diff: string;
+                            }[];
+                        };
                     };
                 };
                 /** @description Bad request */
@@ -2290,6 +3563,28 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
             };
         };
         put?: never;
@@ -2300,7 +3595,310 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/models": {
+    "/coding/sessions/{session_id}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit coding session changes
+         * @description Commit uncommitted changes in the session workspace. `message` defaults to the turn/session identifier.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        message?: string;
+                        title?: string;
+                        repo_key?: string;
+                        branch?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                            message: string;
+                            commit_sha?: string | null;
+                            repo_key?: string;
+                            branch?: string;
+                            pull_request_url?: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push coding session changes
+         * @description Push committed changes to the remote repository using the user's deploy key.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        message?: string;
+                        title?: string;
+                        repo_key?: string;
+                        branch?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                            message: string;
+                            commit_sha?: string | null;
+                            repo_key?: string;
+                            branch?: string;
+                            pull_request_url?: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/pull-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a pull request
+         * @description Push changes and open a pull request (requires git provider integration on the runner).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        message?: string;
+                        title?: string;
+                        repo_key?: string;
+                        branch?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                            message: string;
+                            commit_sha?: string | null;
+                            repo_key?: string;
+                            branch?: string;
+                            pull_request_url?: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/models": {
         parameters: {
             query?: never;
             header?: never;
@@ -2308,13 +3906,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List models
-         * @description List models currently available to the authenticated integration and external user. Use this before creating or updating a session with a specific model.
+         * List models available on the runner
+         * @description Return the model catalog discovered from the runner for a provider. Pass agent_id to select the runner bound to that agent.
          */
         get: {
             parameters: {
-                query?: {
-                    all?: "true" | "1";
+                query: {
+                    provider: string;
+                    agent_id?: string;
+                    runner_id?: string;
+                    refresh?: string;
                 };
                 header?: never;
                 path?: never;
@@ -2322,33 +3923,70 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Available models */
+                /** @description Model catalog */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
+                            provider: string;
+                            runner_id: string;
+                            default_model: string | null;
+                            cached: boolean;
                             models: {
-                                /** @description Model identifier. */
                                 id: string;
-                                /** @description OpenAI-compatible object type. */
-                                object?: string;
-                                /** @description Creation timestamp when provided by the upstream model registry. */
-                                created?: number;
-                                /** @description Owning provider or account when available. */
-                                owned_by?: string;
-                                /**
-                                 * @description Availability status. Included when requesting historical models with all=true.
-                                 * @enum {string}
-                                 */
-                                status?: "active" | "disabled" | "deleted";
+                                label: string;
+                                provider: string;
+                                is_default: boolean;
+                                context_window_max_tokens?: number | null;
+                                default_thinking_option_id?: string | null;
+                                description?: string | null;
+                                thinking_options?: {
+                                    id: string;
+                                    label: string;
+                                    is_default?: boolean;
+                                    description?: string | null;
+                                }[];
                             }[];
                         };
                     };
                 };
-                /** @description Server error */
-                500: {
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2399,7 +4037,7 @@ export interface paths {
                         "application/json": {
                             messages: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 session_id: string;
                                 external_user_id: string;
                                 /** @enum {string} */
@@ -2414,7 +4052,7 @@ export interface paths {
                                 };
                                 execution_summary?: {
                                     /** @enum {string} */
-                                    runtime?: "pi_coding_agent" | "executor";
+                                    runtime?: "pi_coding_agent" | "runner";
                                     /** @enum {string} */
                                     status?: "completed" | "failed";
                                     provider?: string;
@@ -2584,7 +4222,7 @@ export interface paths {
                             usage?: unknown;
                             execution_summary?: {
                                 /** @enum {string} */
-                                runtime?: "pi_coding_agent" | "executor";
+                                runtime?: "pi_coding_agent" | "runner";
                                 /** @enum {string} */
                                 status?: "completed" | "failed";
                                 provider?: string;
@@ -2732,7 +4370,7 @@ export interface paths {
                         "application/json": {
                             message: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 session_id: string;
                                 external_user_id: string;
                                 /** @enum {string} */
@@ -2747,7 +4385,7 @@ export interface paths {
                                 };
                                 execution_summary?: {
                                     /** @enum {string} */
-                                    runtime?: "pi_coding_agent" | "executor";
+                                    runtime?: "pi_coding_agent" | "runner";
                                     /** @enum {string} */
                                     status?: "completed" | "failed";
                                     provider?: string;
@@ -2926,7 +4564,7 @@ export interface paths {
                             /** @description Sessions returned for the current page. */
                             sessions: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 agent_id: string;
                                 external_user_id: string;
                                 title: string;
@@ -2938,11 +4576,6 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                                 custom_data?: unknown;
-                                /**
-                                 * @description Effective coding provider resolved for this session (explicit session value or global default).
-                                 * @enum {string}
-                                 */
-                                executor_provider?: "claude" | "codex" | "opencode";
                                 /** @description Session-level skill_id selection. Null means the session inherits all skills mounted on its agent. */
                                 skill_ids?: string[] | null;
                                 category?: string;
@@ -3021,7 +4654,7 @@ export interface paths {
                         "application/json": {
                             session: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 agent_id: string;
                                 external_user_id: string;
                                 title: string;
@@ -3033,11 +4666,6 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                                 custom_data?: unknown;
-                                /**
-                                 * @description Effective coding provider resolved for this session (explicit session value or global default).
-                                 * @enum {string}
-                                 */
-                                executor_provider?: "claude" | "codex" | "opencode";
                                 /** @description Session-level skill_id selection. Null means the session inherits all skills mounted on its agent. */
                                 skill_ids?: string[] | null;
                                 category?: string;
@@ -3092,12 +4720,7 @@ export interface paths {
                         prompt?: string | null;
                         /** @description Optional session-scoped business metadata. Set custom_data.repository_id to make future turns use a specific repository by default. */
                         custom_data?: unknown;
-                        /**
-                         * @description Change the session-level coding provider. The next turn runs with the new provider; the previous provider's native session is preserved and resumed if you switch back. When omitted the current provider is kept.
-                         * @enum {string}
-                         */
-                        executor_provider?: "claude" | "codex" | "opencode";
-                        /** @description Optional session-level skill_id list. Omit to keep the current selection unchanged. Set null to inherit all skills mounted on the agent. Set [] to disable all skills for this session. Set [skill_id...] to use exactly those active skills, which may include any active skill under the integration. */
+                        /** @description Optional session-level skill_id list. Omit to keep the current selection unchanged. Set null to inherit all skills mounted on the agent. Set [] to disable all skills for this session. Set [skill_id...] to use exactly those active skills, which may include any active skill under the app. */
                         skills?: string[] | null;
                     };
                 };
@@ -3306,13 +4929,11 @@ export interface paths {
         };
         /**
          * List session files
-         * @description List all files and directories inside the session working directory recursively.
+         * @description List all files and directories inside the session working directory recursively. This endpoint takes no query parameters.
          */
         get: {
             parameters: {
-                query?: {
-                    path?: string;
-                };
+                query?: never;
                 header?: never;
                 path: {
                     session_id: string;
@@ -3704,7 +5325,7 @@ export interface paths {
         };
         /**
          * List skills
-         * @description List all skills under the current integration.
+         * @description List all skills under the current app.
          */
         get: {
             parameters: {
@@ -3723,7 +5344,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             id: string;
-                            integration_id: string;
+                            app_id: string;
                             key: string;
                             name: string;
                             description?: string | null;
@@ -3741,7 +5362,7 @@ export interface paths {
         put?: never;
         /**
          * Create skill
-         * @description Create a skill record under the current integration.
+         * @description Create a skill record under the current app.
          */
         post: {
             parameters: {
@@ -3776,7 +5397,7 @@ export interface paths {
                         "application/json": {
                             skill: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -3929,7 +5550,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             id: string;
-                            integration_id: string;
+                            app_id: string;
                             key: string;
                             name: string;
                             description?: string | null;
@@ -3984,7 +5605,7 @@ export interface paths {
                         "application/json": {
                             skill: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -4049,7 +5670,7 @@ export interface paths {
                         "application/json": {
                             skill: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -4114,7 +5735,7 @@ export interface paths {
                         "application/json": {
                             skill: {
                                 id: string;
-                                integration_id: string;
+                                app_id: string;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -4405,28 +6026,13 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            id: string;
-                            integration_id: string;
-                            name: string;
-                            description?: string | null;
-                            embedding_model?: string | null;
-                            max_tokens_per_chunk: number;
-                            overlap_tokens: number;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            created_at?: string;
-                            updated_at?: string | null;
-                        }[];
+                        "application/json": components["schemas"]["MemoryCollection"][];
                     };
                 };
             };
         };
         put?: never;
-        /** Create a memory collection */
+        /** Create a memory collection (admin only) */
         post: {
             parameters: {
                 query?: never;
@@ -4436,13 +6042,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        name: string;
-                        description?: string | null;
-                        embedding_model?: string;
-                        max_tokens_per_chunk?: number;
-                        overlap_tokens?: number;
-                    };
+                    "application/json": components["schemas"]["MemoryCollectionCreateRequest"];
                 };
             };
             responses: {
@@ -4452,26 +6052,22 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            id: string;
-                            integration_id: string;
-                            name: string;
-                            description?: string | null;
-                            embedding_model?: string | null;
-                            max_tokens_per_chunk: number;
-                            overlap_tokens: number;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            created_at?: string;
-                            updated_at?: string | null;
-                        };
+                        "application/json": components["schemas"]["MemoryCollection"];
                     };
                 };
                 /** @description Bad request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4514,69 +6110,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            id: string;
-                            integration_id: string;
-                            name: string;
-                            description?: string | null;
-                            embedding_model?: string | null;
-                            max_tokens_per_chunk: number;
-                            overlap_tokens: number;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            created_at?: string;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-            };
-        };
-        /** Update a memory collection */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        name: string;
-                        description?: string | null;
-                        /** @enum {string} */
-                        status: "enabled" | "disabled" | "deleted";
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated collection */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            integration_id: string;
-                            name: string;
-                            description?: string | null;
-                            embedding_model?: string | null;
-                            max_tokens_per_chunk: number;
-                            overlap_tokens: number;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            created_at?: string;
-                            updated_at?: string | null;
-                        };
+                        "application/json": components["schemas"]["MemoryCollection"];
                     };
                 };
                 /** @description Bad request */
@@ -4592,8 +6126,57 @@ export interface paths {
                 };
             };
         };
+        /** Update a memory collection (admin only) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["MemoryCollectionUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated collection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryCollection"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
         post?: never;
-        /** Delete a memory collection */
+        /** Delete a memory collection (admin only) */
         delete: {
             parameters: {
                 query?: never;
@@ -4611,21 +6194,28 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": components["schemas"]["MemoryCollection"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": {
-                            id: string;
-                            integration_id: string;
-                            name: string;
-                            description?: string | null;
-                            embedding_model?: string | null;
-                            max_tokens_per_chunk: number;
-                            overlap_tokens: number;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            created_at?: string;
-                            updated_at?: string | null;
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
                         };
                     };
                 };
@@ -4647,7 +6237,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    type?: "text" | "markdown" | "document" | "web_page";
+                    type?: string;
                     keywords?: string;
                 };
                 header?: never;
@@ -4664,33 +6254,27 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": components["schemas"]["MemoryContent"][];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": {
-                            id: string;
-                            collection_id: string;
-                            integration_id: string;
-                            key?: string | null;
-                            attrs?: {
-                                [key: string]: unknown;
-                            } | null;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            /** @enum {string} */
-                            embedding_status: "pending" | "processing" | "completed" | "error";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            /** @enum {string} */
-                            content_type: "text" | "markdown" | "document" | "web_page";
-                            content: string;
-                            created_at?: string;
-                            updated_at?: string | null;
-                        }[];
+                            error: string;
+                        };
                     };
                 };
             };
         };
         put?: never;
-        /** Create or update memory content */
+        /**
+         * Create or update memory content (admin only)
+         * @description When `key` is supplied and content with that key already exists, the existing content is updated instead of creating a new one.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -4702,15 +6286,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        content: string;
-                        /** @enum {string} */
-                        content_type?: "text" | "markdown" | "document" | "web_page";
-                        key?: string | null;
-                        attrs?: {
-                            [key: string]: unknown;
-                        } | null;
-                    };
+                    "application/json": components["schemas"]["MemoryContentRequest"];
                 };
             };
             responses: {
@@ -4720,15 +6296,22 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            success: boolean;
-                            message: string;
-                            content_id?: string;
-                        };
+                        "application/json": components["schemas"]["MemoryContentActionResponse"];
                     };
                 };
                 /** @description Bad request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4746,7 +6329,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/memories/{id}/contents/batch": {
+    "/memories/{id}/contents-filter": {
         parameters: {
             query?: never;
             header?: never;
@@ -4755,10 +6338,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Create memory contents in batch
-         * @description Create up to 500 memory contents and enqueue their embedding jobs in one transaction.
-         */
+        /** Filter memory contents with advanced operators */
         post: {
             parameters: {
                 query?: never;
@@ -4770,29 +6350,17 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        contents: {
-                            content: string;
-                            /** @enum {string} */
-                            content_type?: "text" | "markdown" | "document" | "web_page";
-                            key?: string | null;
-                            attrs?: {
-                                [key: string]: unknown;
-                            } | null;
-                        }[];
-                    };
+                    "application/json": components["schemas"]["MemoryContentsFilterRequest"];
                 };
             };
             responses: {
-                /** @description Batch content result */
+                /** @description Memory contents */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            [key: string]: unknown;
-                        };
+                        "application/json": components["schemas"]["MemoryContent"][];
                     };
                 };
                 /** @description Bad request */
@@ -4840,67 +6408,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            id: string;
-                            collection_id: string;
-                            integration_id: string;
-                            key?: string | null;
-                            attrs?: {
-                                [key: string]: unknown;
-                            } | null;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            /** @enum {string} */
-                            embedding_status: "pending" | "processing" | "completed" | "error";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            /** @enum {string} */
-                            content_type: "text" | "markdown" | "document" | "web_page";
-                            content: string;
-                            created_at?: string;
-                            updated_at?: string | null;
-                        };
-                    };
-                };
-            };
-        };
-        /** Update memory content */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    content_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        content: string;
-                        /** @enum {string} */
-                        content_type?: "text" | "markdown" | "document" | "web_page";
-                        key?: string | null;
-                        attrs?: {
-                            [key: string]: unknown;
-                        } | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Content result */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            success: boolean;
-                            message: string;
-                            content_id?: string;
-                        };
+                        "application/json": components["schemas"]["MemoryContent"];
                     };
                 };
                 /** @description Bad request */
@@ -4916,8 +6424,61 @@ export interface paths {
                 };
             };
         };
+        /** Update memory content (admin only) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    content_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["MemoryContentRequest"];
+                };
+            };
+            responses: {
+                /** @description Content result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryContentActionResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
         post?: never;
-        /** Delete memory content */
+        /**
+         * Delete memory content (admin only)
+         * @description When `{content_id}` starts with `_`, the remainder is treated as a content key instead of an id.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -4936,15 +6497,97 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": components["schemas"]["MemoryContentActionResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": {
-                            success: boolean;
-                            message: string;
-                            content_id?: string;
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
                         };
                     };
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memories/{id}/contents/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create memory contents in batch (admin only) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["MemoryContentBatchRequest"];
+                };
+            };
+            responses: {
+                /** @description Batch content result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryBatchCreateResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4957,7 +6600,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List content chunks */
+        /** List content chunks (admin only) */
         get: {
             parameters: {
                 query?: never;
@@ -4976,13 +6619,29 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": components["schemas"]["MemoryContentChunk"][];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": {
-                            id: string;
-                            content: string;
-                            payload: {
-                                [key: string]: unknown;
-                            };
-                        }[];
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
                     };
                 };
             };
@@ -5016,14 +6675,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        query: string;
-                        min_similarity?: number;
-                        limit?: number;
-                        content_filter?: {
-                            [key: string]: unknown;
-                        };
-                    };
+                    "application/json": components["schemas"]["MemorySearchRequest"];
                 };
             };
             responses: {
@@ -5033,13 +6685,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            id: string;
-                            content: string;
-                            payload: {
-                                [key: string]: unknown;
-                            };
-                        }[];
+                        "application/json": components["schemas"]["MemorySearchChunk"][];
                     };
                 };
                 /** @description Bad request */
@@ -5082,14 +6728,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        query: string;
-                        min_similarity?: number;
-                        limit?: number;
-                        content_filter?: {
-                            [key: string]: unknown;
-                        };
-                    };
+                    "application/json": components["schemas"]["MemorySearchRequest"];
                 };
             };
             responses: {
@@ -5099,27 +6738,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            id: string;
-                            collection_id: string;
-                            integration_id: string;
-                            key?: string | null;
-                            attrs?: {
-                                [key: string]: unknown;
-                            } | null;
-                            /** @enum {string} */
-                            status: "enabled" | "disabled" | "deleted";
-                            /** @enum {string} */
-                            embedding_status: "pending" | "processing" | "completed" | "error";
-                            metadata: {
-                                [key: string]: unknown;
-                            };
-                            /** @enum {string} */
-                            content_type: "text" | "markdown" | "document" | "web_page";
-                            content: string;
-                            created_at?: string;
-                            updated_at?: string | null;
-                        }[];
+                        "application/json": components["schemas"]["MemoryContent"][];
                     };
                 };
                 /** @description Bad request */
@@ -5148,7 +6767,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get embedding queue status */
+        /** Get embedding queue status (admin only) */
         get: {
             parameters: {
                 query?: never;
@@ -5158,14 +6777,23 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Queue status */
+                /** @description Queue and worker status */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": components["schemas"]["EmbeddingQueueStatusResponse"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": {
-                            [key: string]: unknown;
+                            error: string;
                         };
                     };
                 };
@@ -5186,7 +6814,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List content embedding jobs */
+        /** List content embedding jobs (admin only) */
         get: {
             parameters: {
                 query?: never;
@@ -5205,9 +6833,1828 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": components["schemas"]["EmbeddingJob"][];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "application/json": {
-                            [key: string]: unknown;
-                        }[];
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/qa/pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List QA pairs
+         * @description List all non-deleted QA pairs of the current app.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description QA pairs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAPair"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a QA pair (upsert by key)
+         * @description Creates a QA pair. When `key` is supplied and a pair with that key already exists, the existing pair is updated (200) instead of creating a new one (201). Requires an embedding model available to the app, otherwise 400.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["QAPairCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description Existing pair updated by key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAPair"];
+                    };
+                };
+                /** @description Pair created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAPair"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/qa/pairs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a QA pair */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description QA pair */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAPair"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+            };
+        };
+        /** Update a QA pair */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["QAPairUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated pair */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAPair"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Soft-delete a QA pair */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deletion result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QADeleteResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/qa/batch/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Batch soft-delete QA pairs
+         * @description Deletes pairs matching any of the supplied conditions (`ids`, `keys`, `attrs_filter`) combined with OR logic. At least one condition is required. `attrs_filter` only supports exact value matches (no comparison operators).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["QABatchDeleteRequest"];
+                };
+            };
+            responses: {
+                /** @description Batch deletion result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QABatchDeleteResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/qa/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search matching QA pairs
+         * @description `attrs` supports comparison operators; requires an embedding model available to the app, otherwise 400.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["QASearchRequest"];
+                };
+            };
+            responses: {
+                /** @description Matching pairs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAMatchResult"][];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/qa/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the best matching QA pair
+         * @description Requires an embedding model available to the app, otherwise 400.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    min_similarity?: number | string;
+                    embedding_model?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Best match */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAMatchResult"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QAError"];
+                    };
+                };
+                /** @description No matching QA pair found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QANoMatch"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/files/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract text from an uploaded file
+         * @description multipart/form-data upload with a `file` field. The parser is selected from the file extension. Supported: pdf, docx, doc, txt, md, xlsx, xls, csv, pptx, html, htm, json, yaml, yml.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": components["schemas"]["FileExtractRequest"];
+                };
+            };
+            responses: {
+                /** @description Extracted content */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FileExtractResponse"];
+                    };
+                };
+                /** @description Missing or invalid file */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FileExtractError"];
+                    };
+                };
+                /** @description Parsing error or unsupported file type */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FileExtractError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List conversations
+         * @description List conversations of the authenticated external user, ordered by `updated_at` desc. Paged: `page` defaults to 1, `page_size` defaults to 20.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    category?: string;
+                    agent_id?: string;
+                    page?: number | string;
+                    page_size?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatConversation"][];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a conversation
+         * @description All body fields are optional. `settings.model` selects the model; `reference_settings` configures memory/QA retrieval.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ConversationCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description Created conversation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatConversation"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Forbidden: one or more memory collections are not valid for this app */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a conversation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatConversation"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        /** Update conversation title and custom data */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ConversationUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Update result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MessageActionResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete a conversation (soft delete) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Delete result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MessageActionResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List messages of a conversation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Messages */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatMessage"][];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Send a message and get the AI response
+         * @description `stream` defaults to true. With `tools` and default runtime-execute mode, `tool_bindings` is required.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ChatMessageCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description AI response。stream=true 时为 text/event-stream（每行 `data: {...}`, 以 `data: [DONE]` 结束）; stream=false 时为 JSON。 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                        "application/json": components["schemas"]["ChatMessageResult"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        /** Delete all messages of a conversation */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Delete result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MessageActionResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a message without building a conversation id
+         * @description Simplified endpoint: pass `conversation_id` to continue, or omit it to auto-create a conversation.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ChatMessageCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description AI response。stream=true 时为 text/event-stream（每行 `data: {...}`, 以 `data: [DONE]` 结束）; stream=false 时为 JSON。 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                        "application/json": components["schemas"]["ChatMessageResult"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}/messages/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single message */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    message_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Message */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatMessage"] & (Record<string, unknown> | null);
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete a single message */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    message_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Delete result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MessageActionResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/conversations/{id}/generate-title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate a title for the conversation */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Generated title */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GeneratedTitleResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List models owned by this app
+         * @description Only models whose ownership is registered to the authenticated app are returned. Ownership controls visibility and management only; whether an end user can call a model is decided by abilities. Requires an app admin token (ak-*).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description App-owned models */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            models: components["schemas"]["SettingsModel"][];
+                        };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Register a model with a dedicated OpenAI-compatible channel
+         * @description One-call registration of an upstream model: a dedicated OpenAI-compatible channel, the model, one ability and the app ownership are created in the same transaction. Each model gets exactly one channel. Replaying the same model_id is idempotent: existing fields are left untouched and only missing ownership / ability rows are recreated. Requires an app admin token (ak-*).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateSettingsModelRequest"];
+                };
+            };
+            responses: {
+                /** @description Registered model (created=false means this app had already registered it) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            model: components["schemas"]["SettingsModel"];
+                            /** @description Channel created for this model; null when the request was an idempotent replay and the channel is gone */
+                            channel_id: number | null;
+                            /** @description Whether any record was newly created */
+                            created: boolean;
+                        };
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Model not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description model_id already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/models/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a model owned by this app
+         * @description Returns 404 for models that do not exist or are not owned by this app. Requires an app admin token (ak-*).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Model details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            model: components["schemas"]["SettingsModel"];
+                        };
+                    };
+                };
+                /** @description Invalid model id */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Model not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Release this app's ownership of a model
+         * @description Removes the ownership row, deletes this app's ability rows for the model, and recycles the channel when it no longer serves any model. The model and channel records themselves are NOT deleted, because other apps may still own them; the platform cleans them up via /api. Requires an app admin token (ak-*).
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Ownership released */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                            model_id: string;
+                        };
+                    };
+                };
+                /** @description Invalid model id */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Model not found or not owned by this app */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Conflicting resource state */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Update model capability configuration
+         * @description Merges capabilities / features / chat_features into the existing config: omitted fields keep their current value and unrelated config keys are preserved. Requires an app admin token (ak-*).
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateSettingsModelRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated model */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            model: components["schemas"]["SettingsModel"];
+                        };
+                    };
+                };
+                /** @description Invalid model id or body */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Model not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List channels created by this app
+         * @description API keys are returned masked. Requires an app admin token (ak-*).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description App-owned channels */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            channels: components["schemas"]["SettingsChannel"][];
+                        };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rotate channel base_url / api_key
+         * @description Used for credential rotation only. Channels are shared by the models bound to them; changes affect all of them. Creating channels is done via POST /v1/zai/models. Requires an app admin token (ak-*).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateSettingsChannelRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated channel */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            channel: components["schemas"]["SettingsChannel"];
+                        };
+                    };
+                };
+                /** @description Validation failed or nothing to update */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Channel not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/signing_secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the ek-* signing secret for this app
+         * @description Returns this app's signing secret (`signing_secret`), the value used to sign ek-* (external user) tokens on the app side: md5(signing_secret + app_id + user_id + expired_time). Sensitive key material; reads are audit-logged. api_key is never returned. Requires an app admin token (ak-*).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Signing secret */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description App id */
+                            app_id: string;
+                            /** @description Signing secret for ek-* tokens */
+                            signing_secret: string;
+                            /** @description Token prefix produced with this secret */
+                            token_prefix: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description App has no signing secret configured */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/signing_secret/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regenerate the ek-* signing secret for this app
+         * @description Generates a new signing secret and persists it immediately. The previous secret is invalidated, so any ek-* tokens signed with it will stop verifying. The new secret can be read back at any time via GET /v1/zai/signing_secret. Generation is audit-logged. Requires an app admin token (ak-*).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Newly generated signing secret */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description App id */
+                            app_id: string;
+                            /** @description Signing secret for ek-* tokens */
+                            signing_secret: string;
+                            /** @description Token prefix produced with this secret */
+                            token_prefix: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Failed to regenerate the signing secret */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream persisted coding session events
+         * @description Persistent session SSE stream. Resume with after_seq; terminal turn events do not close the session stream. Heartbeat comments are ignored. Source: https://zai-zjy.sh.oop.cc/docs/zai/coding/events
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Replay events after this sequence, then follow new events. */
+                    after_seq?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description SSE frames contain full persisted events with seq, type, turn_id, payload and created_at. EOF ends this connection and does not imply turn success; no [DONE] sentinel is required. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
                     };
                 };
             };
@@ -5223,7 +8670,633 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        MemoryCollection: {
+            id: string;
+            app_id: string;
+            external_user_id?: string;
+            external_username?: string;
+            name: string;
+            description?: string;
+            embedding_model?: string;
+            max_tokens_per_chunk: number;
+            overlap_tokens: number;
+            /**
+             * @description Collection status
+             * @enum {string}
+             */
+            status: "enabled" | "disabled" | "deleted";
+            metadata: {
+                [key: string]: unknown;
+            };
+            created_at: string;
+            updated_at?: string;
+        };
+        MemoryCollectionCreateRequest: {
+            /** @description 必填。集合名称, 缺失时返回 400 `{"error":"name is required"}` */
+            name?: string;
+            /** @description 可选。集合描述, 不传时落库为 null */
+            description?: string | null;
+            /** @description 可选。不传时使用应用默认向量模型; 应用未配置向量模型时返回 400 */
+            embedding_model?: string;
+            /** @description 可选。默认 1024 */
+            max_tokens_per_chunk?: number | string;
+            /** @description 可选。默认 0 */
+            overlap_tokens?: number | string;
+        };
+        MemoryCollectionUpdateRequest: {
+            /** @description 必填。缺失时返回 400 `{"error":"name is required"}` */
+            name?: string;
+            /** @description 可选。不传时落库为 null */
+            description?: string | null;
+            /**
+             * @description 必填。缺失时返回 400 `{"error":"status is required"}`
+             * @enum {string}
+             */
+            status?: "enabled" | "disabled" | "deleted";
+        };
+        MemoryContent: {
+            id: string;
+            collection_id: string;
+            app_id: string;
+            external_user_id?: string;
+            external_username?: string;
+            key?: string | null;
+            attrs?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description Content status
+             * @enum {string}
+             */
+            status: "enabled" | "disabled" | "deleted";
+            /**
+             * @description Embedding processing status
+             * @enum {string}
+             */
+            embedding_status: "error" | "pending" | "processing" | "completed";
+            metadata: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Content type
+             * @enum {string}
+             */
+            content_type: "text" | "markdown";
+            content: string;
+            created_at: string;
+            updated_at?: string | null;
+            /** @description Present on embedding search results only */
+            similarity?: number;
+        };
+        MemoryContentsFilterRequest: {
+            /** @description Attribute filters with operators: $gt/$gte/$lt/$lte/$ne/$in/$nin/$contains/$startsWith/$endsWith/$regex/$exists */
+            attrs?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Filter by content type (exact match)
+             * @enum {string}
+             */
+            content_type?: "text" | "markdown";
+            /** @description Case-insensitive keyword search within content */
+            content_keywords?: string;
+        };
+        MemoryContentActionResponse: {
+            success: boolean;
+            message: string;
+            content_id?: string;
+        };
+        MemoryContentRequest: {
+            /** @description 必填。缺失时返回 400 `{"error":"content is required"}` */
+            content?: string;
+            /**
+             * @description 可选。默认 `text`
+             * @enum {string}
+             */
+            content_type?: "text" | "markdown";
+            /** @description 可选。提供时按 key 做 upsert: 同 key 内容已存在则更新 */
+            key?: string | null;
+            /** @description 可选。内容属性, 可用于高级过滤 */
+            attrs?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        MemoryBatchCreateResponse: {
+            success: boolean;
+            message: string;
+            content_ids: string[];
+        };
+        MemoryContentBatchRequest: {
+            /** @description 必填。1 到 500 项; 非数组/空数组/超过 500 项分别返回 400 */
+            contents?: components["schemas"]["MemoryContentRequest"][];
+        };
+        MemoryContentChunk: {
+            id: string;
+            content: string;
+            payload: {
+                [key: string]: unknown;
+            };
+        };
+        MemorySearchChunk: {
+            collection_id: string;
+            content_id: string;
+            /** @enum {string} */
+            content_type: "text" | "markdown";
+            content_key: string | null;
+            content_attrs: {
+                [key: string]: unknown;
+            };
+            chunk_id: string;
+            chunk_index: number;
+            chunk_content: string;
+            similarity: number;
+        };
+        MemorySearchRequest: {
+            /** @description 必填。检索文本, 缺失时返回 400 `{"error":"query is required"}` */
+            query?: string;
+            /** @description 可选。最低相似度, 默认 0.7 */
+            min_similarity?: number | string;
+            /** @description 可选。返回条数, 默认 10 */
+            limit?: number | string;
+            /** @description 可选。支持 `content_type`、`content_keywords`、`attrs` */
+            content_filter?: {
+                [key: string]: unknown;
+            };
+        };
+        EmbeddingQueueStats: {
+            pending: number;
+            processing: number;
+            completed: number;
+            failed: number;
+            cancelled: number;
+            total: number;
+            byTarget: {
+                memory: {
+                    pending: number;
+                    processing: number;
+                    completed: number;
+                    failed: number;
+                    cancelled: number;
+                };
+                qa: {
+                    pending: number;
+                    processing: number;
+                    completed: number;
+                    failed: number;
+                    cancelled: number;
+                };
+            };
+        };
+        EmbeddingWorkerStatus: {
+            isRunning: boolean;
+            isStopping: boolean;
+            pollIntervalMs: number;
+        };
+        EmbeddingQueueStatusResponse: {
+            queue: components["schemas"]["EmbeddingQueueStats"];
+            worker: components["schemas"]["EmbeddingWorkerStatus"];
+        };
+        EmbeddingJob: {
+            id: string;
+            app_id: string;
+            /** @enum {string} */
+            target_type: "memory" | "qa";
+            target_id: string;
+            /** @enum {string} */
+            action: "embed" | "delete";
+            /** @enum {string} */
+            status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+            priority: number;
+            retry_count: number;
+            max_retries: number;
+            payload: {
+                [key: string]: unknown;
+            } | null;
+            error_message: string | null;
+            started_at: string | null;
+            completed_at: string | null;
+            created_at: string;
+            updated_at: string | null;
+        };
+        QAPair: {
+            /** @description QA pair id */
+            id: string;
+            /** @description Owning app id */
+            app_id: string;
+            /** @description Main question */
+            question: string;
+            /** @description Answer content */
+            answer: string;
+            /** @description Alternative phrasings used to improve match rate */
+            additional_questions: string[];
+            /** @description Custom attributes for categorization and filtering */
+            attrs?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Caller-defined unique key enabling upsert */
+            key?: string | null;
+            /** @description Embedding model used for this pair */
+            embedding_model?: string | null;
+            /**
+             * @description QA pair status
+             * @enum {string}
+             */
+            status: "enabled" | "disabled" | "deleted";
+            /** @description Creation timestamp */
+            created_at: string;
+            /** @description Last update timestamp */
+            updated_at?: string | null;
+        };
+        QAError: {
+            /** @description Error message */
+            error: string;
+        };
+        QAPairCreateRequest: {
+            /** @description 必填。主问题 */
+            question?: string;
+            /** @description 必填。答案内容 */
+            answer?: string;
+            /** @description 可选。同义问法, 用于提升命中率 */
+            additional_questions?: string[];
+            /** @description 可选。自定义属性, 用于分类与过滤 */
+            attrs?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description 可选。提供时按 key 做 upsert */
+            key?: string | null;
+            /** @description 可选。不传时使用应用默认向量模型 */
+            embedding_model?: string | null;
+        };
+        QAPairUpdateRequest: {
+            /** @description 必填。主问题 */
+            question?: string;
+            /** @description 必填。答案内容 */
+            answer?: string;
+            additional_questions?: string[];
+            attrs?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * @description 可选。默认 enabled
+             * @enum {string}
+             */
+            status?: "enabled" | "disabled" | "deleted";
+            embedding_model?: string | null;
+        };
+        QADeleteResponse: {
+            /** @description Whether the pair was deleted */
+            success: boolean;
+        };
+        QABatchDeleteResponse: {
+            /** @description Number of QA pairs deleted */
+            deleted_count: number;
+            /** @description Ids of the deleted pairs */
+            deleted_ids: string[];
+        };
+        QABatchDeleteRequest: {
+            /** @description 按 id 删除 */
+            ids?: string[];
+            /** @description 按 key 删除 */
+            keys?: string[];
+            /** @description 按属性等值匹配删除; 多个属性之间为 OR, 不支持比较操作符 */
+            attrs_filter?: {
+                [key: string]: unknown;
+            };
+        };
+        QAMatchResult: {
+            /** @description QA pair id */
+            id: string;
+            /** @description Main question of the matched pair */
+            question: string;
+            /** @description Answer content */
+            answer: string;
+            /** @description Custom attributes of the matched pair */
+            attrs?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Which question (main or additional) was matched */
+            matched_question: string;
+            /** @description Similarity score of the match */
+            similarity: number;
+        };
+        QASearchRequest: {
+            /** @description 必填。检索文本 */
+            query?: string;
+            /** @description 可选。默认 0.7 */
+            min_similarity?: number | string;
+            /** @description 可选。默认 10 */
+            limit?: number | string;
+            /** @description 可选。属性过滤, 支持比较操作符 */
+            attrs?: {
+                [key: string]: unknown;
+            };
+            embedding_model?: string | null;
+        };
+        QANoMatch: {
+            /** @description Error message */
+            error: string;
+            /** @description Always null: no pair matched */
+            match: null;
+        };
+        FileExtractResponse: {
+            /** @description Extracted text content, sanitized for UTF-8 storage */
+            content: string;
+            /** @description Parser-specific metadata; structure varies by file type (pdf / excel / word / json / yaml / html / text) */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        FileExtractError: {
+            error: string;
+        };
+        FileExtractRequest: {
+            /**
+             * Format: binary
+             * @description 必填。待解析的文件（multipart/form-data 的 `file` 字段）; 缺失时返回 400
+             */
+            file?: string;
+        };
+        /** @description Resolved agent summary (present on get/create) */
+        ConversationAgent: {
+            id: string;
+            name: string;
+            type?: string;
+            is_default?: boolean;
+            status?: string;
+            config?: {
+                [key: string]: unknown;
+            };
+        };
+        ConversationSettings: {
+            /** @description Model id used by this conversation */
+            model: string;
+            /** @description Sampling temperature */
+            temperature: number;
+            /** @description Maximum completion tokens */
+            max_tokens: number;
+            /** @description Nucleus sampling parameter */
+            top_p: number;
+            /** @description Frequency penalty */
+            frequency_penalty: number;
+            /** @description Presence penalty */
+            presence_penalty: number;
+            /** @description System prompt */
+            prompt: string | null;
+            /** @description Number of history messages included in context (default 10) */
+            history_messages_count: number;
+        };
+        ConversationReferenceSettings: {
+            memories?: {
+                collections?: string[];
+                content_filter?: {
+                    [key: string]: unknown;
+                };
+                min_similarity?: number;
+                limit?: number;
+                unmatch_message?: string | null;
+            };
+            qa?: {
+                enabled: boolean;
+                min_similarity?: number;
+                attrs_filter?: {
+                    [key: string]: unknown;
+                };
+                unmatch_message?: string | null;
+            };
+        };
+        ChatConversation: {
+            /** @description Conversation id */
+            id: string;
+            app_id: string;
+            /** @description Agent (assistant) id this conversation belongs to */
+            agent_id: string;
+            agent?: components["schemas"]["ConversationAgent"];
+            external_user_id: string;
+            external_username?: string;
+            title: string;
+            description?: string;
+            settings: components["schemas"]["ConversationSettings"];
+            reference_settings: components["schemas"]["ConversationReferenceSettings"];
+            metadata: {
+                [key: string]: unknown;
+            };
+            custom_data: {
+                [key: string]: unknown;
+            };
+            skill_ids?: string[] | null;
+            category?: string;
+            /**
+             * @description Conversation status
+             * @enum {string}
+             */
+            status: "active" | "archived" | "deleted" | "suspended";
+            created_at: string;
+            updated_at: string;
+            context_reset_message_id?: string | null;
+        };
+        ChatError: {
+            /** @description Error message */
+            error: string;
+        };
+        ConversationCreateRequest: {
+            /** @description 会话标题; 不传时使用默认标题 */
+            title?: string | null;
+            settings?: components["schemas"]["ConversationSettings"] & unknown;
+            reference_settings?: components["schemas"]["ConversationReferenceSettings"] & unknown;
+            /** @description 业务元数据, 原样存储并随会话返回 */
+            custom_data?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description 会话分类, 默认 `chat` */
+            category?: string;
+            /** @description 关联的智能体 id; 不传时使用应用默认智能体 */
+            agent_id?: string;
+        };
+        MessageActionResponse: {
+            /** @description Result message */
+            message: string;
+        };
+        ConversationUpdateRequest: {
+            title?: string | null;
+            custom_data?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        ChatMessageResult: {
+            content?: string | null;
+            model?: string;
+            finish_reason?: string | null;
+            /** @description 仅当模型决定调用工具时出现（schema-only 模式或 runtime 透传） */
+            tool_calls?: {
+                [key: string]: unknown;
+            }[];
+            usage?: {
+                [key: string]: unknown;
+            } | null;
+            execution_summary?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        ChatMessageCreateRequest: {
+            /** @description 用户消息文本; 与 attachments / messages 至少提供一个 */
+            content?: string | null;
+            /** @description 附件数组, 例如 `{ type: "image", url: "..." }` */
+            attachments?: {
+                [key: string]: unknown;
+            }[];
+            /** @description 是否流式返回, 默认 true */
+            stream?: boolean;
+            /** @description 指定本次调用挂载的技能 id; 未挂载到该会话的智能体上时返回 404 */
+            skill_id?: string;
+            /** @description OpenAI 格式的 tool 定义数组 */
+            tools?: {
+                [key: string]: unknown;
+            }[];
+            /** @description `runtime-execute` 模式下传了 tools 时必填: 工具名到执行方式的绑定 */
+            tool_bindings?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description 默认 runtime-execute; 未显式指定且只传了 tools 时自动降级为 schema-only
+             * @enum {string}
+             */
+            tool_execution_mode?: "runtime-execute" | "schema-only" | "runtime-orchestrate";
+            /** @description 追加到上下文的 OpenAI 格式消息 */
+            messages?: {
+                [key: string]: unknown;
+            }[];
+            custom_data?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description 仅 POST /chat/conversation: 续接已有会话; 不传则自动创建 */
+            conversation_id?: string;
+            /** @description 自动创建会话时的标题 */
+            title?: string | null;
+            settings?: components["schemas"]["ConversationSettings"];
+            reference_settings?: components["schemas"]["ConversationReferenceSettings"];
+            category?: string;
+            agent_id?: string;
+        };
+        ChatMessage: {
+            /** @description Message id */
+            id: string;
+            conversation_id: string;
+            app_id: string;
+            external_user_id: string;
+            parent_id?: string | null;
+            /**
+             * @description Message role
+             * @enum {string}
+             */
+            role: "user" | "assistant" | "system" | "tool";
+            content: string;
+            /** @description 内容类型, 例如 markdown / text / html / json */
+            content_type?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            custom_data: {
+                [key: string]: unknown;
+            };
+            attachments: {
+                [key: string]: unknown;
+            }[];
+            /** @description 多模态内容分片 */
+            content_parts?: {
+                [key: string]: unknown;
+            }[];
+            /** @description 本次执行的耗时 / 工具 / 引用统计, 由运行时写入 */
+            execution_summary?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description 上游模型原始响应 */
+            ai_response?: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            status?: "pending" | "sending" | "sent" | "failed" | "deleted" | "moderated";
+            created_at?: string;
+            updated_at?: string | null;
+        };
+        GeneratedTitleResponse: {
+            /** @description Generated conversation title */
+            title: string;
+        };
+        SettingsModel: {
+            /** @description Model record id in llm_models */
+            id: number;
+            /** @description Model identifier, also used as the upstream model name */
+            model_id: string;
+            /** @description Display name */
+            name: string;
+            /**
+             * @description Model capability type: 'chat' or 'embeddings'; null when unset
+             * @enum {string|null}
+             */
+            model_type: "chat" | "embeddings" | null;
+            /** @description Creation timestamp */
+            created_at: string;
+        };
+        SettingsError: {
+            /** @description Error message */
+            error: string;
+        };
+        CreateSettingsModelRequest: {
+            /** @description Model identifier. Must match the real upstream model name and only contain letters, digits, '.', '_', ':' and '-' */
+            model_id: string;
+            /** @description Display name; defaults to model_id */
+            name?: string;
+            /**
+             * @description Channel type; only 'openai' is supported (default)
+             * @enum {string}
+             */
+            channel_type?: "openai";
+            /**
+             * @description Model capability type: 'chat' (default) or 'embeddings'. Use 'embeddings' for embedding models so the embedding capability config is applied
+             * @enum {string}
+             */
+            model_type?: "chat" | "embeddings";
+            /** @description Upstream OpenAI-compatible base URL; public internet addresses only */
+            base_url: string;
+            /** @description Upstream API key; stored encrypted and never returned in plaintext */
+            api_key: string;
+        };
+        UpdateSettingsModelRequest: {
+            /** @description Model capabilities, e.g. text.chat / text.embeddings */
+            capabilities?: string[];
+            /** @description Model features, e.g. chat / reasoning / function-calling */
+            features?: string[];
+            chat_features?: {
+                /** @enum {string} */
+                function_calling?: "supported" | "unsupported" | "unknown";
+            };
+        };
+        SettingsChannel: {
+            /** @description Channel id */
+            id: number;
+            /** @description Channel type; 1 = OpenAI compatible */
+            type: number;
+            /** @description Channel display name */
+            name: string | null;
+            /** @description Upstream base URL */
+            base_url: string | null;
+            /** @description Model ids bound to this channel */
+            models: string[];
+            /** @description Whether the channel is enabled */
+            enabled: boolean;
+            /** @description Masked API key; plaintext is never returned */
+            key: string;
+            /** @description Creation timestamp */
+            created_at: string;
+        };
+        UpdateSettingsChannelRequest: {
+            /** @description New upstream base URL */
+            base_url?: string;
+            /** @description New upstream API key */
+            api_key?: string;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;

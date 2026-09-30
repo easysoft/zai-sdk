@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
-import {createZAIClient, createZAITokenProvider, ZAIClientError} from '../src/index.js';
+import {createZAIClient, createZAITokenProvider, ZAIClientError, type AgentsListResponse} from '../src/index.js';
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -20,28 +20,33 @@ test('live ZAI authentication renewal, session, messages, SSE and files', {timeo
   const liveUrl = new URL(required('TEST_ZAI_BASE_URL'));
   // Existing local fixtures may contain only the server origin. Keep this
   // compatibility adapter outside the public SDK's explicit API-root contract.
-  if (liveUrl.pathname === '/') liveUrl.pathname = '/v8';
+  if (liveUrl.pathname === '/') liveUrl.pathname = '/v1/zai';
   const baseUrl = liveUrl.href;
   const credentials = {appID: required('TEST_ZAI_APP_ID'), appKey: required('TEST_ZAI_APP_KEY'), userID: required('TEST_ZAI_USER_ID')};
-  const client = createZAIClient({baseUrl, getToken: createZAITokenProvider({credentials})});
+  const client = createZAIClient({baseUrl, auth: {mode: 'auto', ...credentials}});
   const requestOptions = () => ({signal: AbortSignal.timeout(30_000)});
   let sessionID: string | undefined;
   let failure: unknown;
   try {
-    const shortProvider = createZAITokenProvider({credentials, expiresInSeconds: 5, refreshBeforeSeconds: 3});
-    const sentTokens: string[] = [];
-    const renewalClient = createZAIClient({baseUrl, getToken: shortProvider, fetch: async request => {
-      sentTokens.push(new Headers(request instanceof Request ? request.headers : undefined).get('authorization') ?? '');
-      return fetch(request);
-    }});
-    const {agents} = await renewalClient.agents.list(requestOptions());
-    await delay(2200);
-    const {models} = await renewalClient.models.list(undefined, requestOptions());
-    assert.ok(Array.isArray(models), 'Model listing must return an array.');
-    assert.ok(sentTokens.length === 2 && sentTokens.every(Boolean), 'Both live requests must carry authorization.');
-    assert.ok(sentTokens[0] !== sentTokens[1], 'The next live request must use a renewed token.');
-    sentTokens.length = 0;
-    t.diagnostic('Authenticated reads succeeded across the token renewal boundary.');
+    let agents: AgentsListResponse['agents'] = [];
+    for (const tokenType of ['admin', 'user'] as const) {
+      const shortProvider = createZAITokenProvider({credentials, expiresInSeconds: 5, refreshBeforeSeconds: 3,
+        ...(tokenType === 'user' ? {tokenType, baseUrl} : {tokenType})});
+      const sentTokens: string[] = [];
+      const renewalClient = createZAIClient({baseUrl, getToken: shortProvider, fetch: async request => {
+        sentTokens.push(new Headers(request instanceof Request ? request.headers : undefined).get('authorization') ?? '');
+        return fetch(request);
+      }});
+      ({agents} = await renewalClient.agents.list(requestOptions()));
+      await delay(2200);
+      await renewalClient.agents.list(requestOptions());
+      assert.ok(sentTokens.length === 2 && sentTokens.every(token => token.startsWith(tokenType === 'admin' ? 'Bearer ak-' : 'Bearer ek-')), 'Both live reads must carry the selected token type.');
+      assert.notEqual(sentTokens[0], sentTokens[1], 'The server must accept a renewed token.');
+      sentTokens.length = 0;
+      if (tokenType === 'admin') await renewalClient.settings.models.list(requestOptions());
+      else await assert.rejects(renewalClient.settings.models.list(requestOptions()), error => error instanceof ZAIClientError && error.status === 403);
+      t.diagnostic('Authenticated reads and model-list permissions succeeded for ' + tokenType + ' tokens.');
+    }
 
     const explicitAgentID = process.env.TEST_ZAI_AGENT_ID?.trim();
     const eligible = agents.filter(agent => agent.status === 'active' && agent.type === 'custom');
@@ -82,7 +87,7 @@ test('live ZAI authentication renewal, session, messages, SSE and files', {timeo
     const path = `sdk-test/${randomUUID()}.txt`;
     const content = 'ZAI SDK live test — 你好\n';
     await client.sessions.uploadFile(sessionID, {path, file: {blob: new Blob([content], {type: 'text/plain'}), filename: 'sdk-test.txt'}}, requestOptions());
-    await client.sessions.listFiles(sessionID, undefined, requestOptions());
+    await client.sessions.listFiles(sessionID, requestOptions());
     assert.equal(await (await client.sessions.downloadFile(sessionID, {path}, requestOptions())).text(), content);
     const reset = await client.sessions.resetContext(sessionID, requestOptions());
     assert.ok(typeof reset.message === 'string', 'Context reset must report a result.');

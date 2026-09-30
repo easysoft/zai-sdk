@@ -5,7 +5,7 @@ import {ZAIClientError} from '../src/errors.js';
 import {createTransport} from '../src/transport.js';
 import type {CreateZAIClientOptions} from '../src/types.js';
 
-const baseUrl = 'https://zai.test/v8';
+const baseUrl = 'https://zai.test/v1/zai';
 const defaults = {baseUrl, getToken: () => 'token'};
 const ok = () => Response.json({ok: false, future: {preserved: true}});
 const deferred = <T>() => {
@@ -24,7 +24,7 @@ describe('transport configuration and request construction', () => {
     },
   );
 
-  it.each(['ftp://zai.test/v8', 'https://user:secret@zai.test/v8', 'https://zai.test/v8?token=bad', 'https://zai.test/v8#hash', 'not a URL'])(
+  it.each(['ftp://zai.test/v1/zai', 'https://user:secret@zai.test/v1/zai', 'https://zai.test/v1/zai?token=bad', 'https://zai.test/v1/zai#hash', 'not a URL'])(
     'rejects unsupported API root %s', root => {
       expect(() => createZAIClient({...defaults, baseUrl: root})).toThrow(expect.objectContaining({code: 'invalid-input'}));
     },
@@ -33,10 +33,10 @@ describe('transport configuration and request construction', () => {
   it('resolves a relative API root against the browser location', async () => {
     vi.stubGlobal('location', {href: 'https://browser.test/dashboard'});
     const fetcher = vi.fn<typeof fetch>(async input => {
-      expect((input as Request).url).toBe('https://browser.test/v8/agents');
+      expect((input as Request).url).toBe('https://browser.test/v1/zai/agents');
       return ok();
     });
-    const client = createZAIClient({...defaults, baseUrl: '/v8///', fetch: fetcher});
+    const client = createZAIClient({...defaults, baseUrl: '/v1/zai///', fetch: fetcher});
     await client.agents.list();
   });
 
@@ -104,7 +104,61 @@ describe('transport configuration and request construction', () => {
   });
 });
 
+describe('explicit token permission callbacks', () => {
+  it('routes concurrent requests through independent cached admin and user providers', async () => {
+    const expiresAt = Math.floor(Date.now() / 1000) + 1000;
+    const fetchAdminToken = vi.fn(async () => ({token: 'ak-backend', expiresAt}));
+    const fetchUserToken = vi.fn(async () => ({token: 'ek-backend', expiresAt}));
+    const adminProvider = createZAITokenProvider({fetchToken: fetchAdminToken});
+    const userProvider = createZAITokenProvider({fetchToken: fetchUserToken});
+    const getToken = vi.fn(async (admin: boolean) => admin ? adminProvider() : userProvider());
+    const requests: Request[] = [];
+    const client = createZAIClient({baseUrl, getToken, fetch: async input => {
+      const request = input as Request;
+      requests.push(request);
+      const path = new URL(request.url).pathname;
+      const admin = path.endsWith('/models') || path.endsWith('/memories');
+      expect(request.headers.get('authorization')).toBe(admin ? 'Bearer ak-backend' : 'Bearer ek-backend');
+      return ok();
+    }});
+    await Promise.all([
+      client.agents.list(), client.memories.create({name: 'test'}),
+      client.settings.models.list(), client.messages.send('session', {content: [{type: 'input_text', text: 'hello'}]}),
+    ]);
+    expect(getToken.mock.calls).toEqual([[false], [true], [true], [false]]);
+    expect(fetchAdminToken).toHaveBeenCalledTimes(1);
+    expect(fetchUserToken).toHaveBeenCalledTimes(1);
+    expect(requests).toHaveLength(4);
+  });
+
+  it.each([
+    {status: 401, admin: false}, {status: 403, admin: false},
+    {status: 401, admin: true}, {status: 403, admin: true},
+  ])('does not reacquire or replay after HTTP $status (admin=$admin)', async ({status, admin}) => {
+    // Even for an admin-only operation, the SDK does not reinterpret or upgrade this opaque ek.
+    const getToken = vi.fn(() => 'ek-only');
+    const fetcher = vi.fn<typeof fetch>(async input => {
+      expect((input as Request).headers.get('authorization')).toBe('Bearer ek-only');
+      return Response.json({error: 'Forbidden'}, {status});
+    });
+    const client = createZAIClient({baseUrl, getToken, fetch: fetcher});
+    await expect(admin ? client.settings.models.list() : client.agents.list()).rejects.toMatchObject({code: 'authentication', status});
+    expect(getToken.mock.calls).toEqual([[admin]]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('upload and binary protocols', () => {
+  it.each([{}, {file: new Blob(['extracted'])}])('sends file-only multipart without inventing a required path', async body => {
+    const transport = createTransport({...defaults, fetch: async input => {
+      const form = await (input as Request).formData();
+      expect(form.has('path')).toBe(false);
+      if ('file' in body) expect(await (form.get('file') as File).text()).toBe('extracted');
+      else expect(form.has('file')).toBe(false);
+      return Response.json({content: ''});
+    }});
+    await transport.request({method: 'post', path: '/files/extract', body, encoding: 'file'});
+  });
   it.each([
     [new File(['contents'], 'source.txt', {type: 'text/plain'}), 'source.txt'],
     [new Blob(['contents'], {type: 'text/plain'}), 'blob'],

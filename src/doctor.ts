@@ -7,7 +7,7 @@ export interface ZAIDoctorOptions extends ZAIRequestOptions {
   chat?: boolean;
   /** An active custom Agent. Defaults to the default active custom Agent, then the first available one. */
   agentId?: string;
-  /** Optional available model ID; otherwise the server selects its default. */
+  /** Model name passed to an enabled chat probe; otherwise the server selects its default. */
   model?: string;
   /** Timeout per request, including cleanup. Defaults to 30,000 milliseconds. */
   timeoutMs?: number;
@@ -16,7 +16,7 @@ export interface ZAIDoctorOptions extends ZAIRequestOptions {
 }
 
 export interface ZAIDoctorDetail {
-  type: 'config' | 'httpProtocol' | 'server' | 'chatModels' | 'agents' | 'chat' | 'cleanup';
+  type: 'config' | 'httpProtocol' | 'server' | 'agents' | 'chat' | 'cleanup';
   name: string;
   pass: boolean;
   message: string;
@@ -44,7 +44,7 @@ function failure(type: ZAIDoctorDetail['type'], name: string, message: string, e
 
 /** Internal implementation shared by client.doctor; uses the client's transport and token provider. */
 export async function runZAIDoctor(
-  client: Pick<ZAIClient, 'agents' | 'models' | 'sessions' | 'messages'>,
+  client: Pick<ZAIClient, 'agents' | 'sessions' | 'messages'>,
   baseUrl: string,
   options: ZAIDoctorOptions = {},
 ): Promise<ZAIDoctorResult> {
@@ -89,7 +89,7 @@ export async function runZAIDoctor(
   try {
     const response = await client.agents.list(requestOptions());
     if (!response || !Array.isArray(response.agents) || response.agents.some(agent => !agent
-      || !validId(agent.id) || !['system', 'custom', 'executor'].includes(agent.type)
+      || !validId(agent.id) || !['system', 'custom', 'runner'].includes(agent.type)
       || !['active', 'disabled', 'deleted'].includes(agent.status))) {
       throw new ZAIClientError('invalid-response', 'Invalid agent list response.');
     }
@@ -101,20 +101,6 @@ export async function runZAIDoctor(
   }
   add(serverDetail);
 
-  let modelsDetail: ZAIDoctorDetail;
-  try {
-    const {models} = await client.models.list(undefined, requestOptions());
-    if (models.some(model => !validId(model.id))) throw new ZAIClientError('invalid-response', 'Invalid model ID in the model list.');
-    const available = models.filter(model => model.status === undefined || model.status === 'active');
-    const pass = options.model === undefined ? available.length > 0 : available.some(model => model.id === options.model);
-    modelsDetail = {type: 'chatModels', name: 'Chat models', pass, message: pass
-      ? `${available.length} model(s) available.`
-      : options.model === undefined ? 'No available chat models found.' : 'The requested model is not available.'};
-  } catch (error) {
-    modelsDetail = failure('chatModels', 'Chat models', 'Unable to read available models.', error);
-  }
-  add(modelsDetail);
-
   const eligible = agents.filter(agent => agent.status === 'active' && agent.type === 'custom');
   const agent = options.agentId === undefined
     ? eligible.find(agent => agent.is_default) ?? eligible[0]
@@ -123,7 +109,7 @@ export async function runZAIDoctor(
   add({type: 'agents', name: 'Chat agents', pass: !!agent, message: agent
     ? 'An active custom Agent is available.'
     : options.agentId === undefined ? 'No active custom Agent found.' : 'The requested Agent is not an active custom Agent.'});
-  if (!options.chat || !modelsDetail.pass || !agent) return finish();
+  if (!options.chat || !agent) return finish();
 
   // Keep callback delivery inside the cleanup boundary, but outside request catches.
   try {

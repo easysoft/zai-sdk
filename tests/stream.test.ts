@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest';
 import {ZAIClientError} from '../src/errors.js';
-import {parseZAIStream, type ZAIStreamEvent} from '../src/stream.js';
+import {parseZAICodingStream, parseZAIStream, type ZAIStreamEvent} from '../src/stream.js';
 
 const encoder = new TextEncoder();
 const done = 'data: [DONE]\n\n';
@@ -31,6 +31,57 @@ async function collect(stream: AsyncIterable<ZAIStreamEvent>) {
   for await (const event of stream) result.push(event);
   return result;
 }
+
+describe('persistent Coding SSE', () => {
+  const event = {seq: 1, type: 'turn.completed', turn_id: 'turn-1', payload: {error: null, text: '你好😀'}, created_at: '2026-09-29', future: true};
+  const frame = (data: typeof event) => `id: ${data.seq}\nevent: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`;
+
+  it('keeps reading after each turn terminal event and ends at EOF without DONE', async () => {
+    const events = ['turn.completed', 'turn.failed', 'turn.canceled', 'turn.started'].map((type, index) => ({...event, type, seq: index + 1, payload: {...event.payload, error: index === 1 ? {message: 'model failed'} : null}}));
+    const bytes = encoder.encode(': connected\n\n' + events.map(data => frame(data as typeof event)).join(': ping\n\n'));
+    const {response} = source(Array.from(bytes, byte => Uint8Array.of(byte)), {close: true});
+    const received = await collect(parseZAICodingStream(response));
+    expect(received).toEqual(events.map(data => ({type: 'data', id: String(data.seq), event: data.type, rawData: JSON.stringify(data), data})));
+    expect(response.body?.locked).toBe(false);
+  });
+
+  it.each([null, {}, {...event, seq: '1'}, {...event, type: 1}, {...event, turn_id: 1}, {...event, payload: null}, {...event, payload: []}, {...event, created_at: 1}])('rejects an invalid Coding envelope %j', async data => {
+    const {response, cancel} = source([`data: ${JSON.stringify(data)}\n\n`]);
+    await expect(collect(parseZAICodingStream(response))).rejects.toMatchObject({code: 'invalid-response'});
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows null turn IDs and preserves unknown business error fields', async () => {
+    const data = {...event, turn_id: null, error: {future: 'business metadata'}};
+    const {response} = source([`data: ${JSON.stringify(data)}\n\n`], {close: true});
+    expect(await collect(parseZAICodingStream(response))).toMatchObject([{type: 'data', data}]);
+  });
+
+  it('reports channel error and rejects a message-only completion sentinel', async () => {
+    for (const text of ['event: error\ndata: {"message":"runner offline"}\n\n', done]) {
+      const {response, cancel} = source([text]);
+      await expect(collect(parseZAICodingStream(response))).rejects.toMatchObject({code: 'invalid-response'});
+      expect(cancel).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('releases a persistent connection on early return and on abort', async () => {
+    const first = source([frame(event)]);
+    for await (const value of parseZAICodingStream(first.response)) {
+      expect(value.data.seq).toBe(1);
+      break;
+    }
+    expect(first.cancel).toHaveBeenCalledTimes(1);
+    const second = source();
+    const controller = new AbortController();
+    const stream = parseZAICodingStream(second.response, controller.signal);
+    const pending = stream.next();
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({code: 'aborted'});
+    expect(second.cancel).toHaveBeenCalledTimes(1);
+    expect(second.response.body?.locked).toBe(false);
+  });
+});
 
 describe('SSE data fidelity', () => {
   it('preserves named events, IDs, choices, tool calls, usage, and unknown fields', async () => {

@@ -5,7 +5,19 @@ export default defineConfig({
     name: 'zai-browser-upload-fixture',
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
-        if (request.method !== 'POST' || !/^\/v8\/sessions\/[^/]+\/files\/upload$/.test(request.url ?? '')) {
+        const path = request.url?.split('?')[0];
+        if (request.method === 'GET' && path === '/v1/zai/coding/sessions/browser/stream') {
+          response.setHeader('content-type', 'text/event-stream');
+          const after = Number(new URL(request.url!, 'http://test').searchParams.get('after_seq') ?? 0);
+          response.write(': connected\n\n');
+          for (const [index, type] of ['turn.completed', 'turn.started', 'message.delta'].entries()) {
+            const event = {seq: after + index + 1, type, turn_id: index ? 'next' : 'previous', payload: {text: '你好'}, created_at: '2026-09-29'};
+            response.write(`id: ${event.seq}\nevent: ${type}\ndata: ${JSON.stringify(event)}\n\n`);
+          }
+          // Remain open like the real session stream; the browser must cancel it.
+          return;
+        }
+        if (request.method !== 'POST' || (!/^\/v1\/zai\/sessions\/[^/]+\/files\/upload$/.test(path ?? '') && path !== '/v1/zai/files/extract')) {
           next();
           return;
         }
@@ -20,7 +32,9 @@ export default defineConfig({
           }).formData();
           const file = form.get('file') as File;
           response.setHeader('content-type', 'application/json');
-          response.end(JSON.stringify({
+          response.end(JSON.stringify(path === '/v1/zai/files/extract' ? {
+            content: await file.text(), metadata: {filename: file.name, hasPath: form.has('path')},
+          } : {
             path: form.get('path'), name: file.name, mime_type: file.type, size: file.size,
             test_content: await file.text(),
           }));

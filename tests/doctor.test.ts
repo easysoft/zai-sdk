@@ -6,7 +6,7 @@ const defaultAgent = {...custom, id: 'default', is_default: true};
 
 function setup(
   respond?: (request: Request) => Response | undefined | Promise<Response | undefined>,
-  options: Partial<CreateZAIClientOptions> = {},
+  options: Partial<Extract<CreateZAIClientOptions, {getToken: unknown}>> = {},
 ) {
   const requests: Request[] = [];
   const getToken = vi.fn(() => 'doctor-token');
@@ -16,14 +16,13 @@ function setup(
     const response = await respond?.(request);
     if (response) return response;
     const path = new URL(request.url).pathname;
-    if (path === '/v8/agents') return Response.json({agents: [custom, defaultAgent]});
-    if (path === '/v8/models') return Response.json({models: [{id: 'model'}]});
+    if (path === '/v1/zai/agents') return Response.json({agents: [custom, defaultAgent]});
     if (path.endsWith('/sessions')) return Response.json({session: {id: 'temporary'}}, {status: 201});
     if (path.endsWith('/messages')) return Response.json({content: 'OK', execution_summary: {status: 'completed'}});
     if (request.method === 'DELETE') return Response.json({message: 'Deleted'});
     throw new Error(`Unexpected request: ${request.method} ${path}`);
   });
-  const client = createZAIClient({baseUrl: 'https://zai.test/v8', getToken, ...options, fetch: fetcher});
+  const client = createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken, ...options, fetch: fetcher});
   return {client, requests, getToken, fetcher};
 }
 
@@ -31,17 +30,15 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('connection and capability diagnostics', () => {
   it('reads fresh authenticated lists without creating a session by default', async () => {
-    const {client, requests, getToken} = setup(request => {
-      if (new URL(request.url).pathname === '/v8/models') return Response.json([{id: 'model'}]);
-    }, {headers: {'x-shared': 'default', 'x-default': 'kept'}});
+    const {client, requests, getToken} = setup(undefined, {headers: {'x-shared': 'default', 'x-default': 'kept'}});
     const details: ZAIDoctorDetail[] = [];
     const result = await client.doctor({headers: {'x-shared': 'override'}, onChange: detail => details.push(detail)});
     expect(result).toMatchObject({pass: true, summary: 'All requested checks passed.', agentId: 'default'});
     expect(result.sessionId).toBeUndefined();
     expect(details).toEqual(result.details);
-    expect(details.map(detail => detail.type)).toEqual(['config', 'httpProtocol', 'server', 'chatModels', 'agents']);
+    expect(details.map(detail => detail.type)).toEqual(['config', 'httpProtocol', 'server', 'agents']);
     expect(requests.map(request => [request.method, new URL(request.url).pathname])).toEqual([
-      ['GET', '/v8/agents'], ['GET', '/v8/models'],
+      ['GET', '/v1/zai/agents'],
     ]);
     for (const request of requests) {
       expect(request.headers.get('authorization')).toBe('Bearer doctor-token');
@@ -50,7 +47,7 @@ describe('connection and capability diagnostics', () => {
       expect(new URL(request.url).search).toBe('');
     }
     await client.doctor();
-    expect(getToken).toHaveBeenCalledTimes(4);
+    expect(getToken).toHaveBeenCalledTimes(2);
   });
 
   it.each([0, -1, 1.5, NaN, Infinity, 2_147_483_648])('reports invalid timeout %s without network access', async timeoutMs => {
@@ -69,12 +66,12 @@ describe('connection and capability diagnostics', () => {
 
   it('resolves a relative browser API root when constructing the client', async () => {
     vi.stubGlobal('location', {href: 'https://browser.test/app', protocol: 'https:'});
-    const {client, requests} = setup(undefined, {baseUrl: '/v8'});
+    const {client, requests} = setup(undefined, {baseUrl: '/v1/zai'});
     expect((await client.doctor()).pass).toBe(true);
-    expect(requests[0]!.url).toBe('https://browser.test/v8/agents');
+    expect(requests[0]!.url).toBe('https://browser.test/v1/zai/agents');
   });
 
-  it.each(['http://zai.test/v8', 'http://localhost.evil.test/v8'])('reports browser mixed content for %s before authentication', async baseUrl => {
+  it.each(['http://zai.test/v1/zai', 'http://localhost.evil.test/v1/zai'])('reports browser mixed content for %s before authentication', async baseUrl => {
     vi.stubGlobal('location', {href: 'https://browser.test/app', protocol: 'https:'});
     const {client, getToken} = setup(undefined, {baseUrl});
     const result = await client.doctor();
@@ -83,7 +80,7 @@ describe('connection and capability diagnostics', () => {
     expect(getToken).not.toHaveBeenCalled();
   });
 
-  it.each(['http://localhost/v8', 'http://api.localhost/v8', 'http://127.0.0.1/v8', 'http://[::1]/v8'])('permits browser loopback API %s', async baseUrl => {
+  it.each(['http://localhost/v1/zai', 'http://api.localhost/v1/zai', 'http://127.0.0.1/v1/zai', 'http://[::1]/v1/zai'])('permits browser loopback API %s', async baseUrl => {
     vi.stubGlobal('location', {href: 'https://browser.test/app', protocol: 'https:'});
     expect((await setup(undefined, {baseUrl}).client.doctor()).pass).toBe(true);
   });
@@ -92,7 +89,7 @@ describe('connection and capability diagnostics', () => {
     vi.stubGlobal('location', {href: 'http://browser.test/app', protocol: 'http:'});
     expect((await setup().client.doctor()).pass).toBe(true);
     vi.unstubAllGlobals();
-    expect((await setup(undefined, {baseUrl: 'http://zai.test/v8'}).client.doctor()).pass).toBe(true);
+    expect((await setup(undefined, {baseUrl: 'http://zai.test/v1/zai'}).client.doctor()).pass).toBe(true);
   });
 
   it.each([401, 403, 503])('preserves HTTP failure %s without replaying or probing further', async status => {
@@ -117,37 +114,32 @@ describe('connection and capability diagnostics', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it.each([[], [{id: 'old', status: 'disabled'}], [{id: 'deleted', status: 'deleted'}]].map(models => ({models})))('fails readiness with no active models: %j', async ({models}) => {
-    const {client, requests} = setup(request => new URL(request.url).pathname === '/v8/models' ? Response.json({models}) : undefined);
-    const result = await client.doctor({chat: true});
-    expect(result.pass).toBe(false);
-    expect(result.details.find(detail => detail.type === 'chatModels')).toMatchObject({pass: false, message: 'No available chat models found.'});
-    expect(requests.every(request => request.method === 'GET')).toBe(true);
+  it('does not query administrator models and passes the model name only to an enabled probe', async () => {
+    const {client, requests} = setup(request => {
+      if (request.url.endsWith('/models')) throw new Error('Must not access admin models');
+      return undefined;
+    });
+    expect((await client.doctor({model: 'unlisted-model'})).pass).toBe(true);
+    expect(requests).toHaveLength(1);
+    const full = await client.doctor({chat: true, model: 'unlisted-model'});
+    expect(full.pass).toBe(true);
+    expect(await requests.find(request => request.method === 'POST')!.json()).toMatchObject({model: 'unlisted-model'});
   });
 
-  it.each([null, {models: [null]}, {models: [{id: ''}]}, {models: 'invalid'}])('reports malformed model response %j separately from connectivity', async response => {
-    const {client} = setup(request => new URL(request.url).pathname === '/v8/models' ? Response.json(response) : undefined);
-    const result = await client.doctor({chat: true});
-    expect(result.details.find(detail => detail.type === 'server')?.pass).toBe(true);
-    expect(result.details.find(detail => detail.type === 'chatModels')).toMatchObject({pass: false, error: {code: 'invalid-response'}});
-    expect(result.pass).toBe(false);
-  });
-
-  it('validates the requested model and Agent without falling back to others', async () => {
+  it('does not fall back when a requested Agent is unavailable', async () => {
     const {client, requests} = setup();
-    expect((await client.doctor({chat: true, model: 'missing'})).details.find(detail => detail.type === 'chatModels')?.pass).toBe(false);
-    expect((await client.doctor({chat: true, agentId: 'missing'})).details.find(detail => detail.type === 'agents')?.pass).toBe(false);
+    expect((await client.doctor({chat: true, agentId: 'missing'})).details.at(-1)).toMatchObject({type: 'agents', pass: false});
     expect(requests.every(request => request.method === 'GET')).toBe(true);
   });
 
   it('selects the first active custom Agent when no eligible default exists', async () => {
-    const {client} = setup(request => new URL(request.url).pathname === '/v8/agents'
-      ? Response.json({agents: [{...defaultAgent, type: 'executor'}, {...custom, status: 'disabled'}, {...custom, id: 'eligible'}]}) : undefined);
+    const {client} = setup(request => new URL(request.url).pathname === '/v1/zai/agents'
+      ? Response.json({agents: [{...defaultAgent, type: 'runner'}, {...custom, status: 'disabled'}, {...custom, id: 'eligible'}]}) : undefined);
     expect(await client.doctor()).toMatchObject({pass: true, agentId: 'eligible'});
   });
 
-  it.each([[], [{...custom, type: 'executor'}], [{...custom, type: 'system'}], [{...custom, status: 'disabled'}]].map(agents => ({agents})))('requires an active custom Agent: %j', async ({agents}) => {
-    const {client, requests} = setup(request => new URL(request.url).pathname === '/v8/agents' ? Response.json({agents}) : undefined);
+  it.each([[], [{...custom, type: 'runner'}], [{...custom, type: 'system'}], [{...custom, status: 'disabled'}]].map(agents => ({agents})))('requires an active custom Agent: %j', async ({agents}) => {
+    const {client, requests} = setup(request => new URL(request.url).pathname === '/v1/zai/agents' ? Response.json({agents}) : undefined);
     const result = await client.doctor({chat: true});
     expect(result.pass).toBe(false);
     expect(result.details.at(-1)).toMatchObject({type: 'agents', pass: false});
@@ -171,12 +163,12 @@ describe('temporary conversation probe', () => {
     const progress: string[] = [];
     const result = await client.doctor({chat: true, agentId: 'custom', model: 'model', onChange: detail => progress.push(detail.type)});
     expect(result).toMatchObject({pass: true, agentId: 'custom', sessionId: 'temporary'});
-    expect(progress).toEqual(['config', 'httpProtocol', 'server', 'chatModels', 'agents', 'chat', 'cleanup']);
-    expect(new URL(requests[2]!.url).pathname).toBe('/v8/agents/custom/sessions');
-    expect(await requests[2]!.json()).toMatchObject({model: 'model', skills: [], reference_settings: {memories: {collections: []}}, category: 'zai-sdk-doctor'});
-    expect(await requests[3]!.json()).toMatchObject({stream: false, tools: [], tool_execution_mode: 'schema-only', content: [{type: 'input_text', text: expect.any(String)}]});
-    expect(requests[4]!.method).toBe('DELETE');
-    expect(new URL(requests[4]!.url).pathname).toBe('/v8/sessions/temporary');
+    expect(progress).toEqual(['config', 'httpProtocol', 'server', 'agents', 'chat', 'cleanup']);
+    expect(new URL(requests[1]!.url).pathname).toBe('/v1/zai/agents/custom/sessions');
+    expect(await requests[1]!.json()).toMatchObject({model: 'model', skills: [], reference_settings: {memories: {collections: []}}, category: 'zai-sdk-doctor'});
+    expect(await requests[2]!.json()).toMatchObject({stream: false, tools: [], tool_execution_mode: 'schema-only', content: [{type: 'input_text', text: expect.any(String)}]});
+    expect(requests[3]!.method).toBe('DELETE');
+    expect(new URL(requests[3]!.url).pathname).toBe('/v1/zai/sessions/temporary');
   });
 
   it.each([null, {}, {session: {id: ''}}, {session: {id: '..'}}])('does not send or delete with an invalid session response %j', async response => {
@@ -184,7 +176,7 @@ describe('temporary conversation probe', () => {
     const result = await client.doctor({chat: true});
     expect(result.pass).toBe(false);
     expect(result.details.at(-1)).toMatchObject({type: 'chat', pass: false, error: {code: 'invalid-response'}});
-    expect(requests).toHaveLength(3);
+    expect(requests).toHaveLength(2);
     expect(result.sessionId).toBeUndefined();
   });
 

@@ -6,6 +6,19 @@ export type ZAIStreamEvent =
   | {type: 'data'; event: string; id?: string; rawData: string; data: unknown}
   | {type: 'done'};
 
+/** Persisted Coding event envelope; payloads and future fields are preserved. */
+export interface ZAICodingEvent {
+  seq: number;
+  type: string;
+  turn_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+/** A persistent Coding stream has no message completion sentinel. */
+export type ZAICodingStreamEvent = Omit<Extract<ZAIStreamEvent, {type: 'data'}>, 'data'> & {data: ZAICodingEvent};
+
 const STREAM_BUFFER_LIMIT = 1024 * 1024;
 
 /**
@@ -13,6 +26,15 @@ const STREAM_BUFFER_LIMIT = 1024 * 1024;
  * when abandoning a stream, including before the first next() call.
  */
 export function parseZAIStream(response: Response, signal?: AbortSignal): AsyncIterableIterator<ZAIStreamEvent> {
+  return parseStream(response, signal, false);
+}
+
+export function parseZAICodingStream(response: Response, signal?: AbortSignal): AsyncIterableIterator<ZAICodingStreamEvent> {
+  // Coding mode validates its envelope and never emits a done sentinel.
+  return parseStream(response, signal, true) as AsyncIterableIterator<ZAICodingStreamEvent>;
+}
+
+function parseStream(response: Response, signal: AbortSignal | undefined, coding: boolean): AsyncIterableIterator<ZAIStreamEvent> {
   const invalid = (message: string, body?: unknown, cause?: unknown) => new ZAIClientError(
     'invalid-response', message, {status: response.status, headers: response.headers, body, cause},
   );
@@ -73,7 +95,7 @@ export function parseZAIStream(response: Response, signal?: AbortSignal): AsyncI
   }
 
   function parseEvent(event: EventSourceMessage): ZAIStreamEvent {
-    if (event.data === '[DONE]' && event.event !== 'error') return {type: 'done'};
+    if (!coding && event.data === '[DONE]' && event.event !== 'error') return {type: 'done'};
     let data: unknown;
     try {
       data = JSON.parse(event.data);
@@ -81,8 +103,16 @@ export function parseZAIStream(response: Response, signal?: AbortSignal): AsyncI
       throw invalid('ZAI returned invalid JSON in the message stream.', event.data, cause);
     }
     if (event.event === 'error'
-      || (typeof data === 'object' && data !== null && 'error' in data && data.error != null)) {
+      || (!coding && typeof data === 'object' && data !== null && 'error' in data && data.error != null)) {
       throw invalid('ZAI returned an error in the message stream.', data);
+    }
+    if (coding && (typeof data !== 'object' || data === null
+      || !('seq' in data) || typeof data.seq !== 'number'
+      || !('type' in data) || typeof data.type !== 'string'
+      || !('turn_id' in data) || (data.turn_id !== null && typeof data.turn_id !== 'string')
+      || !('payload' in data) || typeof data.payload !== 'object' || data.payload === null || Array.isArray(data.payload)
+      || !('created_at' in data) || typeof data.created_at !== 'string')) {
+      throw invalid('ZAI returned an invalid Coding event envelope.', data);
     }
     return {
       type: 'data', event: event.event || 'message',
@@ -123,6 +153,7 @@ export function parseZAIStream(response: Response, signal?: AbortSignal): AsyncI
         if (result.done) {
           // Flush the decoder to reject a truncated UTF-8 character at EOF.
           decode();
+          if (coding) return;
           throw invalid('ZAI ended the message stream without a completion sentinel.');
         }
         decode(result.value);

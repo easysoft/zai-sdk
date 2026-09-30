@@ -2,7 +2,7 @@
 import {createZAIClient, createZAITokenProvider} from '../src/index.js';
 
 /** 业务后端根据当前登录用户返回 {token, expiresAt}，expiresAt 为 Unix 秒。 */
-export function createBrowserZAIClient(baseUrl = '/v8', tokenEndpoint = '/api/zai/token') {
+export function createBrowserZAIClient(baseUrl = '/v1/zai', tokenEndpoint = '/api/zai/token') {
   return createZAIClient({
     baseUrl,
     getToken: createZAITokenProvider({
