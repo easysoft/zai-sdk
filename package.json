@@ -45,7 +45,7 @@
     "test:unit": "vitest run --project unit",
     "test:coverage": "vitest run --project unit --coverage",
     "test:browser": "pnpm build && playwright test",
-    "test:live": "node --env-file=.env.local --import tsx --test tests/live.test.ts",
+    "test:live": "node --env-file=.env.local --import tsx --test --test-concurrency=1 tests/live.test.ts tests/live-migration.ts",
     "check:package": "tsx scripts/check-package.ts",
     "check": "pnpm check:api && pnpm docs:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:browser && pnpm check:package"
   },
