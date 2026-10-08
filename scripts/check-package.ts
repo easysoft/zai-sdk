@@ -1,8 +1,11 @@
+import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {promisify} from 'node:util';
+import {pathToFileURL} from 'node:url';
+import {runInNewContext} from 'node:vm';
 import {build} from 'vite';
 
 const run = promisify(execFile);
@@ -19,7 +22,7 @@ try {
       throw new Error(`Unexpected file in package: ${file}`);
     }
   }
-  for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/index.js.map', 'docs/index.html', 'zai-openapi.json', 'zai-openapi.supplement.json', 'README.md', 'docs/MIGRATION.md', 'LICENSE']) {
+  for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/index.js.map', 'dist/zai.js', 'docs/index.html', 'zai-openapi.json', 'zai-openapi.supplement.json', 'README.md', 'docs/MIGRATION.md', 'LICENSE']) {
     if (!files.includes(`package/${file}`)) throw new Error(`Missing package file: ${file}`);
   }
 
@@ -34,12 +37,38 @@ try {
     if (dependency.startsWith('@')) await mkdir(join(modules, dependency.split('/')[0]!), {recursive: true});
     await symlink(join(root, 'node_modules', dependency), target, 'dir');
   }
+  const umd = await readFile(join(packageDirectory, 'dist/zai.js'), 'utf8');
+  const esm = await import(pathToFileURL(join(packageDirectory, 'dist/index.js')).href) as Record<string, unknown>;
+  const commonjs = {exports: {}};
+  const amd: Record<string, unknown> = {};
+  const define = Object.assign((dependencies: string[], factory: (exports: object) => void) => {
+    assert.deepEqual(Array.from(dependencies), ['exports']);
+    factory(amd);
+  }, {amd: true});
+  runInNewContext(umd, {define});
+  const globals = runInNewContext(`${umd}; ZAI;`, {}) as Record<string, unknown>;
+  runInNewContext(umd, {module: commonjs, exports: commonjs.exports});
+  for (const exports of [globals, commonjs.exports, amd] as Record<string, unknown>[]) {
+    assert.deepEqual(Object.keys(exports).sort(), Object.keys(esm).sort());
+    for (const name of Object.keys(esm)) assert.equal(typeof exports[name], typeof esm[name]);
+  }
+
+  // A standalone UMD build emits one file and preserves its destination's contents.
+  const umdDirectory = join(temporary, 'umd');
+  await mkdir(umdDirectory);
+  await writeFile(join(umdDirectory, 'keep.txt'), 'keep');
+  await run('pnpm', ['build:umd'], {cwd: root, env: {...process.env, OUT: umdDirectory}});
+  assert.deepEqual((await readdir(umdDirectory)).sort(), ['keep.txt', 'zai.js']);
+  assert.equal(await readFile(join(umdDirectory, 'keep.txt'), 'utf8'), 'keep');
+  assert.equal(await readFile(join(umdDirectory, 'zai.js'), 'utf8'), umd);
+
   await writeFile(join(temporary, 'package.json'), '{"type":"module","private":true}');
   await writeFile(join(temporary, 'consumer.mjs'), `
 import assert from 'node:assert/strict';
 import {createZAITokenProvider, createZAIClient, ZAIClientError} from 'zai-sdk';
 import spec from 'zai-sdk/openapi.json' with {type:'json'};
 import supplement from 'zai-sdk/openapi-supplement.json' with {type:'json'};
+assert.ok(import.meta.resolve('zai-sdk/zai.js').endsWith('/dist/zai.js'));
 assert.equal(Object.keys(spec.paths).length,77);
 assert.equal(Object.keys(supplement.paths).length,1);
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
@@ -81,7 +110,7 @@ void event; void diagnosis;
     const js = await readFile(join(assets, file), 'utf8');
     if (/from\s*["']node:|__vite-browser-external/.test(js)) throw new Error('Browser bundle contains a Node-only dependency.');
   }
-  console.log(`Package verified: ${files.length} files; ESM import, declarations and browser bundle passed.`);
+  console.log(`Package verified: ${files.length} files; ESM import, declarations, single-file UMD (global/CommonJS/AMD) and browser bundle passed.`);
 } finally {
   await rm(temporary, {recursive: true, force: true});
 }

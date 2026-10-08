@@ -1,6 +1,6 @@
 # ZAI SDK
 
-面向 Node.js 22+ 和现代浏览器的 TypeScript / ESM SDK。0.2.0 使用 `/v1/zai`，覆盖原始 OpenAPI 的 119 个操作，并按官方文档补充 Coding SSE：共 **78 条路径、120 个 HTTP 操作、123 个资源方法**。
+面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.2.0 使用 `/v1/zai`，覆盖原始 OpenAPI 的 119 个操作，并按官方文档补充 Coding SSE：共 **78 条路径、120 个 HTTP 操作、123 个资源方法**。
 
 中文完整文档在 [`docs/index.html`](./docs/index.html)，包含每个接口的权限、来源、字段、调用签名和可复制示例。页面可离线打开，无需启动服务。升级旧项目请先阅读 [`docs/MIGRATION.md`](./docs/MIGRATION.md)。
 
@@ -49,6 +49,42 @@ await client.sessions.list(undefined, {
   headers: {'X-Request-ID': 'request-123'},
 });
 ```
+
+## UMD 单文件
+
+```sh
+pnpm build:umd  # 仅生成 dist/zai.js
+pnpm build     # 同时生成原有 ESM、类型声明和 dist/zai.js
+```
+
+`dist/zai.js` 内含全部运行时依赖，通过普通 `<script>` 加载后提供全局 `ZAI`，与 ESM 入口的运行时导出一致，无需额外 JS、CSS 或模块加载器。运行环境仍为支持原生 Fetch、Streams 等 API 的现代浏览器。
+
+```html
+<script src="/assets/zai.js"></script>
+<script>
+  const client = ZAI.createZAIClient({
+    baseUrl: '/v1/zai',
+    getToken: ZAI.createZAITokenProvider({
+      fetchToken: async () => {
+        const response = await fetch('/api/zai/token');
+        if (!response.ok) throw new Error('获取令牌失败');
+        return response.json(); // {token: 'ek-...', expiresAt: <整数 Unix 秒>}
+      },
+    }),
+  });
+  client.agents.list().then(console.log).catch(console.error);
+</script>
+```
+
+`/api/zai/token` 由业务后端提供，应用 API Key 和 signing secret 留在后端。UMD 文件随 npm 包分发，也可通过 `zai-sdk/zai.js` 子路径定位为静态资源；不要把它当作 ESM 入口导入，现有 `import ... from 'zai-sdk'` 和类型声明保持不变。
+
+封装 `@zentao/zai` 时，可在本 SDK 目录运行以下命令，直接输出到扩展的静态资源目录，再由 `LibLoader` 加载 `zai/zai/zai.js` 并检查全局 `ZAI`：
+
+```sh
+OUT=../zui_exts/zentao/lib/zai/public/zai pnpm build:umd
+```
+
+`OUT` 相对于 SDK 根目录解析，也支持绝对路径。UMD 构建仅写入 `zai.js`，不清空目标目录；上述命令供创建扩展时使用。
 
 ## ak、ek 与自动续期
 

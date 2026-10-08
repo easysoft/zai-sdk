@@ -197,6 +197,9 @@ const client = createZAIClient({
 
 const {agents} = await client.agents.list();
 console.log(agents);`, 'typescript', true)}
+<h3>普通 script 引入 UMD 单文件</h3>
+<p><code>pnpm build:umd</code> 生成自包含的 <code>dist/zai.js</code>；<code>pnpm build</code> 同时生成 ESM、类型声明和该 UMD 文件。复制到静态资源目录后，使用 <code>&lt;script src="/assets/zai.js"&gt;&lt;/script&gt;</code> 加载，在后续普通脚本中通过 <code>ZAI.createZAIClient</code>、<code>ZAI.createZAITokenProvider</code> 使用上述 API，无需额外 JS、CSS 或模块加载器。UMD 与 ESM 的运行时导出相同，仍要求支持原生 Fetch、Streams 等 API 的现代浏览器。</p>
+<p>UMD 随 npm 包分发，可通过 <code>zai-sdk/zai.js</code> 子路径定位为静态资源。不要将它当作 ESM 入口导入。<code>OUT=/path/to/public/zai pnpm build:umd</code> 可指定目标目录，只写入 <code>zai.js</code>，不会清空目录。封装 <code>@zentao/zai</code> 时，由 <code>LibLoader</code> 加载该文件并检查全局 <code>ZAI</code>。</p>
 <p><code>/api/zai/token</code> 是需要由你的应用实现的业务接口，并非 SDK 内置接口。跨域部署时，服务端需允许应用来源、相应 HTTP 方法和 <code>Authorization</code> 等请求头；也可通过业务后端同源代理访问。</p>`,
     },
     {

@@ -10,6 +10,7 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./zai.js": "./dist/zai.js",
     "./openapi.json": "./zai-openapi.json",
     "./openapi-supplement.json": "./zai-openapi.supplement.json"
   },
@@ -39,6 +40,7 @@
     "docs:check": "tsx scripts/generate-docs.ts --check",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsx scripts/build.ts",
+    "build:umd": "tsx scripts/build.ts --umd",
     "prepack": "pnpm check:api && pnpm build && pnpm docs:build",
     "lint": "eslint .",
     "test": "vitest run --project unit && pnpm test:browser",
