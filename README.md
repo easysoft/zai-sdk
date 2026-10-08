@@ -222,18 +222,12 @@ const text = await client.files.extract({
 
 错误统一为 `ZAIClientError`，稳定 `code` 为 `authentication/http/network/aborted/invalid-input/invalid-response`。正常 HTTP 内的 `ok:false` 等业务结果原样返回。
 
+## OpenAPI 规范
+
+原始 [`zai-openapi.json`](./zai-openapi.json) 和 Coding SSE 补充 [`zai-openapi.supplement.json`](./zai-openapi.supplement.json) 随安装包提供，分别通过 `zai-sdk/openapi.json`、`zai-sdk/openapi-supplement.json` 导出。
+
 ## 开发与验证
 
-```sh
-pnpm generate:api
-pnpm docs:build
-pnpm check
-```
-
-`pnpm check` 检查生成一致性、文档、lint、类型、单元覆盖率、三浏览器及打包消费。默认自动测试不需要真实服务凭据。HTML 文档每个调用示例都会类型检查，接口权限、嵌套锚点及导出覆盖也会检查。维护方式见 [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md)。
-
-真实服务测试通过 `pnpm test:live` 单列运行，使用 `.env.local` 的 `TEST_ZAI_BASE_URL/APP_ID/APP_KEY/USER_ID`。测试环境适配器可为服务器 origin 补 `/v1/zai`；公开客户端仍接收 API 根地址。测试覆盖双令牌、普通会话、Chat、QA、文件和 Coding；Coding 需要在线 Codex Runner，并使用独立临时 Agent 和空工作区。真实对话会消耗模型用量，测试负责删除或归档自己创建的数据。离线权限测试只验证 SDK 选令牌，不替代服务端逐接口验收。
-
-接口生成使用原始 [`zai-openapi.json`](./zai-openapi.json) 和 [`zai-openapi.supplement.json`](./zai-openapi.supplement.json)，分别导出为 `zai-sdk/openapi.json`、`zai-sdk/openapi-supplement.json`。补充只允许新增路径，禁止覆盖。更新操作时维护显式映射、权限及来源，运行生成和检查；不要手改生成文件。
+开发环境、构建测试、接口生成与提交约定统一维护在源码仓库的 [AGENTS.md](https://github.com/easysoft/zai-sdk/blob/main/AGENTS.md)。其中也提供文档维护、验证记录和真实服务测试的入口。
 
 本版交付本地 SDK、文档和验证，不包含 npm 发布或消费项目迁移。
