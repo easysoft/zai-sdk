@@ -6,7 +6,7 @@ import type {CreateZAIClientOptions, ZAIOperationRequest, ZAITransport, ZAIUploa
 interface DynamicOpenAPIClient {
   request(method: ZAIOperationRequest['method'], path: string, init: {
     params: {path?: Record<string, string>; query?: object};
-    body?: string | FormData;
+    body?: string | FormData | Blob;
     bodySerializer: (value: unknown) => BodyInit;
     pathSerializer: (path: string, params: Record<string, unknown>) => string;
     querySerializer: (query: Record<string, unknown>) => string;
@@ -65,17 +65,23 @@ function appendFile(form: FormData, key: string, value: ZAIUploadFile): void {
   form.append(key, file, filename);
 }
 
-function serializeBody(input: ZAIOperationRequest): string | FormData | undefined {
+function serializeBody(input: ZAIOperationRequest): string | FormData | Blob | undefined {
   const {body, encoding} = input;
   if (body === undefined) return undefined;
+  if (encoding === 'binary') {
+    if (!isBlob(body)) throw new ZAIClientError('invalid-input', 'Binary uploads require a Blob or File.');
+    return body;
+  }
   if (encoding === 'multipart' || encoding === 'file' || (encoding === 'bundle' && typeof body === 'object' && body !== null && 'bundle' in body)) {
     if (typeof body !== 'object' || body === null) throw new ZAIClientError('invalid-input', 'A multipart body is required.');
     const values = body as Record<string, unknown>;
     const form = new FormData();
     if (encoding === 'multipart') {
-      if (typeof values.path !== 'string' || !values.path.trim()) throw new ZAIClientError('invalid-input', 'An upload target path is required.');
+      if (values.path !== undefined && (typeof values.path !== 'string' || !values.path.trim())) {
+        throw new ZAIClientError('invalid-input', 'An upload target path must be a non-empty string when provided.');
+      }
       appendFile(form, 'file', values.file as ZAIUploadFile);
-      form.append('path', values.path);
+      if (values.path !== undefined) form.append('path', values.path as string);
     } else if (encoding === 'file') {
       // The extraction schema leaves file optional. Preserve that contract;
       // reject invalid supplied files, but let the server report missing files.
@@ -90,6 +96,64 @@ function serializeBody(input: ZAIOperationRequest): string | FormData | undefine
     return form;
   }
   return JSON.stringify(body);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validateFileSelector(value: unknown): void {
+  if (!isRecord(value) || Object.keys(value).some(key => key !== 'path' && key !== 'file_id')
+    || (value.path !== undefined) === (value.file_id !== undefined)
+    || (value.path !== undefined && (typeof value.path !== 'string' || value.path.length < 1 || value.path.length > 4096))
+    || (value.file_id !== undefined && (typeof value.file_id !== 'string' || !value.file_id.trim()))) {
+    throw new ZAIClientError('invalid-input', 'Provide exactly one non-empty path or file_id.');
+  }
+}
+
+function validateJSONBody(body: string | FormData | Blob | undefined, validation: 'file-body' | 'tool-result'): void {
+  const value: unknown = typeof body === 'string' ? JSON.parse(body) : undefined;
+  if (validation === 'file-body') {
+    validateFileSelector(value);
+    return;
+  }
+  if (!isRecord(value) || Object.keys(value).length !== 1 || (!Object.hasOwn(value, 'output') && !Object.hasOwn(value, 'error'))) {
+    throw new ZAIClientError('invalid-input', 'A tool result must serialize exactly one output or error field.');
+  }
+  if (Object.hasOwn(value, 'error') && (!isRecord(value.error)
+    || typeof value.error.code !== 'string' || typeof value.error.message !== 'string'
+    || Object.keys(value.error).some(key => key !== 'code' && key !== 'message'))) {
+    throw new ZAIClientError('invalid-input', 'A tool error requires string code and message fields.');
+  }
+}
+
+function selectTokenType(input: ZAIOperationRequest, automatic: boolean): 'admin' | 'user' {
+  const selected = input.options?.tokenType;
+  if ((input.auth !== undefined && !['admin', 'user', 'user-only'].includes(input.auth))
+    || (automatic && input.auth === undefined)
+    || (selected !== undefined && selected !== 'admin' && selected !== 'user')
+    || (input.auth === 'admin' && selected === 'user')
+    || (input.auth === 'user-only' && selected === 'admin')) {
+    throw new ZAIClientError('invalid-input', 'The selected token type is not permitted for this operation.');
+  }
+  return selected ?? (input.auth === 'admin' ? 'admin' : 'user');
+}
+
+function setIdempotencyKey(headers: Headers, input: ZAIOperationRequest): void {
+  const explicit = input.options?.idempotencyKey;
+  if (explicit !== undefined && typeof explicit !== 'string') {
+    throw new ZAIClientError('invalid-input', 'An idempotency key must contain 1 to 128 characters.');
+  }
+  let key = explicit ?? headers.get('idempotency-key');
+  if (key == null && input.idempotencyRequired) {
+    key = Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  if (explicit !== undefined || key !== null) {
+    if (typeof key !== 'string' || !key.trim() || key.length > 128) {
+      throw new ZAIClientError('invalid-input', 'An idempotency key must contain 1 to 128 characters.');
+    }
+    headers.set('idempotency-key', key);
+  }
 }
 
 function errorMessage(body: unknown, status: number): string {
@@ -140,28 +204,38 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
     async request<T>(input: ZAIOperationRequest): Promise<T> {
       const {signal} = input.options ?? {};
       if (signal?.aborted) throw aborted(signal);
-      let body: string | FormData | undefined;
+      const tokenType = selectTokenType(input, !!providers);
+      let body: string | FormData | Blob | undefined;
       let headers: Headers;
       try {
         for (const [key, value] of Object.entries(input.pathParams ?? {})) {
           // URL parsers normalize literal dot segments, even when percent-encoded.
           if (typeof value !== 'string' || !value.trim() || value === '.' || value === '..') throw new Error(`Invalid path parameter: ${key}`);
         }
+        if (input.validation === 'file-query') validateFileSelector(input.query);
+        if (input.validation === 'user-scope') {
+          const externalUserId = isRecord(input.query) ? input.query.external_user_id : undefined;
+          if (tokenType === 'admin'
+            ? typeof externalUserId !== 'string' || !externalUserId.trim() || externalUserId.length > 128
+            : externalUserId !== undefined) {
+            throw new ZAIClientError('invalid-input', 'Administrator requests require external_user_id; user requests cannot override it.');
+          }
+        }
         body = serializeBody(input);
+        if (input.validation === 'file-body' || input.validation === 'tool-result') validateJSONBody(body, input.validation);
         headers = new Headers(options.headers);
         new Headers(input.options?.headers).forEach((value, key) => headers.set(key, value));
+        setIdempotencyKey(headers, input);
         headers.delete('content-type');
-        if (typeof body === 'string') headers.set('content-type', 'application/json');
+        if (input.encoding === 'binary') headers.set('content-type', 'application/octet-stream');
+        else if (typeof body === 'string') headers.set('content-type', 'application/json');
         headers.set('accept', input.responseType === 'stream' ? 'text/event-stream' : input.responseType === 'blob' ? 'application/octet-stream' : 'application/json');
       } catch (cause) {
         if (cause instanceof ZAIClientError) throw cause;
         throw new ZAIClientError('invalid-input', 'Unable to construct the request.', {cause});
       }
-      if (providers && input.auth !== 'admin' && input.auth !== 'user') {
-        throw new ZAIClientError('invalid-input', 'Automatic authentication requires an explicit operation permission.');
-      }
-      const getToken = providers ? providers[input.auth!] : fixedToken!;
-      const token = await waitForToken(getToken, input.auth === 'admin', signal);
+      const getToken = providers ? providers[tokenType] : fixedToken!;
+      const token = await waitForToken(getToken, tokenType === 'admin', signal);
       try {
         headers.set('authorization', `Bearer ${token}`);
       } catch (cause) {
