@@ -19,20 +19,24 @@ export const groups: Record<string, {title: string; description: string}> = {
   chat: {title: 'Chat 便捷发送', description: '创建或续接 Chat 会话并发送 JSON/SSE 消息。'},
   'coding.workspaces': {title: 'Coding 工作区', description: '管理开发工作区和 AGENTS.md。'},
   'coding.repositories': {title: 'Coding 仓库', description: '管理仓库、列出文件树及读取内容；没有下载端点。'},
-  'coding.keys': {title: 'Coding 密钥', description: '读取或轮换当前用户的公钥。'},
-  'coding.runners': {title: 'Runner 运维', description: '应用管理员查看 Runner 状态。'},
-  'coding.sessions': {title: 'Coding 会话', description: '创建绑定工作区与 provider 的编码会话，查询工具并归档。'},
+  'coding.keys': {title: 'Coding 密钥', description: '使用 ek 确保、读取或轮换当前用户的 SSH 公钥。'},
+  'coding.runners': {title: 'Runner 配置', description: '应用管理员查询 Runner Profile 与镜像策略；Profile 写接口用于旧客户端兼容。'},
+  'coding.runners.instances': {title: 'Runner 实例', description: '应用管理员管理用户 Runner 实例；接受请求不等于实例已就绪。'},
+  'coding.agents': {title: 'Coding Agent', description: '应用管理员管理 Coding Agent；用户查询状态、确保实例并订阅状态流。'},
+  'coding.sessions': {title: 'Coding 会话', description: '创建绑定工作区和 Runner 实例的编码会话，管理附件、标题、工具并归档。'},
+  'coding.toolCalls': {title: 'Coding 客户端工具', description: '由当前用户回填客户端工具的执行结果或错误。'},
   'coding.turns': {title: 'Coding Turn', description: '异步启动编码任务，查询、取消或插话。'},
   'coding.events': {title: 'Coding 事件', description: '读取历史事件，或通过持续 SSE 接收会话事件。'},
   'coding.interactions': {title: 'Coding 交互', description: '读取待处理交互，提交审批或输入。'},
-  'coding.git': {title: 'Coding Git', description: '查看 diff、提交、推送和创建 Pull Request。'},
-  'coding.models': {title: 'Coding 模型', description: '查询 Coding provider 提供的模型。'},
+  'coding.git': {title: 'Coding Git', description: '配置当前用户 Git 身份，查看 diff、提交、推送和创建 Pull Request。'},
+  'coding.models': {title: 'Coding 模型', description: '通过 agent_id 查询 Coding provider 提供的模型。'},
+  'coding.modes': {title: 'Coding 执行模式', description: '查询 Coding provider 支持的执行模式。'},
   agentSkills: {title: 'Agent 技能挂载', description: '挂载技能，配置版本和启用状态。'},
   skills: {title: '技能', description: '管理技能版本，校验 JSON 文件列表或 ZIP 技能包。'},
   memories: {title: '记忆', description: '管理记忆集合与内容，检索、过滤并查看处理状态；写入和运维接口需要 ak。'},
   qa: {title: '问答 QA', description: '维护问答对，批量删除、搜索和匹配。'},
   files: {title: '文件提取', description: '上传文件并提取文本，无需会话 ID 或 path。'},
-  'settings.models': {title: '模型管理', description: '应用管理员维护模型记录；数字 id 与调用模型的 model_id 不同。'},
+  'settings.models': {title: '模型目录与管理', description: '默认以 ek 查询应用可用模型；以 ak 管理自有模型记录和显式测试模型。数字 id 与调用模型的 model_id 不同。'},
   'settings.channels': {title: '渠道管理', description: '应用管理员查询和配置上游渠道。'},
   'settings.signingSecret': {title: '签名密钥管理', description: '应用管理员读取或主动轮换 ek 签名密钥。'},
 };
@@ -41,6 +45,7 @@ export const operationTitles: Record<string, string> = {
   'agents.list': '列出 Agent', 'agents.create': '创建 Agent', 'agents.get': '获取 Agent',
   'agents.update': '更新 Agent', 'agents.delete': '删除 Agent',
   'coding.keys.getPublic': '获取当前用户的公钥', 'coding.keys.rotate': '轮换当前用户的公钥',
+  'coding.keys.ensure': '确保当前用户的 SSH 密钥',
   'coding.workspaces.getAgentsMarkdown': '读取工作区 AGENTS.md', 'coding.workspaces.updateAgentsMarkdown': '更新工作区 AGENTS.md',
   'coding.workspaces.list': '列出工作区', 'coding.workspaces.create': '创建工作区', 'coding.workspaces.get': '获取工作区',
   'coding.workspaces.update': '更新工作区', 'coding.workspaces.delete': '删除工作区',
@@ -58,8 +63,9 @@ export const operationTitles: Record<string, string> = {
   'skills.list': '列出技能', 'skills.create': '创建技能', 'skills.get': '获取技能', 'skills.update': '更新技能',
   'skills.delete': '删除技能', 'skills.restore': '恢复技能', 'skills.validateBundle': '校验技能包',
   'skills.publishRevision': '发布技能版本', 'skills.listRevisions': '列出技能版本', 'skills.listRevisionContents': '列出版本文件内容',
-  'settings.models.list': '列出模型配置', 'settings.models.create': '创建模型配置',
+  'settings.models.list': '列出可用或自有模型', 'settings.models.create': '创建模型配置',
   'settings.models.get': '读取模型配置', 'settings.models.update': '更新模型配置', 'settings.models.delete': '删除模型配置',
+  'settings.models.test': '测试模型连接与响应',
   'settings.channels.list': '列出渠道', 'settings.channels.update': '更新渠道',
   'settings.signingSecret.get': '读取用户令牌签名密钥', 'settings.signingSecret.regenerate': '重新生成用户令牌签名密钥',
   'chat.conversations.list': '列出 Chat 会话', 'chat.conversations.create': '创建 Chat 会话',
@@ -69,16 +75,32 @@ export const operationTitles: Record<string, string> = {
   'chat.messages.list': '列出 Chat 消息', 'chat.messages.get': '获取 Chat 消息',
   'chat.messages.delete': '删除 Chat 消息', 'chat.messages.deleteAll': '删除 Chat 会话全部消息',
   'chat.send': '创建或续接会话并返回 JSON', 'chat.stream': '创建或续接会话并流式发送',
-  'coding.runners.list': '列出 Runner', 'coding.models.list': '列出 Coding 模型',
+  'coding.runners.list': '列出 Runner 配置', 'coding.models.list': '列出 Coding 模型',
+  'coding.runners.create': '创建 Runner 配置', 'coding.runners.get': '获取 Runner 配置',
+  'coding.runners.update': '更新 Runner 配置', 'coding.runners.delete': '删除 Runner 配置',
+  'coding.runners.listImagePolicies': '列出 Runner 镜像策略',
+  'coding.runners.instances.list': '列出 Runner 实例', 'coding.runners.instances.create': '创建 Runner 实例',
+  'coding.runners.instances.get': '获取 Runner 实例', 'coding.runners.instances.update': '更新 Runner 实例',
+  'coding.runners.instances.delete': '删除 Runner 实例',
+  'coding.agents.list': '列出 Coding Agent', 'coding.agents.create': '创建 Coding Agent',
+  'coding.agents.get': '获取 Coding Agent', 'coding.agents.update': '更新 Coding Agent',
+  'coding.agents.delete': '删除 Coding Agent', 'coding.agents.getStatus': '查询用户 Runner 状态',
+  'coding.agents.ensureRunnerInstance': '确保当前用户的 Runner 实例', 'coding.agents.streamStatus': '订阅用户 Runner 状态',
+  'coding.modes.list': '列出 Coding 执行模式',
   'coding.sessions.create': '创建编码会话', 'coding.sessions.list': '列出编码会话',
   'coding.sessions.get': '获取编码会话', 'coding.sessions.update': '更新编码会话',
   'coding.sessions.archive': '归档编码会话', 'coding.sessions.getTools': '获取编码会话工具',
+  'coding.sessions.generateTitle': '生成编码会话标题', 'coding.sessions.listFiles': '列出编码会话文件',
+  'coding.sessions.uploadFile': '上传编码附件', 'coding.sessions.readFile': '读取编码会话文件',
+  'coding.sessions.downloadFile': '下载编码文件原件', 'coding.sessions.createDownloadLink': '创建单次下载链接',
+  'coding.toolCalls.resolve': '回填客户端工具结果',
   'coding.turns.start': '异步启动 Turn', 'coding.turns.get': '读取 Turn',
   'coding.turns.cancel': '取消 Turn', 'coding.turns.steer': '向 Turn 插话',
   'coding.events.list': '读取历史事件', 'coding.events.stream': '持续订阅编码事件',
   'coding.interactions.list': '列出交互', 'coding.interactions.resolve': '处理交互',
   'coding.git.diff': '查看代码差异', 'coding.git.commit': '提交代码',
   'coding.git.push': '推送代码', 'coding.git.createPullRequest': '创建 Pull Request',
+  'coding.git.getIdentity': '获取当前用户的 Git 身份', 'coding.git.updateIdentity': '更新当前用户的 Git 身份',
   'qa.list': '列出问答对', 'qa.create': '创建或更新问答对', 'qa.get': '获取问答对',
   'qa.update': '更新问答对', 'qa.delete': '删除问答对', 'qa.batchDelete': '批量删除问答对',
   'qa.search': '搜索问答对', 'qa.match': '匹配问答对',
@@ -90,22 +112,39 @@ export const operationTitles: Record<string, string> = {
   'memories.listContentChunks': '列出内容分块', 'memories.searchChunksByEmbedding': '检索记忆分块',
   'memories.searchContentsByEmbedding': '检索记忆内容', 'memories.getEmbeddingQueueStats': '获取向量队列状态',
   'memories.listContentEmbeddingJobs': '列出内容的向量任务',
+  'memories.rebuild': '重建记忆嵌入', 'memories.listFailures': '查询记忆处理失败内容',
 };
 
 export const operationNotes: Record<string, string> = {
   'agents.create': 'system 类型由平台预置；创建自有 Agent 时使用 custom 或 runner。',
   'agents.delete': '删除默认 Agent 时，可通过 new_default_id 指定新的默认 Agent。请在调用前确认目标。',
-  'coding.keys.rotate': '此调用会轮换密钥，请在确实需要轮换时执行。',
-  'sessions.create': 'skills 省略或为 null 时继承 Agent 技能；[] 禁用本会话技能。编码任务使用 coding.sessions，并显式选择 provider。',
+  'coding.keys.rotate': '仅允许 ek；必须提供当前密钥的 fingerprint，确认目标后执行轮换。',
+  'sessions.create': 'skills 省略或为 null 时继承 Agent 技能；[] 禁用本会话技能。编码任务使用 coding.sessions，由应用 Coding 配置确定 provider。',
   'sessions.update': 'custom_data 等对象的合并、替换和清空语义以字段说明为准，SDK 直接传递输入。',
-  'sessions.uploadFile': 'file 接受 File、Blob 或 {blob, filename}。SDK 自动生成 multipart boundary，无需设置 Content-Type。',
+  'sessions.uploadFile': 'file 接受 File、Blob 或 {blob, filename}。省略 path 上传不可变附件并获取 file ID；提供非空 path 保留旧工作区上传方式。SDK 自动生成 multipart boundary。',
   'messages.send': '使用 MessagesSendInput。SDK 固定发送 stream: false；输入中不包含 stream 字段。',
   'messages.stream': '与 messages.send 使用同一个 HTTP 操作和 MessagesSendInput；SDK 固定发送 stream: true。返回异步迭代器，须先 await，再 for await。',
   'messages.deleteAll': '此调用删除指定会话的全部消息，请确认 sessionId。',
   'skills.validateBundle': '支持 JSON 文本文件列表或 ZIP 包。包内必须恰好有一个 SKILL.md；二进制文件使用 ZIP。ok: false 属于业务结果，不会自动抛出异常。',
   'skills.publishRevision': '支持 JSON 文件列表或 ZIP 包；版本号由服务端返回。二进制文件使用 ZIP。',
-  'settings.models.list': '此接口仅供应用管理员使用；调用模型使用 model_id，不使用数字记录 id。',
-  'coding.events.stream': '此端点来自在线 Coding 文档的补充规范。turn 完成、失败或取消是数据事件，不结束会话流。EOF 只代表断流；使用 after_seq 手动恢复。',
+  'settings.models.list': '默认使用 ek 获取应用可用目录；传 {tokenType: "admin"} 使用 ak 获取自有管理目录。调用模型使用 model_id，不使用数字记录 id。',
+  'settings.models.test': '此操作会实际调用模型并消耗额度，仅在明确需要验证时调用；doctor() 默认不调用它。',
+  'coding.events.stream': '此端点来自在线 Coding 文档的补充规范。合法 error 事件不是终态，后续仍可收到 turn.failed。turn 完成、失败或取消不结束会话流。EOF 只代表断流；使用 after_seq 手动恢复。',
+  'coding.agents.create': '先在应用控制台配置 Coding 环境，再提供 name 创建 Agent；无需传 runner_profile_id。',
+  'coding.agents.getStatus': '默认以 ek 查询当前用户；使用 {tokenType: "admin"} 时必须提供 external_user_id。用户令牌不能覆盖用户范围。',
+  'coding.agents.streamStatus': '权限与 getStatus 相同。状态 SSE 返回 ZAIRunnerStatusStreamEvent，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。',
+  'coding.agents.ensureRunnerInstance': '仅使用 ek 确保当前用户实例；202 表示已接受，仍需查询状态确认就绪。',
+  'coding.sessions.create': '不再接受 provider 或 runner_id；通过 mode、plan_mode、system_prompt 和 primary_repo_key 配置会话行为。',
+  'coding.sessions.generateTitle': '生成标题可能调用模型并消耗额度，保持显式调用。',
+  'coding.sessions.uploadFile': 'input 接受 Blob（包含 File），文件名通过 name 查询参数传递；按 application/octet-stream 发送原始内容，允许零字节。返回 id 用于 attachment_ids。',
+  'coding.sessions.downloadFile': '原件下载只允许 ek；file_id 与 path 必须恰好提供一个，返回 Blob。',
+  'coding.sessions.createDownloadLink': 'file_id 与 path 必须恰好提供一个；链接最多有效十分钟且仅可使用一次，不要持久化到消息中。',
+  'coding.toolCalls.resolve': '仅使用 ek；input 必填且 output/error 恰好一项。output: null 合法；error 需要 code 和 message。SDK 检查实际序列化内容后再获取令牌。',
+  'coding.runners.create': '旧客户端兼容接口；新应用通过控制台保存应用级 Coding 配置。',
+  'coding.runners.update': '旧客户端兼容接口；新应用通过控制台更新应用级 Coding 配置。',
+  'coding.runners.delete': '旧客户端兼容接口；删除前确认没有依赖该 Profile 的实例。',
+  'coding.repositories.update': 'HTTP 202 表示已接受更新，不代表仓库已就绪。',
+  'memories.rebuild': '重建嵌入可能消耗模型额度，显式调用后通过状态和失败内容查询跟踪结果。',
   'chat.send': '输入 content 是文本，返回值未声明 conversation ID。需要继续对话时优先显式创建并保存会话 ID。',
   'chat.stream': '便捷发送的 SSE 变体；SDK 固定 stream: true。',
   'settings.signingSecret.regenerate': '密钥轮换会使旧 ek 签名失效。成功后重新创建持有缓存的 provider/client；SDK 不自动轮换或重试请求。',
@@ -204,7 +243,7 @@ console.log(agents);`, 'typescript', true)}
     },
     {
       id: 'authentication', title: 'Token 与自动续期', description: '选择 Token 来源，理解有效期和并发刷新。',
-      body: `<p>服务端推荐 <code>auth: {mode: 'auto', appID, appKey, userID}</code>。每个接口有显式权限：20 个操作仅允许 ak，100 个允许 ak 或 ek；自动模式分别选择 ak 和 ek。<code>auth</code> 与 <code>getToken</code> 互斥。完整权限及来源列在每个接口中。令牌类型正确后，服务端仍检查应用与用户归属。</p>
+      body: `<p>服务端推荐 <code>auth: {mode: 'auto', appID, appKey, userID}</code>。每个接口区分仅 ak、共享 ak/ek 和仅 ek 权限；自动模式为管理员接口选择 ak，其余默认选择 ek。共享接口可在请求选项中通过 tokenType 显式选择，固定权限接口拒绝冲突选项。<code>auth</code> 与 <code>getToken</code> 互斥。完整权限及来源列在每个接口中。令牌类型正确后，服务端仍检查应用与用户归属。</p>
 <h3>独立获取管理员或用户令牌</h3>
 ${code(`import {createZAIToken, createZAITokenProvider} from 'zai-sdk';
 
@@ -232,7 +271,7 @@ const ek = await getUserToken();`, 'typescript', true)}
 ${note('切换用户或轮换 signing secret 后，重新创建 provider/client 以清除旧密钥与 Token 缓存。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
 <p>浏览器继续使用 <code>fetchToken</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。</p>
 <h3>自定义 getToken 按接口权限选择令牌</h3>
-<p>回调签名为 <code>(admin: boolean) =&gt; string | Promise&lt;string&gt;</code>。SDK 在每次发送请求前传入权限标记：true 表示仅允许 ak；false 表示允许 ak 或 ek，推荐 ek。回调只收到该布尔值，不接收路径等其他接口参数。选择发生在请求前，不是收到 403 后重试；SDK 不解码返回的令牌。</p>
+<p>回调签名为 <code>(admin: boolean) =&gt; string | Promise&lt;string&gt;</code>。SDK 在每次发送请求前传入权限标记：true 表示此次请求选择 ak；false 表示选择 ek（含仅用户接口）。回调只收到该布尔值，不接收路径等其他接口参数。选择发生在请求前，不是收到 403 后重试；SDK 不解码返回的令牌。</p>
 ${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
 
 const baseUrl = 'https://zai.example.com/v1/zai';
@@ -279,11 +318,12 @@ try {
   // 在错误处理章节中按 error.code 处理取消。
 }`, 'typescript', true)}
 <p>请求级 headers 覆盖同名默认 headers。SDK 根据返回模式和请求体设置 <code>Accept</code>、<code>Content-Type</code>，并用自动选择或 <code>getToken</code> 提供的令牌设置 <code>Authorization: Bearer …</code>。无需手动设置这些协议头。</p>
+<p>请求选项 <code>idempotencyKey</code> 优先于同名请求头。对于契约要求幂等键的 11 个写操作，两者都未提供时使用 Web Crypto 自动生成。显式键必须非空且为 1–128 字符；每次独立调用生成新键。业务重试须自行保存并复用原键，SDK 不自动重试。</p>
 <p>列表每次只读取一页，保留服务端分页结构。会话列表的 <code>page</code> 从 1 开始，<code>page_size</code> 默认为 20、最大 100。分页循环、缓存和重试由应用决定。</p>`,
     },
     {
       id: 'doctor', title: '连接与功能检查', description: '逐项诊断配置、协议、鉴权与 Agent，可选验证真实对话。',
-      body: `<p><code>client.doctor(options?)</code> 返回 <code>Promise&lt;ZAIDoctorResult&gt;</code>。默认只读取 Agent 列表，不查询管理员模型目录、不创建会话。<code>onChange</code> 在每项检查完成后接收 <code>ZAIDoctorDetail</code>，可用于展示诊断进度。</p>
+      body: `<p><code>client.doctor(options?)</code> 返回 <code>Promise&lt;ZAIDoctorResult&gt;</code>。默认只读取 Agent 列表，不查询管理员模型目录、不创建会话，也不调用模型测试、标题生成或记忆重建。<code>onChange</code> 在每项检查完成后接收 <code>ZAIDoctorDetail</code>，可用于展示诊断进度。</p>
 ${code(`const result = await client.doctor({
   onChange: detail => console.log(detail.type, detail.pass, detail.message),
 });
@@ -308,7 +348,7 @@ ${note('<code>chat: true</code> 会创建临时会话并消耗少量模型用量
     },
     {
       id: 'conversation', title: '会话与消息', description: '创建会话，选择模型与技能，发送文本和文件引用。',
-      body: `<p>先选择一个可用 Agent，再创建会话。在同一个 <code>session.id</code> 下发送多条消息以延续对话。需要指定模型时使用服务端配置的 model_id；<a href="#api-settings-models-list">settings.models.list()</a> 是管理员配置接口。</p>
+      body: `<p>先选择一个可用 Agent，再创建会话。在同一个 <code>session.id</code> 下发送多条消息以延续对话。需要指定模型时使用服务端配置的 model_id；<a href="#api-settings-models-list">settings.models.list()</a> 默认使用 ek 返回应用可用模型目录。</p>
 ${code(`const {session} = await client.sessions.create('your-agent-id', {
   title: '文档助手',
   skills: [],
@@ -323,8 +363,8 @@ console.log(reply.content);
 const history = await client.messages.list(session.id);
 console.log(history);`, 'typescript', true)}
 <p><code>skills</code> 省略或为 null 时继承 Agent 技能，空数组禁用技能，指定 ID 数组则使用这些技能。<code>reference_settings.memories.collections</code> 配置记忆检索范围，省略或空数组禁用检索。</p>
-<p>消息内容支持 <code>input_text</code>、<code>input_image</code> 和 <code>input_file</code>。图片及文件通过 <code>path</code> 引用已上传的会话文件；可附带 <code>mime_type</code> 和 <code>name</code>。具体字段及工具配置见 <a href="#api-messages-send">messages.send()</a>。</p>
-<p>编码任务使用独立的 coding.sessions，创建时绑定工作区及 claude、codex 或 opencode provider。<code>custom_data</code> 原样传给服务端，SDK 不额外合并对象。</p>`,
+<p>消息内容支持 <code>input_text</code>、<code>input_image</code> 和 <code>input_file</code>。图片及文件通过 <code>file_id</code> 或旧工作区 <code>path</code> 引用文件，至少提供其中一项，也可同时提供；可附带 <code>mime_type</code> 和 <code>name</code>。具体字段及工具配置见 <a href="#api-messages-send">messages.send()</a>。</p>
+<p>编码任务使用独立的 coding.sessions，创建时绑定工作区，provider 来自应用 Coding 配置，不接受会话级覆盖。<code>custom_data</code> 原样传给服务端，SDK 不额外合并对象。</p>`,
     },
     {
       id: 'chat-guide', title: 'Chat 会话', description: '使用文本及 attachments，保留会话 ID 以继续对话。',
@@ -348,44 +388,82 @@ for await (const event of stream) {
 <p>工具默认执行模式的描述存在矛盾，示例显式使用 schema-only。ConversationSettings 的正式 Schema 要求完整字段，传 settings 时应提供完整对象；只使用默认配置可省略 settings。</p>`,
     },
     {
-      id: 'coding-guide', title: 'Coding 异步任务与事件', description: '创建编码会话、启动 turn，再持续消费事件。',
-      body: `${code(`const session = await client.coding.sessions.create('your-runner-agent-id', {
-  workspace_id: 'your-workspace-id',
-  provider: 'codex',
+      id: 'coding-guide', title: 'Coding 异步任务与事件', description: '配置应用环境、准备用户实例，创建会话后持续消费事件。',
+      body: `<p>先在应用控制台保存 Coding 环境，再使用 ak 创建 Agent；只需提供 name。Profile 写接口用于旧客户端兼容，新应用无需传 runner_profile_id。随后使用 ek 配置用户的 SSH 密钥、Git 身份和工作区。</p>
+${code(`const agent = await client.coding.agents.create({name: '开发助手'}); // ak
+const key = await client.coding.keys.ensure(agent.id); // ek
+console.log(key.public_key); // 将公钥授权给需要访问的 Git 仓库。
+await client.coding.git.updateIdentity(agent.id, {name: '小明', email: 'user@example.com'});
+const workspace = await client.coding.workspaces.create(agent.id, {name: '示例项目'});
+const idempotencyKey = crypto.randomUUID(); // 保存到业务请求，重试创建会话时复用。
+const session = await client.coding.sessions.create(agent.id, {
+  workspace_id: workspace.id,
   title: '修复测试',
-});
+}, {idempotencyKey});
+const status = await client.coding.agents.getStatus(agent.id, {session_id: session.id});
+if (status.status !== 'ready') throw new Error('Runner 尚未就绪，请稍后查询状态');
 const accepted = await client.coding.turns.start(session.id, {content: '分析当前测试失败原因'});
 console.log(accepted); // HTTP 202 表示已接受，不代表任务完成。
 
 const controller = new AbortController();
 let afterSeq = 0;
+const textByTurn = new Map<string, string>();
 const stream = await client.coding.events.stream(session.id, {after_seq: String(afterSeq)}, {
   signal: controller.signal,
 });
 for await (const event of stream) {
+  // 只拼接文本增量；空文本事件也必须推进游标。
+  if (event.data.type === 'message.delta' && event.data.turn_id && typeof event.data.payload.text === 'string') {
+    const turnId = event.data.turn_id;
+    textByTurn.set(turnId, (textByTurn.get(turnId) ?? '') + event.data.payload.text);
+  }
+  afterSeq = event.data.seq;
   console.log(event.id, event.event, event.data);
-  if (typeof event.data.seq === 'number') afterSeq = event.data.seq;
-  // turn 终态仍是数据事件；按业务目标决定何时 break。
+  // 合法 error 不是终态，继续读取 turn.failed；按业务目标决定何时 break。
 }
+console.log(textByTurn, afterSeq);
 // EOF 仅表示连接结束。如需继续，使用 afterSeq 再调用 stream。
 // 不再需要会话时调用 client.coding.sessions.archive(session.id)。`, 'typescript', true)}
-<p>provider 在创建会话后不可更改。首次读取使用 after_seq: "0"，恢复时使用最后处理完的事件游标；可通过 events.list 回放历史。SDK 不自动重连、不自动执行交互审批或 Git 写操作。</p>
-<p>Coding SSE 来自 <a href="https://zai-zjy.sh.oop.cc/docs/zai/coding/events">在线事件流文档</a>，独立于消息 SSE。数据帧保留 id、event、rawData 和完整事件对象；心跳注释忽略，完成、失败和取消均不关闭会话流。无需 [DONE]；EOF 不是 turn 成功。通道 error 和网络读取失败抛错，取消或提前退出释放连接。</p>`,
+<p>会话不接受 provider 或 runner_id 覆盖；响应记录 runner_profile_id、runner_instance_id 和 runner_profile_version。通过 mode、plan_mode、system_prompt、primary_repo_key 配置会话；首次读取事件使用 after_seq: "0"，恢复时使用最后处理完的事件游标，也可通过 events.list 回放历史。仓库更新的 202 同样仅表示已接受。SDK 不自动轮询、重连、执行交互审批或 Git 写操作。</p>
+<p>Coding SSE 来自 <a href="https://zai-dev.sh.oop.cc/docs/zai/coding/events">在线事件流文档</a>，独立于消息 SSE。数据帧保留 id、event、rawData 和完整事件对象；心跳注释忽略，合法 error、完成、失败和取消均不关闭会话流。无需 [DONE]；EOF 不是 turn 成功。非事件信封的通道错误和畸形事件抛错，取消或提前退出释放连接。</p>
+<h3>用户 Runner 状态流</h3>
+${code(`const statusStream = await client.coding.agents.streamStatus('your-agent-id');
+for await (const snapshot of statusStream) {
+  // snapshot.data 是 unknown，按状态协议缩小类型后使用。
+  console.log(snapshot.event, snapshot.id, snapshot.data);
+}
+// 管理员必须明确指定目标用户。
+const status = await client.coding.agents.getStatus('your-agent-id', {
+  external_user_id: 'your-user-id',
+}, {tokenType: 'admin'});`, 'typescript', true)}
+<p>getStatus 和 streamStatus 默认使用 ek 查询当前用户，用户令牌不可覆盖 external_user_id；ak 查询必须提供该字段。ensureRunnerInstance 只允许 ek 操作当前用户。状态 SSE 保留 event、id、rawData，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。</p>
+<h3>附件与客户端工具</h3>
+${code(`const uploaded = await client.coding.sessions.uploadFile('your-session-id', {name: 'report.txt'}, new Blob(['报告正文']));
+await client.coding.turns.start('your-session-id', {
+  content: '总结附件', attachment_ids: [uploaded.id],
+});
+const blob = await client.coding.sessions.downloadFile('your-session-id', {file_id: uploaded.id});
+console.log(await blob.text());
+await client.coding.toolCalls.resolve('your-session-id', 'your-tool-call-id', {output: null});`, 'typescript', true)}
+<p>Coding 上传按 application/octet-stream 发送原始 Blob，返回 id 供 attachment_ids 引用。原件下载只允许 ek；下载和创建单次链接时，file_id/path 恰好提供一个。单次链接不要持久化到消息中。工具回填只允许当前用户，output/error 恰好一项；output: null 合法，error 必须包含 code/message。</p>`,
     },
     {
       id: 'settings-guide', title: '应用管理员配置', description: '管理模型、渠道与签名密钥。',
       body: `${code(`// 使用 auth.mode: 'auto' 的服务端客户端，以下调用自动选择 ak。
-const models = await client.settings.models.list();
+const models = await client.settings.models.list({tokenType: 'admin'});
 const channels = await client.settings.channels.list();
 console.log(models, channels);`, 'typescript', true)}
-<p>模型记录的数字 id 用于管理接口，模型调用使用字符串 model_id。settings 全部需要 ak，Runner 运维查询和部分 Memories 操作同样需要 ak；各接口会显示具体要求。不要将应用 API Key 或 signing secret 交给浏览器。</p>
+<p>模型记录的数字 id 用于管理接口，模型调用使用字符串 model_id。settings.models.list 默认使用 ek 查询应用可用目录，显式选择 admin 才返回自有管理目录。其他 settings、Runner 配置/实例管理、Coding Agent 管理和部分 Memories 操作需要 ak；各接口会显示具体要求。不要将应用 API Key 或 signing secret 交给浏览器。</p>
 <p><code>settings.signingSecret.get()</code> 读取 ek 签名密钥。仅在主动安排轮换时调用 <code>regenerate()</code>；轮换后重新创建服务端 provider/client。SDK 不自动轮换，也不在鉴权失败后改用更高权限重放。</p>`,
     },
     {
-      id: 'migration', title: '0.1.x 升级到 0.2.0', description: '路径、嵌套资源、令牌和正式 Schema 的变化。',
-      body: `<p>根地址从 /v8 改为 /v1/zai；旧顶层 executor、workspaces、repositories、models 已移除。工作区、仓库和公钥进入 coding；models 改为 settings.models。实体字段 integration_id 改为 app_id，Agent 类型 executor 改为 runner；普通会话不再使用 executor_provider。</p>
+      id: 'migration', title: '升级到 0.3.0', description: 'Runner 配置、附件、幂等键、权限和事件协议的变化。',
+      body: `<h3>从 0.2.x 升级</h3><p>0.3.0 直接适配新版契约。Coding 会话移除 provider/runner_id 覆盖，响应新增 Profile、Instance 和版本信息；创建 Agent 仅需 name。模型列表默认使用 ek，管理目录显式传 tokenType: "admin"。密钥轮换需要 fingerprint，Coding 模型查询需要 agent_id。</p>
+<p>11 个写操作自动生成幂等键；重试应复用原键。仓库更新与 Turn 的 202 表示接受，不表示就绪或完成。普通附件可用 file_id/path，Coding 上传后以 attachment_ids 引用；原件下载仅允许 ek，单次链接不持久化到消息。合法 Coding error 事件继续传递，仍需读取 turn.failed；只拼接 message.delta，空文本事件也推进游标。</p>
+<p>模型测试、标题生成和记忆重建可能消耗额度，均保持显式调用；doctor 默认不增加这些行为。完整迁移说明和 0.1→0.2 历史保留在随包提供的 MIGRATION.md。</p>
+<h3>从 0.1.x 升级的历史变化</h3><p>根地址从 /v8 改为 /v1/zai；旧顶层 executor、workspaces、repositories、models 已移除。工作区、仓库和公钥进入 coding；models 改为 settings.models。实体字段 integration_id 改为 app_id，Agent 类型 executor 改为 runner；普通会话不再使用 executor_provider。</p>
 <p>工作区和仓库更新使用 PUT；仓库文件列表返回 entries，内容可能是 base64 或被截断，旧仓库下载无替代端点。模型管理不支持 all，也不再归一化旧模型数组。同步管理员签发保留位置参数并改用 UTF-8；用户令牌通过应用 API Key 获取签名密钥后生成。</p>
-<p>覆盖原始规范 119 个 HTTP 操作，加上 Coding SSE 共 78 条路径、120 个 HTTP 操作、123 个资源方法。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
+<p>0.3.0 覆盖原始规范 151 个 HTTP 操作，加上 Coding SSE 共 99 条路径、152 个 HTTP 操作、155 个资源方法。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
 <h3>保留的规范缺口</h3><ul>
 <li>Memories、QA、文件提取的部分描述写“必填”，但 Schema 未设置 required；类型遵循正式 Schema，示例仍提供业务必需值。</li>
 <li>SettingsModel.model_type 的 nullable 类型与 enum 不一致；不推测性扩充生成类型。</li>
@@ -440,7 +518,7 @@ const blob = await client.sessions.downloadFile('your-session-id', {
 });
 console.log(await blob.text());`, 'typescript', true)}
 <p><code>ZAIUploadFile</code> 为 <code>Blob | {blob: Blob; filename: string}</code>。浏览器的 <code>File</code> 继承 Blob，可直接传入；裸 Blob 默认文件名为 <code>blob</code>。SDK 自动构造 FormData，上传时无需设置 Content-Type。</p>
-<p>会话 <code>readFile()</code> 返回 JSON，<code>downloadFile()</code> 返回 Blob。仓库使用 <code>coding.repositories.readFile()</code>，根据 encoding 解码 base64，并检查 truncated；没有仓库下载接口。</p>
+<p>普通会话上传的 path 可省略：省略时返回不可变附件 id，消息通过 file_id 引用；返回 id 为可选字段，使用前先检查。传入非空 path 仍可上传到旧工作区。<code>readFile()</code> 返回 JSON，<code>downloadFile()</code> 返回 Blob。仓库使用 <code>coding.repositories.readFile()</code>，根据 encoding 解码 base64，并检查 truncated；没有仓库下载接口。</p>
 <h3>直接提取文件文本</h3>
 ${code(`const extracted = await client.files.extract({
   file: {blob: new Blob(['报告正文'], {type: 'text/plain'}), filename: 'report.txt'},
@@ -486,7 +564,7 @@ const {session} = await client.sessions.create('your-agent-id', {
     min_similarity: 0.5,
   }},
 });`, 'typescript', true)}
-<p>通过 <a href="#api-memories-create">memories.create()</a> 创建集合，写入内容后可查看 <code>embedding_status</code> 和 <code>listContentEmbeddingJobs()</code>。不要将写入成功视为向量处理已完成；需按服务端状态决定何时检索。</p>`,
+<p>通过 <a href="#api-memories-create">memories.create()</a> 创建集合，写入内容后可查看 <code>embedding_status</code> 和 <code>listContentEmbeddingJobs()</code>。不要将写入成功视为向量处理已完成；需按服务端同步状态决定何时检索。可通过 listFailures 查询失败内容；rebuild 重建嵌入可能消耗模型额度，仅在明确需要时调用。</p>`,
     },
     {
       id: 'errors', title: '错误处理与常见问题', description: '按稳定错误码分支，区分协议错误与业务结果。',
@@ -513,9 +591,9 @@ try {
 <tr><td>invalid-input</td><td>无法构造请求、无效路径 ID、上传格式或配置错误。</td><td>修正调用参数。</td></tr>
 <tr><td>invalid-response</td><td>意外成功状态、错误媒体类型、无效 JSON / SSE 等。</td><td>核对 API 版本及服务端响应。</td></tr>
 </tbody></table></div>
-<p><code>ZAIClientError</code> 继承 Error，包含 <code>code</code>；还可包含 <code>status</code>、<code>body</code>、<code>method</code>、<code>path</code>、<code>headers</code>、<code>cause</code>。这些可选字段只在信息可用时存在。根据 code 分支，避免依赖错误文案。</p>
+<p><code>ZAIClientError</code> 继承 Error，包含 <code>code</code>；还可包含 <code>status</code>、<code>body</code>、<code>method</code>、<code>path</code>、<code>headers</code>、<code>cause</code>。这些可选字段只在信息可用时存在。结构有效的服务端 error_info 会提取为 errorInfo（ZAIErrorInfo），包含 code、message、reason_code、user_message、details 和可选 retryable；原始 body 与 SDK 错误分类不变。根据 SDK code 分支，避免依赖错误文案。</p>
 <details class="faq"><summary>为什么返回了 ok: false，却没有抛出异常？</summary><p>正常 HTTP 响应内的业务结果原样返回。请检查 ok、success 等字段，按相应接口处理。</p></details>
-<details class="faq"><summary>原来的 models.list 在哪里？</summary><p>新版 settings.models 是应用管理员配置接口，不再支持 all。数字 id 标识配置记录，调用模型使用 model_id。</p></details>
+<details class="faq"><summary>原来的 models.list 在哪里？</summary><p>settings.models.list 默认用 ek 查询应用可用目录，传 {tokenType: "admin"} 查询自有管理目录；其他模型管理操作需要 ak。不再支持 all。数字 id 标识配置记录，调用模型使用 model_id。</p></details>
 <details class="faq"><summary>SDK 会自动重试、重连或执行工具吗？</summary><p>不会。缓存、重试、工具执行和 UI 状态由应用负责；尤其是消息发送、创建或删除操作，重试前应确认上一次请求的结果。</p></details>
 <details class="faq"><summary>TypeScript 类型是否等于完整运行时校验？</summary><p>不是。SDK 校验传输协议和必要边界，但不会对所有返回 JSON 做完整 schema 校验。开放对象和 unknown 数据需由应用缩小类型。</p></details>`,
     },

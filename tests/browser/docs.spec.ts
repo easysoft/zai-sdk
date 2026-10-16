@@ -2,12 +2,16 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {test, expect} from './fixtures.js';
 
+// Snapshotting the full API reference at every action stalls WebKit tracing.
+// Retain action/network logs and screenshots without serializing the large DOM.
+test.use({trace: {mode: 'retain-on-failure', snapshots: false}});
+
 test('documentation links, resource methods and exported APIs are complete', async ({page}) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/docs/index.html');
   await expect(page).toHaveTitle('ZAI SDK · 使用指南与接口参考');
-  await expect(page.locator('.operation')).toHaveCount(123);
+  await expect(page.locator('.operation')).toHaveCount(155);
   expect(await page.locator('.type-entry').count()).toBeGreaterThan(126);
   const broken = await page.locator('a[href^="#"]').evaluateAll(links => links
     .map(link => link.getAttribute('href')!.slice(1))
@@ -57,6 +61,19 @@ test('deep links reveal full nested request and response fields', async ({page})
   await page.goBack();
   await expect(page).toHaveURL(/#api-sessions-create$/);
   await expect(operation).toHaveAttribute('open', '');
+});
+
+test('documentation distinguishes stream protocols, binary uploads and user permissions', async ({page}) => {
+  await page.goto('/docs/index.html#api-coding-agents-streamStatus');
+  const status = page.locator('#api-coding-agents-streamStatus');
+  await expect(status).toHaveAttribute('open', '');
+  await expect(status).toContainText('ZAIRunnerStatusStreamEvent');
+  await expect(status).toContainText('正常 EOF 结束');
+  await expect(status).toContainText('external_user_id');
+  await page.goto('/docs/index.html#api-coding-sessions-uploadFile');
+  await expect(page.locator('#api-coding-sessions-uploadFile')).toContainText("new Blob(['报告正文']");
+  await expect(page.locator('#api-coding-sessions-downloadFile .operation-auth')).toContainText('仅 ek');
+  await expect(page.locator('#api-coding-sessions-create')).toContainText('重试须复用原键');
 });
 
 test('documentation works from a standalone local file without network access', async ({page, context}) => {

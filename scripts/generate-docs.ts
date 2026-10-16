@@ -134,25 +134,30 @@ function schemaExample(schema: Schema, field = ''): unknown {
 }
 
 const snippets: {key: string; source: string}[] = [];
-function operationExample(key: string, op: Operation, params: readonly string[], stream: boolean): string {
+function operationExample(key: string, op: Operation, params: readonly string[], stream: boolean, streamKind: 'coding' | 'status' | null): string {
   const args = params.map(name => JSON.stringify(name === 'version' || (key.startsWith('settings.models.') && name === 'id') ? '1' : `your-${name.replaceAll('_', '-')}`));
   const query = op.parameters?.filter(p => p.in === 'query') ?? [];
   if (query.length) {
-    const chosen = query.some(p => p.required) ? query.filter(p => p.required) : query.filter(p => ['page', 'page_size', 'all', 'path'].includes(p.name));
-    args.push(JSON.stringify(Object.fromEntries((chosen.length ? chosen : query.slice(0, 1)).map(p => [p.name, schemaExample(p.schema ?? {}, p.name)])), null, 2));
+    const chosen = query.some(p => p.required) ? query.filter(p => p.required) : query.filter(p => ['page', 'page_size', 'all', 'path', 'session_id'].includes(p.name));
+    const sample = chosen.length ? chosen : query.filter(p => p.name !== 'external_user_id').slice(0, 1);
+    args.push(JSON.stringify(Object.fromEntries(sample.map(p => [p.name, schemaExample(p.schema ?? {}, p.name)])), null, 2));
   }
   if (op.requestBody) {
-    if (key === 'sessions.uploadFile') args.push(`{\n  path: 'input/report.txt',\n  file: {blob: new Blob(['报告正文'], {type: 'text/plain'}), filename: 'report.txt'},\n}`);
+    if (op.requestBody.content['application/octet-stream']) args.push(`new Blob(['报告正文'], {type: 'text/plain'})`);
+    else if (key === 'sessions.uploadFile') args.push(`{\n  file: {blob: new Blob(['报告正文'], {type: 'text/plain'}), filename: 'report.txt'},\n}`);
     else if (key === 'files.extract') args.push(`{\n  file: {blob: new Blob(['报告正文'], {type: 'text/plain'}), filename: 'report.txt'},\n}`);
     else if (key.startsWith('chat.') && (key.endsWith('.send') || key.endsWith('.stream'))) args.push(`{\n  content: '你好，请介绍一下自己。',\n  tool_execution_mode: 'schema-only',\n}`);
+    else if (key === 'coding.toolCalls.resolve') args.push(`{output: null}`);
     else if (key === 'qa.create' || key === 'qa.update') args.push(`{\n  question: '如何开始使用？',\n  answer: '先创建会话，再发送消息。',\n}`);
     else if (key === 'messages.send' || key === 'messages.stream') args.push(`{\n  content: [{type: 'input_text', text: '你好，请介绍一下自己。'}],\n}`);
     else if (key === 'skills.validateBundle' || key === 'skills.publishRevision') args.push(`{\n  files: [{path: 'SKILL.md', media_type: 'text/markdown', content: '# Example\\nSummarize a report.'}],\n}`);
     else args.push(JSON.stringify(schemaExample(op.requestBody.content['application/json']?.schema ?? {}), null, 2));
   }
   const call = `await client.${key}(${args.join(', ')})`;
-  const source = key === 'coding.events.stream'
+  const source = streamKind === 'coding'
     ? `const stream = ${call};\nfor await (const event of stream) {\n  // 保存事件游标，断线后通过 after_seq 恢复。\n  console.log(event.id, event.event, event.data);\n}`
+    : streamKind === 'status'
+    ? `const stream = ${call};\nfor await (const event of stream) {\n  // data 是 unknown，按状态协议缩小类型；正常 EOF 结束。\n  console.log(event.event, event.id, event.data);\n}`
     : stream
     ? `const stream = ${call};\nfor await (const event of stream) {\n  if (event.type === 'done') break;\n  console.log(event.event, event.data);\n}`
     : `const result = ${call};\nconsole.log(result);`;
@@ -182,17 +187,18 @@ function renderOperation(meta: (typeof ZAI_OPERATIONS)[number], stream = false):
     const resolved = resolveSchema(schema, spec);
     const sdkSchema = meta.streamName ? {...resolved, properties: Object.fromEntries(Object.entries(resolved.properties ?? {}).filter(([name]) => name !== 'stream')), required: resolved.required?.filter(name => name !== 'stream')} : resolved;
     const inputParam = method.parameters.find(p => p.name.getText() === 'input');
-    return `<h4>请求体 <a class="type-link" href="#${typeID(typePrefix + 'Input')}">${typePrefix}Input</a></h4><p class="muted">${escape(media)} · SDK input 参数${inputParam?.questionToken ? '可省略' : '必填'}${media === 'multipart/form-data' ? '；二进制字段由 SDK 转为 FormData。' : ''}</p>${renderSchema(sdkSchema, 'request', media === 'multipart/form-data')}`;
+    return `<h4>请求体 <a class="type-link" href="#${typeID(typePrefix + 'Input')}">${typePrefix}Input</a></h4><p class="muted">${escape(media)} · SDK input 参数${inputParam?.questionToken ? '可省略' : '必填'}${media === 'multipart/form-data' ? '；二进制字段由 SDK 转为 FormData。' : media === 'application/octet-stream' ? '；SDK 接受 Blob（包含 File），按原始二进制发送，允许零字节。' : ''}</p>${media === 'application/octet-stream' ? '<p>SDK 输入类型为 <code>Blob</code>。</p>' : renderSchema(sdkSchema, 'request', media === 'multipart/form-data')}`;
   }).join('');
-  const responseHTML = meta.responseType === 'stream' ? `<h4>返回值</h4><p><code>Promise&lt;AsyncIterableIterator&lt;<a href="#type-ZAICodingStreamEvent">ZAICodingStreamEvent</a>&gt;&gt;</code>。持续的 Coding 会话事件流，保留 id、event、rawData 及完整事件对象；turn 终态是普通数据，EOF 仅表示连接结束。无需 [DONE]，不自动重连，使用 after_seq 恢复。参见 <a href="#coding-guide">Coding 使用指南</a>。</p>` : stream ? `<h4>返回值</h4><p><code>Promise&lt;AsyncIterableIterator&lt;<a href="#type-ZAIStreamEvent">ZAIStreamEvent</a>&gt;&gt;</code></p><p>HTTP 200，text/event-stream。<code>type: 'data'</code> 包含 event、id?、rawData 和 unknown 类型的 data；<code>type: 'done'</code> 表示正常完成。完整处理方式见 <a href="#streaming">流式响应 SSE</a>。</p>` : `<h4>返回值 <a class="type-link" href="#${typeID(typePrefix + 'Response')}">${typePrefix}Response</a></h4>` + Object.entries(op.responses).filter(([status]) => /^2\d\d$/.test(status)).map(([status, response]) => Object.entries(response.content ?? {}).filter(([media]) => media !== 'text/event-stream').map(([media, {schema}]) => `<p class="response-status">HTTP ${status} · ${escape(media)}</p>${media === 'application/octet-stream' ? '<p>SDK 返回 <code>Blob</code>，可使用 <code>text()</code>、<code>arrayBuffer()</code> 或浏览器下载流程。</p>' : schema ? renderSchema(schema, 'response') : '<p>规范未定义响应字段。</p>'}`).join('')).join('');
+  const responseHTML = meta.streamKind === 'status' ? `<h4>返回值</h4><p><code>Promise&lt;AsyncIterableIterator&lt;<a href="#type-ZAIRunnerStatusStreamEvent">ZAIRunnerStatusStreamEvent</a>&gt;&gt;</code>。用户 Runner 状态流，保留 event、id?、rawData，data 为 unknown。正常 EOF 结束，不要求 [DONE]，不自动重连。参见 <a href="#coding-guide">Coding 使用指南</a>。</p>` : meta.streamKind === 'coding' ? `<h4>返回值</h4><p><code>Promise&lt;AsyncIterableIterator&lt;<a href="#type-ZAICodingStreamEvent">ZAICodingStreamEvent</a>&gt;&gt;</code>。持续的 Coding 会话事件流，保留 id、event、rawData 及完整事件对象；合法 error 及 turn 终态是普通数据，EOF 仅表示连接结束。无需 [DONE]，不自动重连，使用 after_seq 恢复。参见 <a href="#coding-guide">Coding 使用指南</a>。</p>` : stream ? `<h4>返回值</h4><p><code>Promise&lt;AsyncIterableIterator&lt;<a href="#type-ZAIStreamEvent">ZAIStreamEvent</a>&gt;&gt;</code></p><p>HTTP 200，text/event-stream。<code>type: 'data'</code> 包含 event、id?、rawData 和 unknown 类型的 data；<code>type: 'done'</code> 表示正常完成。完整处理方式见 <a href="#streaming">流式响应 SSE</a>。</p>` : `<h4>返回值 <a class="type-link" href="#${typeID(typePrefix + 'Response')}">${typePrefix}Response</a></h4>` + Object.entries(op.responses).filter(([status]) => /^2\d\d$/.test(status)).map(([status, response]) => Object.entries(response.content ?? {}).filter(([media]) => media !== 'text/event-stream').map(([media, {schema}]) => `<p class="response-status">HTTP ${status} · ${escape(media)}</p>${media === 'application/octet-stream' ? '<p>SDK 返回 <code>Blob</code>，可使用 <code>text()</code>、<code>arrayBuffer()</code> 或浏览器下载流程。</p>' : schema ? renderSchema(schema, 'response') : '<p>规范未定义响应字段。</p>'}`).join('')).join('');
   const responses = Object.entries(op.responses).map(([status, response]) => [`<code>${escape(status)}</code>`, inline(response.description), /^2\d\d$/.test(status) ? '正常返回' : '抛出 ZAIClientError，保留可用的 status 和 body']);
   return `<details class="operation" id="${apiID(key)}" data-search-entry data-search-title="${escape(key + ' · ' + name)}" data-search-kind="接口" data-operation="${key}">
 <summary><span class="method method-${meta.method}">${meta.method.toUpperCase()}</span><span class="operation-label"><code>${key}()</code><span>${name}</span></span><span class="disclosure" aria-hidden="true">＋</span></summary>
 <div class="operation-body"><div class="endpoint"><code>${escape(meta.path)}</code><a href="#${apiID(key)}" class="permalink" aria-label="${escape(key)} 的永久链接">#</a></div>
-<p class="operation-auth"><strong>令牌：${meta.auth === 'admin' ? '仅 ak（管理员）' : 'ak 或 ek'}</strong> · 自动模式使用 <code>${meta.auth === 'admin' ? 'ak' : 'ek'}</code> · <a href="${escape(meta.source)}">权限与协议来源</a></p>
+<p class="operation-auth"><strong>令牌：${meta.auth === 'admin' ? '仅 ak（管理员）' : meta.auth === 'user-only' ? '仅 ek（当前用户）' : 'ak 或 ek'}</strong> · 自动模式默认使用 <code>${meta.auth === 'admin' ? 'ak' : 'ek'}</code> · <a href="${escape(meta.source)}">权限与协议来源</a></p>
+${meta.idempotencyRequired ? '<p>需要幂等键；SDK 优先使用 options.idempotencyKey，其次使用合并后的同名请求头，均未提供时自动生成。重试须复用原键。</p>' : ''}
 ${op.description ? `<p>${inline(op.description)}</p>` : ''}${operationNotes[key] ? `<aside class="note"><p>${inline(operationNotes[key])}</p></aside>` : ''}
 <h4>调用签名</h4>${code(signature)}<p class="muted">所有方法最后均可传入 <a href="#type-ZAIRequestOptions">ZAIRequestOptions</a>；示例中的 ID 请替换为真实值。</p>
-${parameterHTML}${queryHTML}${bodyHTML}<h4>调用示例</h4>${operationExample(key, op, meta.pathParams, isStream)}${responseHTML}
+${parameterHTML}${queryHTML}${bodyHTML}<h4>调用示例</h4>${operationExample(key, op, meta.pathParams, isStream, meta.streamKind)}${responseHTML}
 <details class="response-details"><summary>HTTP 状态与原始接口定义</summary>${table(['状态', '规范说明', 'SDK 行为'], responses)}<p>下方保留完整 HTTP 规范，包含嵌套字段、联合类型、默认值、约束及所有响应。SDK 的文件上传与流式开关以上方说明为准。</p>${code(JSON.stringify({method: meta.method.toUpperCase(), path: meta.path, ...op}, null, 2), 'JSON / OpenAPI')}</details></div></details>`;
 }
 
@@ -208,17 +214,18 @@ const coreDescriptions: Record<string, string> = {
   createZAIClient: '创建资源客户端。baseUrl 必填，auth 与 getToken 二选一，返回 ZAIClient。',
   createZAIToken: '使用服务端凭据签发 Token。expiredTime 默认为当前 Unix 秒加 1000。',
   createZAITokenProvider: '创建按请求缓存并续期的 Token 提供器。',
-  ZAIClientError: 'SDK 错误类；按 code 分支处理，可附带 HTTP 信息和 cause。',
+  ZAIClientError: 'SDK 错误类；按 code 分支处理，可附带 HTTP 信息、errorInfo 及 cause。',
   ZAIClient: 'createZAIClient 的返回类型，包含全部资源方法与 doctor 诊断方法。',
   ZAIDoctorOptions: 'doctor 选项：真实对话开关、Agent 与模型选择、每次请求超时、取消、请求头及进度回调。',
   ZAIDoctorDetail: '单项检查的类型、名称、是否通过、说明和可选错误。',
   ZAIDoctorResult: '诊断整体结果、逐项详情、选定 Agent 和临时会话 ID；清理失败也使 pass 为 false。',
   CreateZAIClientOptions: '客户端构造选项：API 根地址、Token 提供器、自定义 Fetch 和默认请求头。',
-  ZAIRequestOptions: '所有资源方法的末尾选项：AbortSignal 和单次请求头。',
+  ZAIRequestOptions: '所有资源方法的末尾选项：AbortSignal、单次请求头、显式幂等键和令牌类型。',
   ZAIUploadFile: '支持 File / Blob，或显式指定文件名的 Blob。',
   ZAIAutoAuthOptions: '服务端自动鉴权：按每个操作的权限选择 ak 或 ek。',
   ZAICodingEvent: 'Coding 事件完整载荷，保留未知扩展字段。',
   ZAICodingStreamEvent: 'Coding SSE 数据帧，含事件名称、游标、原始 JSON 和完整事件对象。',
+  ZAIRunnerStatusStreamEvent: 'Runner 状态 SSE 数据帧，含 event、id?、rawData 和 unknown 类型的 data；正常 EOF 结束。',
   ZAIStreamEvent: 'SSE 数据事件或完成事件；data 以 unknown 保留。',
   ZAICredentials: '服务端签名凭据：appID、appKey、userID 及可选 userName。',
   ZAIToken: 'Token 与有效期；expiresAt 使用整数 Unix 秒。',
@@ -226,8 +233,9 @@ const coreDescriptions: Record<string, string> = {
   ZAITokenProviderOptions: 'credentials 与 fetchToken 二选一，支持提前续期窗口。',
   ZAIErrorCode: '六个稳定错误类别：authentication、http、network、aborted、invalid-input、invalid-response。',
   ZAIErrorOptions: '构造 SDK 错误时使用的可选上下文。',
+  ZAIErrorInfo: '服务端结构化诊断：code、message、reason_code、user_message、details 和可选 retryable。',
   paths: '完整 OpenAPI 路径类型；通过路径、HTTP 方法、响应状态继续索引。',
-  components: 'OpenAPI components 类型；含新版规范的 47 个公共 schemas。',
+  components: `OpenAPI components 类型；含新版规范的 ${Object.keys(spec.components?.schemas ?? {}).length} 个公共 schemas。`,
 };
 const coreLinks: Record<string, string> = {
   createZAIClient: 'requests', createZAIToken: 'authentication', createZAITokenProvider: 'authentication',
@@ -239,7 +247,7 @@ function declarationText(name: string, declaration: ts.Declaration): string {
     const signature = checker.getSignatureFromDeclaration(declaration)!;
     return `export declare function ${name}${checker.signatureToString(signature, declaration, ts.TypeFormatFlags.NoTruncation).replace(/: \{[\s\S]*$/, ': ZAIClient')};`;
   }
-  if (ts.isClassDeclaration(declaration)) return `export class ZAIClientError extends Error {\n  constructor(code: ZAIErrorCode, message: string, options?: ZAIErrorOptions);\n  readonly code: ZAIErrorCode;\n  readonly status?: number;\n  readonly body?: unknown;\n  readonly method?: string;\n  readonly path?: string;\n  readonly headers?: Headers;\n}`;
+  if (ts.isClassDeclaration(declaration)) return `export class ZAIClientError extends Error {\n  constructor(code: ZAIErrorCode, message: string, options?: ZAIErrorOptions);\n  readonly code: ZAIErrorCode;\n  readonly status?: number;\n  readonly body?: unknown;\n  readonly errorInfo?: ZAIErrorInfo;\n  readonly method?: string;\n  readonly path?: string;\n  readonly headers?: Headers;\n}`;
   if (name === 'paths') return `import type {paths} from 'zai-sdk';\ntype Agents = paths['/agents']['get']['responses'][200]['content']['application/json'];`;
   if (name === 'components') return declaration.getText();
   return declaration.getText();

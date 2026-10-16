@@ -1,3 +1,69 @@
+# 从 0.2.x 升级到 0.3.0
+
+0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。覆盖原始规范的 98 条路径、151 个操作、55 个公共 Schema；加上现有 Coding SSE 补充规范，共 **99 条路径、152 个 HTTP 操作、155 个资源方法**。
+
+## Runner 与 Coding 会话
+
+先在应用控制台保存 Coding 环境，再通过 `coding.agents.create({name})` 使用 ak 创建 Agent；无需指定 `runner_profile_id`。随后以 ek 确保 SSH 密钥、配置 Git 身份、创建工作区和会话，查询状态就绪后启动 Turn。`coding.runners` 的 Profile 写接口保留供旧客户端兼容；新应用不再以创建 Profile 作为入门步骤。
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| 在线 Runner 列表 | `coding.runners` 管理应用 Profile，`coding.runners.instances` 管理用户实例 |
+| Agent 的 `runner_id` | `runner_profile_id`；专用管理入口为 `coding.agents` |
+| 创建 Coding 会话时覆盖 `provider/runner_id` | 删除覆盖；由应用配置决定 provider，响应保留 Profile、Instance 和版本信息 |
+| 固定会话执行方式 | 可指定 `mode/plan_mode/system_prompt/primary_repo_key`，并支持标题生成 |
+| Coding 模型列表无 Agent | `coding.models.list({agent_id})`，新增 `coding.modes.list` |
+| 无参数轮换 SSH 密钥 | `coding.keys.rotate(agentId, {fingerprint})`，先读取当前密钥指纹 |
+| 仓库更新成功即完成 | HTTP 202 表示已接受，按实际状态确认就绪 |
+
+`coding.agents.getStatus/streamStatus` 默认 ek 查询当前用户；显式 `{tokenType: 'admin'}` 必须提供 `external_user_id`。用户令牌不得覆盖用户范围。`ensureRunnerInstance` 仅允许 ek，202 不代表实例已经就绪。
+
+## 请求选项、权限与错误
+
+方法最后的 `ZAIRequestOptions` 新增 `idempotencyKey?: string` 和 `tokenType?: 'admin' | 'user'`。共享权限接口允许显式选择，固定权限接口拒绝冲突选项。`getToken(admin: boolean)` 签名不变，布尔值表示这次选择 ak 还是 ek；自定义回调应分别管理两类令牌。
+
+`settings.models.list()` 改为默认 ek，返回应用可用目录。查询自有管理目录使用 `settings.models.list({tokenType: 'admin'})`；其他模型管理与测试仍需要 ak。通用 `agents` 保持默认选择，管理 runner 推荐使用 `coding.agents`，通过通用入口管理时显式选择 admin。
+
+Git identity、SSH keys、Coding 原件下载与客户端工具结果回填只允许 ek。Profile/Instance 管理、Coding Agent 管理（含列表和详情）、记忆重建和模型测试使用 ak。
+
+11 个写操作要求幂等键。SDK 优先使用 `options.idempotencyKey`，其次使用合并后的 `Idempotency-Key` 请求头，均未提供时通过 Web Crypto 自动生成。显式键必须非空且为 1–128 字符；**业务重试必须复用原键**，每次独立方法调用都会生成新键。SDK 不增加自动重试或轮询。
+
+```ts
+const idempotencyKey = crypto.randomUUID(); // 与业务请求一起保存。
+await client.coding.sessions.create(agentId, {workspace_id: workspaceId}, {idempotencyKey});
+// 不确定上次响应时，在确认业务重试条件后复用同一个 idempotencyKey。
+```
+
+新增 `ZAIErrorInfo` 与 `ZAIClientError.errorInfo`，结构有效时提取服务端 `error_info` 中的 `code/message/reason_code/user_message/details` 和可选 `retryable`。SDK 原有错误分类 `code`、消息与完整 `body` 保持不变；畸形或缺失的诊断信息不会被当作有效 `errorInfo`。
+
+## 文件、附件与客户端工具
+
+普通 `sessions.uploadFile` 的 `path` 改为可选。省略它会上传不可变附件并返回文件 ID，提供非空 path 则保留旧工作区上传方式。普通消息的 `input_image/input_file` 至少提供 `file_id/path` 之一，也可同时提供；上传响应的 id 为可选字段，应在使用前检查。
+
+```ts
+const uploaded = await client.coding.sessions.uploadFile(sessionId, {name: 'report.txt'}, new Blob(['报告正文']));
+await client.coding.turns.start(sessionId, {content: '总结附件', attachment_ids: [uploaded.id]});
+const original = await client.coding.sessions.downloadFile(sessionId, {file_id: uploaded.id});
+```
+
+Coding 上传发送原始 `Blob`，不是 multipart；input 按规范可省略，允许零字节。原件下载只接受 ek；下载和创建单次下载链接的 `file_id/path` 必须恰好提供一个。单次链接最多有效十分钟且仅能使用一次，不适合持久化到消息中；使用附件引用和 `asset_delivery` 处理消息中的文件交付。
+
+`coding.toolCalls.resolve(sessionId, toolCallId, input)` 仅允许用户回填结果，input 必填且为 `{output: unknown; error?: never} | {error: {code: string; message: string}; output?: never}`。`output: null` 合法；SDK 只序列化一次，校验实际发送内容，空对象、双选或序列化后 output 丢失会在获取令牌前报错。
+
+## 三种 SSE 与诊断
+
+- 普通消息 SSE 仍要求 `[DONE]`，错误事件保持抛错行为。
+- Coding 会话 SSE 中合法 `error` 是数据事件，后续仍会收到 `turn.failed`；完成、失败或取消都不关闭会话流。只拼接 `message.delta`，空文本事件也推进 seq 游标；非信封通道错误和畸形事件仍抛错，EOF 只表示连接结束。
+- 新 `coding.agents.streamStatus` 返回 `ZAIRunnerStatusStreamEvent`，保留 `event/id/rawData`，`data` 是 unknown，正常 EOF 结束，不要求 `[DONE]`。
+
+三种流均支持取消、提前退出和资源清理，不自动重连。模型测试、标题生成和记忆重建可能消耗额度，保持显式调用；`doctor()` 默认不接入这些操作。新增记忆同步状态、失败内容查询和重建入口便于跟踪处理结果。
+
+字段及路径以本地原始 OpenAPI 为准；权限和协议补充依据 [Coding API](https://zai-dev.sh.oop.cc/docs/zai/coding/api)、[快速开始](https://zai-dev.sh.oop.cc/docs/zai/coding/getting-started) 和 [事件流说明](https://zai-dev.sh.oop.cc/docs/zai/coding/events)。原始规范不变，supplement 只允许新增路径；离线测试不等于真实服务权限与运行流程验收。
+
+---
+
+以下保留 0.1.x → 0.2.0 的历史迁移记录；涉及模型目录、Runner 与文件上传的最新行为以上方 0.3.0 说明为准。
+
 # 从 0.1.x 升级到 0.2.0
 
 0.2.0 是破坏性升级。将 API 根地址 `/v8` 改为 `/v1/zai`，按以下映射迁移调用及类型；旧资源不提供兼容别名。
