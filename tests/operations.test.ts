@@ -11,12 +11,23 @@ const operations = Object.entries(specification.paths).flatMap(([path, item]) =>
 const successCases = operations.flatMap(operation => Object.keys(operation.spec.responses).filter(status => /^2\d\d$/.test(status)).map(status => ({...operation, status: Number(status)})));
 // Independently maintained permission expectation: never infer admin privileges from the HTTP verb.
 const adminOperations = new Set([
-  'get /models', 'post /models', 'get /models/{id}', 'patch /models/{id}', 'delete /models/{id}',
+  'post /models', 'get /models/{id}', 'patch /models/{id}', 'delete /models/{id}', 'post /models/test',
   'get /channels', 'put /channels/{id}', 'get /signing_secret', 'post /signing_secret/generate',
   'post /memories', 'put /memories/{id}', 'delete /memories/{id}',
   'post /memories/{id}/contents', 'put /memories/{id}/contents/{content_id}', 'delete /memories/{id}/contents/{content_id}',
   'post /memories/{id}/contents/batch', 'get /memories/{id}/contents/{content_id}/chunks',
   'get /memories/{id}/contents/{content_id}/jobs', 'get /memories/queue/stats', 'get /coding/runners',
+  'post /memories/{id}/rebuild', 'get /coding/runner-image-policies', 'post /coding/runners',
+  'get /coding/runners/{profile_id}', 'patch /coding/runners/{profile_id}', 'delete /coding/runners/{profile_id}',
+  'get /coding/runners/{profile_id}/instances', 'post /coding/runners/{profile_id}/instances',
+  'get /coding/runners/{profile_id}/instances/{instance_id}', 'patch /coding/runners/{profile_id}/instances/{instance_id}', 'delete /coding/runners/{profile_id}/instances/{instance_id}',
+  'get /coding/agents', 'post /coding/agents', 'get /coding/agents/{agent_id}', 'patch /coding/agents/{agent_id}', 'delete /coding/agents/{agent_id}',
+]);
+const userOnlyOperations = new Set([
+  'post /coding/agents/{agent_id}/runner-instance',
+  'get /coding/agents/{agent_id}/git/identity', 'put /coding/agents/{agent_id}/git/identity',
+  'get /coding/agents/{agent_id}/keys/public', 'post /coding/agents/{agent_id}/keys', 'post /coding/agents/{agent_id}/keys/rotate',
+  'get /coding/sessions/{session_id}/files/download', 'post /coding/sessions/{session_id}/tool-calls/{tool_call_id}/result',
 ]);
 
 /** Exercise all declared fields independently of the generated method table. */
@@ -42,18 +53,21 @@ function methodAt(client: unknown, group: string, name: string): (...args: unkno
   return (resource as Record<string, (...args: unknown[]) => Promise<unknown>>)[name]!;
 }
 
-it('covers exactly 78 paths, 120 operations, 123 public methods and every explicit permission', () => {
-  expect(Object.keys(specification.paths)).toHaveLength(78);
-  expect(operations).toHaveLength(120);
-  expect(ZAI_OPERATIONS).toHaveLength(120);
+it('covers exactly 99 paths, 152 operations, 155 public methods and every explicit permission', () => {
+  expect(Object.keys(specification.paths)).toHaveLength(99);
+  expect(operations).toHaveLength(152);
+  expect(ZAI_OPERATIONS).toHaveLength(152);
   const methods = ZAI_OPERATIONS.flatMap(operation => [`${operation.group}.${operation.name}`, ...(operation.streamName ? [`${operation.group}.${operation.streamName}`] : [])]);
-  expect(new Set(methods).size).toBe(123);
+  expect(new Set(methods).size).toBe(155);
   expect(ZAI_OPERATIONS.map(operation => `${operation.method} ${operation.path}`).sort()).toEqual(operations.map(operation => `${operation.method} ${operation.path}`).sort());
-  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'admin')).toHaveLength(20);
-  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(100);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'admin')).toHaveLength(36);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(108);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user-only')).toHaveLength(8);
+  expect(ZAI_OPERATIONS.filter(operation => operation.idempotencyRequired)).toHaveLength(11);
   for (const operation of ZAI_OPERATIONS) {
-    expect(operation.auth).toBe(adminOperations.has(`${operation.method} ${operation.path}`) ? 'admin' : 'user');
-    expect(operation.source).toMatch(operation.auth === 'admin' ? /^\.\.\/zai-openapi\.json#\/paths\// : /^https:\/\//);
+    const key = `${operation.method} ${operation.path}`;
+    expect(operation.auth).toBe(adminOperations.has(key) ? 'admin' : userOnlyOperations.has(key) ? 'user-only' : 'user');
+    expect(operation.source).toMatch(/^(https:\/\/zai-dev\.sh\.oop\.cc\/docs\/|\.\.\/zai-openapi\.json#\/paths\/)/);
   }
 });
 
@@ -65,14 +79,19 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
     const queryParameters = parameters.filter(value => value.in === 'query');
     const ids = pathNames.map((name, index) => `${name}-${index} /?#%汉`);
     const query = Object.fromEntries(queryParameters.map(value => [value.name, fixture(value.schema)]));
+    if (path === '/coding/sessions/{session_id}/files/download') delete query.file_id;
+    if (path === '/coding/agents/{agent_id}/status' || path === '/coding/agents/{agent_id}/status/stream') delete query.external_user_id;
     const mediaTypes = spec.requestBody?.content;
     const isUpload = !!mediaTypes?.['multipart/form-data'] && !mediaTypes['application/json'];
+    const isBinaryUpload = !!mediaTypes?.['application/octet-stream'];
     const bodySchema = mediaTypes?.['application/json']?.schema ?? mediaTypes?.['multipart/form-data']?.schema;
-    const input = mediaTypes ? (isUpload ? {...fixture(bodySchema) as object, file: {blob: new Blob(['wire bytes']), filename: 'input.txt'}} : fixture(bodySchema)) : undefined;
+    const input = isBinaryUpload ? new Blob(['wire bytes'], {type: 'text/plain'}) : mediaTypes ? (isUpload ? {...fixture(bodySchema) as object, file: {blob: new Blob(['wire bytes']), filename: 'input.txt'}} : fixture(bodySchema)) : undefined;
     const responseMediaTypes = spec.responses[status]!.content ?? {};
     const binary = !!responseMediaTypes['application/octet-stream'];
     const stream = !!responseMediaTypes['text/event-stream'] && !responseMediaTypes['application/json'];
-    const event = {seq: 2, type: 'turn.completed', turn_id: 'turn', payload: {future: 'kept'}, created_at: '2026-09-29T00:00:00Z'};
+    const eventName = path.endsWith('/status/stream') ? 'runner.status' : 'turn.completed';
+    const event = path.endsWith('/status/stream') ? {agent_id: 'agent', status: 'ready', future: true}
+      : {seq: 2, type: 'turn.completed', turn_id: 'turn', payload: {future: 'kept'}, created_at: '2026-09-29T00:00:00Z'};
     const result = binary ? 'binary result' : fixture(responseMediaTypes['application/json']?.schema);
     const requiresAdmin = adminOperations.has(`${method} ${path}`);
     const getToken = vi.fn((admin: boolean) => admin ? 'ak-contract-token' : 'ek-contract-token');
@@ -80,7 +99,7 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
     const fetcher = vi.fn<typeof fetch>(async requestInput => {
       const request = requestInput as Request;
       const url = new URL(request.url);
-      if (mode === 'auto' && operation.auth === 'user' && !secretFetched) {
+      if (mode === 'auto' && !requiresAdmin && !secretFetched) {
         expect(url.pathname).toBe('/v1/zai/signing_secret');
         expect(request.method).toBe('GET');
         expect(request.headers.get('authorization')).toMatch(/^Bearer ak-/);
@@ -97,6 +116,10 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
       else expect(request.headers.get('authorization')).toMatch(requiresAdmin ? /^Bearer ak-/ : /^Bearer ek-/);
       expect(request.headers.get('x-client')).toBe('base');
       expect(request.headers.get('x-call')).toBe('operation');
+      const idempotent = parameters.some(value => value.in === 'header' && value.name === 'idempotency-key' && value.required);
+      expect(operation.idempotencyRequired).toBe(idempotent);
+      if (idempotent) expect(request.headers.get('idempotency-key')).toMatch(/^[a-f0-9]{32}$/);
+      else expect(request.headers.has('idempotency-key')).toBe(false);
       expect(request.headers.get('accept')).toBe(stream ? 'text/event-stream' : binary ? 'application/octet-stream' : 'application/json');
       expect(request.signal.aborted).toBe(false);
       if (isUpload) {
@@ -106,6 +129,9 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
         expect((form.get('file') as File).name).toBe('input.txt');
         for (const [key, value] of Object.entries(input as object)) if (key !== 'file') expect(form.get(key)).toBe(value);
         if (path === '/files/extract') expect(form.has('path')).toBe(false);
+      } else if (isBinaryUpload) {
+        expect(request.headers.get('content-type')).toBe('application/octet-stream');
+        expect(await request.text()).toBe('wire bytes');
       } else if (mediaTypes) {
         expect(await request.json()).toEqual(operation.streamName ? {...input as object, stream: false} : input);
         expect(request.headers.get('content-type')).toBe('application/json');
@@ -113,7 +139,7 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
         expect(await request.text()).toBe('');
         expect(request.headers.has('content-type')).toBe(false);
       }
-      if (stream) return new Response(`: heartbeat\n\nid: 2\nevent: turn.completed\ndata: ${JSON.stringify(event)}\n\n`, {status, headers: {'content-type': 'text/event-stream'}});
+      if (stream) return new Response(`: heartbeat\n\nid: 2\nevent: ${eventName}\ndata: ${JSON.stringify(event)}\n\n`, {status, headers: {'content-type': 'text/event-stream'}});
       return binary ? new Response(result as string, {status}) : Response.json(result, {status});
     });
     const common = {baseUrl: 'https://zai.test/v1/zai/', fetch: fetcher, headers: {'x-client': 'base'}};
@@ -131,9 +157,9 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
     } else if (stream) {
       const events = [];
       for await (const value of actual as AsyncIterable<unknown>) events.push(value);
-      expect(events).toEqual([{type: 'data', id: '2', event: 'turn.completed', rawData: JSON.stringify(event), data: event}]);
+      expect(events).toEqual([{type: 'data', id: '2', event: eventName, rawData: JSON.stringify(event), data: event}]);
     } else expect(actual).toEqual(result);
-    expect(fetcher).toHaveBeenCalledTimes(mode === 'auto' && operation.auth === 'user' ? 2 : 1);
+    expect(fetcher).toHaveBeenCalledTimes(mode === 'auto' && !requiresAdmin ? 2 : 1);
     expect(getToken.mock.calls).toEqual(mode === 'explicit' ? [[requiresAdmin]] : []);
     expect(operation.pathParams).toEqual(pathNames);
     expect(operation.query).toEqual(queryParameters.map(value => value.name));
@@ -165,7 +191,7 @@ describe('resource-specific behavior', () => {
       const request = input as Request;
       expect(request.method).toBe('PUT');
       expect(await request.json()).toEqual(body);
-      return Response.json({repository: {custom_data: body.custom_data}});
+      return Response.json({repository: {custom_data: body.custom_data}}, {status: 202});
     });
     const client = createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', fetch: fetcher});
     await client.coding.repositories.update('agent', 'workspace', 'repo', body);

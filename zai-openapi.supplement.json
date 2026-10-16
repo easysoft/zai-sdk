@@ -2,15 +2,15 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Documented ZAI operations missing from the upstream OpenAPI export",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/coding/sessions/{session_id}/stream": {
       "get": {
         "tags": ["Coding Turns"],
         "summary": "Stream persisted coding session events",
-        "description": "Persistent session SSE stream. Resume with after_seq; terminal turn events do not close the session stream. Heartbeat comments are ignored. Source: https://zai-zjy.sh.oop.cc/docs/zai/coding/events",
-        "externalDocs": {"url": "https://zai-zjy.sh.oop.cc/docs/zai/coding/events"},
+        "description": "Persistent session SSE stream. Resume with after_seq; terminal turn events do not close the session stream. Valid persisted error events are non-terminal data, followed by turn.failed; only malformed envelopes or channel failures interrupt parsing. Heartbeat comments are ignored. Source: https://zai-dev.sh.oop.cc/docs/zai/coding/events",
+        "externalDocs": {"url": "https://zai-dev.sh.oop.cc/docs/zai/coding/events"},
         "parameters": [
           {"name": "session_id", "in": "path", "required": true, "schema": {"type": "string"}},
           {"name": "after_seq", "in": "query", "required": false, "description": "Replay events after this sequence, then follow new events.", "schema": {"type": "string"}}

@@ -46,11 +46,36 @@ try {
     factory(amd);
   }, {amd: true});
   runInNewContext(umd, {define});
-  const globals = runInNewContext(`${umd}; ZAI;`, {}) as Record<string, unknown>;
+  const globals = runInNewContext(`${umd}; ZAI;`, {URL, URLSearchParams, Blob, FormData, Request, Response, Headers, AbortController, DOMException, TextDecoder, TextEncoder, ReadableStream, crypto}) as Record<string, unknown>;
   runInNewContext(umd, {module: commonjs, exports: commonjs.exports});
   for (const exports of [globals, commonjs.exports, amd] as Record<string, unknown>[]) {
     assert.deepEqual(Object.keys(exports).sort(), Object.keys(esm).sort());
     for (const name of Object.keys(esm)) assert.equal(typeof exports[name], typeof esm[name]);
+  }
+  for (const exports of [esm, globals]) {
+    const createClient = exports.createZAIClient as typeof import('../src/index.js').createZAIClient;
+    const permissions: boolean[] = [];
+    const client = createClient({baseUrl: 'https://example.test/v1/zai', getToken: admin => { permissions.push(admin); return admin ? 'ak-fixture' : 'ek-fixture'; }, fetch: async input => {
+      const request = input as Request;
+      const url = new URL(request.url);
+      if (url.pathname.endsWith('/status/stream')) return new Response('event: runner.status\nid: 1\ndata: {"status":"ready"}\n\n', {headers: {'content-type': 'text/event-stream'}});
+      if (url.pathname.endsWith('/files')) {
+        assert.equal(url.searchParams.get('name'), 'text.txt');
+        assert.equal(request.headers.get('content-type'), 'application/octet-stream');
+        assert.equal(await request.text(), 'package upload');
+        return Response.json({file_id: 'file'}, {status: 201});
+      }
+      assert.equal(request.headers.get('idempotency-key'), 'package-instance');
+      return Response.json({accepted: true}, {status: 202});
+    }});
+    await client.coding.sessions.uploadFile('session', {name: 'text.txt'}, new Blob(['package upload']));
+    const statuses = [];
+    for await (const event of await client.coding.agents.streamStatus('agent')) statuses.push(event);
+    assert.equal(statuses.length, 1);
+    assert.equal(statuses[0]!.event, 'runner.status');
+    assert.equal(JSON.stringify(statuses[0]!.data), '{"status":"ready"}');
+    await client.coding.agents.ensureRunnerInstance('agent', {}, {idempotencyKey: 'package-instance', tokenType: 'user'});
+    assert.deepEqual(permissions, [false, false, false]);
   }
 
   // A standalone UMD build emits one file and preserves its destination's contents.
@@ -69,7 +94,7 @@ import {createZAITokenProvider, createZAIClient, ZAIClientError} from 'zai-sdk';
 import spec from 'zai-sdk/openapi.json' with {type:'json'};
 import supplement from 'zai-sdk/openapi-supplement.json' with {type:'json'};
 assert.ok(import.meta.resolve('zai-sdk/zai.js').endsWith('/dist/zai.js'));
-assert.equal(Object.keys(spec.paths).length,77);
+assert.equal(Object.keys(spec.paths).length,98);
 assert.equal(Object.keys(supplement.paths).length,1);
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
 const permissions = [];
@@ -80,7 +105,8 @@ const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:a
 }});
 assert.deepEqual(await client.agents.list(), {agents:[]});
 assert.deepEqual(await client.settings.models.list(), {models:[]});
-assert.deepEqual(permissions, [false,true]);
+assert.deepEqual(await client.settings.models.list({tokenType:'admin'}), {models:[]});
+assert.deepEqual(permissions, [false,false,true]);
 const diagnosis = await client.doctor();
 assert.equal(diagnosis.pass, false);
 assert.equal(diagnosis.details.find(detail => detail.type === 'server').pass, true);
@@ -88,18 +114,24 @@ assert.equal(new ZAIClientError('http','test').code,'http');
 `);
   await run(process.execPath, ['consumer.mjs'], {cwd: temporary});
   await writeFile(join(temporary, 'consumer.ts'), `
-import {createZAIClient, type CodingSessionsCreateInput, type ChatMessagesSendInput, type ZAIStreamEvent, type ZAIDoctorResult} from 'zai-sdk';
-const coding: CodingSessionsCreateInput = {workspace_id:'workspace',provider:'codex'};
+import {createZAIClient, type CodingSessionsCreateInput, type ChatMessagesSendInput, type ZAIStreamEvent, type ZAIRunnerStatusStreamEvent, type ZAIDoctorResult} from 'zai-sdk';
+const coding: CodingSessionsCreateInput = {workspace_id:'workspace',plan_mode:true};
 const message: ChatMessagesSendInput = {content:'hello'};
 const event: ZAIStreamEvent = {type:'done'};
 const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:admin=> admin ? 'ak-token' : 'ek-token'});
 const diagnosis: Promise<ZAIDoctorResult> = client.doctor({chat:false});
 void client.settings.models.list();
-void client.coding.sessions.create('agent',coding);
+void client.settings.models.list({tokenType:'admin'});
+void client.coding.sessions.create('agent',coding,{idempotencyKey:'package-create'});
+void client.coding.sessions.uploadFile('session',{name:'file.txt'},new Blob(['text']));
+void client.coding.sessions.downloadFile('session',{file_id:'file'});
+void client.coding.sessions.createDownloadLink('session',{path:'file.txt'});
+void client.coding.toolCalls.resolve('session','tool',{output:null});
+const statuses: Promise<AsyncIterableIterator<ZAIRunnerStatusStreamEvent>> = client.coding.agents.streamStatus('agent');
 void client.chat.messages.send('conversation',message);
 void client.files.extract({file:new Blob(['text'])});
 void client.coding.events.stream('session',{after_seq:'0'});
-void event; void diagnosis;
+void event; void diagnosis; void statuses;
 `);
   await run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--lib', 'ES2022,DOM,DOM.Iterable', 'consumer.ts'], {cwd: temporary});
   await writeFile(join(temporary, 'index.html'), '<script type="module" src="/consumer.ts"></script>');

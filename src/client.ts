@@ -2,7 +2,7 @@
 import type {paths} from './schema.js';
 import type {CreateZAIClientOptions, ZAIRequestOptions, ZAIUploadFile} from './types.js';
 import {createTransport} from './transport.js';
-import {parseZAIStream, parseZAICodingStream, type ZAIStreamEvent, type ZAICodingStreamEvent} from './stream.js';
+import {parseZAIStream, parseZAICodingStream, parseZAIRunnerStatusStream, type ZAIStreamEvent, type ZAICodingStreamEvent, type ZAIRunnerStatusStreamEvent} from './stream.js';
 import {runZAIDoctor, type ZAIDoctorOptions, type ZAIDoctorResult} from './doctor.js';
 
 export type AgentsListResponse = paths["/agents"]["get"]['responses'][200]['content']['application/json'];
@@ -15,6 +15,9 @@ export type AgentsDeleteResponse = paths["/agents/{agent_id}"]["delete"]['respon
 export type AgentsDeleteInput = NonNullable<paths["/agents/{agent_id}"]["delete"]['requestBody']>['content']['application/json'];
 export type CodingKeysGetPublicResponse = paths["/coding/agents/{agent_id}/keys/public"]["get"]['responses'][200]['content']['application/json'];
 export type CodingKeysRotateResponse = paths["/coding/agents/{agent_id}/keys/rotate"]["post"]['responses'][200]['content']['application/json'];
+export type CodingKeysRotateInput = NonNullable<paths["/coding/agents/{agent_id}/keys/rotate"]["post"]['requestBody']>['content']['application/json'];
+export type CodingKeysEnsureResponse = paths["/coding/agents/{agent_id}/keys"]["post"]['responses'][200]['content']['application/json'];
+export type CodingKeysEnsureInput = NonNullable<paths["/coding/agents/{agent_id}/keys"]["post"]['requestBody']>['content']['application/json'];
 export type CodingWorkspacesGetAgentsMarkdownResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md"]["get"]['responses'][200]['content']['application/json'];
 export type CodingWorkspacesUpdateAgentsMarkdownResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md"]["put"]['responses'][200]['content']['application/json'];
 export type CodingWorkspacesUpdateAgentsMarkdownInput = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md"]["put"]['requestBody']>['content']['application/json'];
@@ -26,10 +29,10 @@ export type CodingWorkspacesUpdateResponse = paths["/coding/agents/{agent_id}/wo
 export type CodingWorkspacesUpdateInput = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}"]["put"]['requestBody']>['content']['application/json'];
 export type CodingWorkspacesDeleteResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}"]["delete"]['responses'][200]['content']['application/json'];
 export type CodingRepositoriesListResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos"]["get"]['responses'][200]['content']['application/json'];
-export type CodingRepositoriesCreateResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos"]["post"]['responses'][201]['content']['application/json'];
+export type CodingRepositoriesCreateResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos"]["post"]['responses'][201]['content']['application/json'] | paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos"]["post"]['responses'][202]['content']['application/json'];
 export type CodingRepositoriesCreateInput = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos"]["post"]['requestBody']>['content']['application/json'];
 export type CodingRepositoriesGetResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}"]["get"]['responses'][200]['content']['application/json'];
-export type CodingRepositoriesUpdateResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}"]["put"]['responses'][200]['content']['application/json'];
+export type CodingRepositoriesUpdateResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}"]["put"]['responses'][202]['content']['application/json'];
 export type CodingRepositoriesUpdateInput = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}"]["put"]['requestBody']>['content']['application/json'];
 export type CodingRepositoriesDeleteResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}"]["delete"]['responses'][200]['content']['application/json'];
 export type CodingRepositoriesListFilesResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files"]["get"]['responses'][200]['content']['application/json'];
@@ -107,7 +110,39 @@ export type MemoriesSearchContentsByEmbeddingResponse = paths["/memories/{id}/em
 export type MemoriesSearchContentsByEmbeddingInput = NonNullable<paths["/memories/{id}/embeddings-search-contents"]["post"]['requestBody']>['content']['application/json'];
 export type MemoriesGetEmbeddingQueueStatsResponse = paths["/memories/queue/stats"]["get"]['responses'][200]['content']['application/json'];
 export type MemoriesListContentEmbeddingJobsResponse = paths["/memories/{id}/contents/{content_id}/jobs"]["get"]['responses'][200]['content']['application/json'];
-export type CodingRunnersListResponse = paths["/coding/runners"]["get"]['responses'][200]['content']['application/json'];
+export type MemoriesRebuildResponse = paths["/memories/{id}/rebuild"]["post"]['responses'][202]['content']['application/json'];
+export type MemoriesRebuildInput = NonNullable<paths["/memories/{id}/rebuild"]["post"]['requestBody']>['content']['application/json'];
+export type MemoriesListFailuresResponse = paths["/memories/{id}/failures"]["get"]['responses'][200]['content']['application/json'];
+export type MemoriesListFailuresQuery = NonNullable<paths["/memories/{id}/failures"]["get"]['parameters']['query']>;
+export type CodingRunnersListResponse = paths["/coding/runners"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/runners"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/runners"]["get"]['responses'][202]['content']['application/json'];
+export type CodingRunnersCreateResponse = paths["/coding/runners"]["post"]['responses'][200]['content']['application/json'] | paths["/coding/runners"]["post"]['responses'][201]['content']['application/json'] | paths["/coding/runners"]["post"]['responses'][202]['content']['application/json'];
+export type CodingRunnersCreateInput = NonNullable<paths["/coding/runners"]["post"]['requestBody']>['content']['application/json'];
+export type CodingRunnersGetResponse = paths["/coding/runners/{profile_id}"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}"]["get"]['responses'][202]['content']['application/json'];
+export type CodingRunnersUpdateResponse = paths["/coding/runners/{profile_id}"]["patch"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}"]["patch"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}"]["patch"]['responses'][202]['content']['application/json'];
+export type CodingRunnersUpdateInput = NonNullable<paths["/coding/runners/{profile_id}"]["patch"]['requestBody']>['content']['application/json'];
+export type CodingRunnersDeleteResponse = paths["/coding/runners/{profile_id}"]["delete"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}"]["delete"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}"]["delete"]['responses'][202]['content']['application/json'];
+export type CodingRunnersListImagePoliciesResponse = paths["/coding/runner-image-policies"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/runner-image-policies"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/runner-image-policies"]["get"]['responses'][202]['content']['application/json'];
+export type CodingRunnersInstancesListResponse = paths["/coding/runners/{profile_id}/instances"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances"]["get"]['responses'][202]['content']['application/json'];
+export type CodingRunnersInstancesListQuery = NonNullable<paths["/coding/runners/{profile_id}/instances"]["get"]['parameters']['query']>;
+export type CodingRunnersInstancesCreateResponse = paths["/coding/runners/{profile_id}/instances"]["post"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances"]["post"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances"]["post"]['responses'][202]['content']['application/json'];
+export type CodingRunnersInstancesCreateInput = NonNullable<paths["/coding/runners/{profile_id}/instances"]["post"]['requestBody']>['content']['application/json'];
+export type CodingRunnersInstancesGetResponse = paths["/coding/runners/{profile_id}/instances/{instance_id}"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances/{instance_id}"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances/{instance_id}"]["get"]['responses'][202]['content']['application/json'];
+export type CodingRunnersInstancesUpdateResponse = paths["/coding/runners/{profile_id}/instances/{instance_id}"]["patch"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances/{instance_id}"]["patch"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances/{instance_id}"]["patch"]['responses'][202]['content']['application/json'];
+export type CodingRunnersInstancesUpdateInput = NonNullable<paths["/coding/runners/{profile_id}/instances/{instance_id}"]["patch"]['requestBody']>['content']['application/json'];
+export type CodingRunnersInstancesDeleteResponse = paths["/coding/runners/{profile_id}/instances/{instance_id}"]["delete"]['responses'][200]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances/{instance_id}"]["delete"]['responses'][201]['content']['application/json'] | paths["/coding/runners/{profile_id}/instances/{instance_id}"]["delete"]['responses'][202]['content']['application/json'];
+export type CodingAgentsListResponse = paths["/coding/agents"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/agents"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/agents"]["get"]['responses'][202]['content']['application/json'];
+export type CodingAgentsCreateResponse = paths["/coding/agents"]["post"]['responses'][200]['content']['application/json'] | paths["/coding/agents"]["post"]['responses'][201]['content']['application/json'] | paths["/coding/agents"]["post"]['responses'][202]['content']['application/json'];
+export type CodingAgentsCreateInput = NonNullable<paths["/coding/agents"]["post"]['requestBody']>['content']['application/json'];
+export type CodingAgentsGetResponse = paths["/coding/agents/{agent_id}"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/agents/{agent_id}"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/agents/{agent_id}"]["get"]['responses'][202]['content']['application/json'];
+export type CodingAgentsUpdateResponse = paths["/coding/agents/{agent_id}"]["patch"]['responses'][200]['content']['application/json'] | paths["/coding/agents/{agent_id}"]["patch"]['responses'][201]['content']['application/json'] | paths["/coding/agents/{agent_id}"]["patch"]['responses'][202]['content']['application/json'];
+export type CodingAgentsUpdateInput = NonNullable<paths["/coding/agents/{agent_id}"]["patch"]['requestBody']>['content']['application/json'];
+export type CodingAgentsDeleteResponse = paths["/coding/agents/{agent_id}"]["delete"]['responses'][200]['content']['application/json'] | paths["/coding/agents/{agent_id}"]["delete"]['responses'][201]['content']['application/json'] | paths["/coding/agents/{agent_id}"]["delete"]['responses'][202]['content']['application/json'];
+export type CodingAgentsGetStatusResponse = paths["/coding/agents/{agent_id}/status"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/agents/{agent_id}/status"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/agents/{agent_id}/status"]["get"]['responses'][202]['content']['application/json'];
+export type CodingAgentsGetStatusQuery = NonNullable<paths["/coding/agents/{agent_id}/status"]["get"]['parameters']['query']>;
+export type CodingAgentsEnsureRunnerInstanceResponse = paths["/coding/agents/{agent_id}/runner-instance"]["post"]['responses'][200]['content']['application/json'] | paths["/coding/agents/{agent_id}/runner-instance"]["post"]['responses'][201]['content']['application/json'] | paths["/coding/agents/{agent_id}/runner-instance"]["post"]['responses'][202]['content']['application/json'];
+export type CodingAgentsEnsureRunnerInstanceInput = NonNullable<paths["/coding/agents/{agent_id}/runner-instance"]["post"]['requestBody']>['content']['application/json'];
+export type CodingAgentsStreamStatusResponse = AsyncIterableIterator<ZAIRunnerStatusStreamEvent>;
+export type CodingAgentsStreamStatusQuery = NonNullable<paths["/coding/agents/{agent_id}/status/stream"]["get"]['parameters']['query']>;
 export type CodingSessionsCreateResponse = paths["/coding/agents/{agent_id}/sessions"]["post"]['responses'][201]['content']['application/json'];
 export type CodingSessionsCreateInput = NonNullable<paths["/coding/agents/{agent_id}/sessions"]["post"]['requestBody']>['content']['application/json'];
 export type CodingSessionsListResponse = paths["/coding/sessions"]["get"]['responses'][200]['content']['application/json'];
@@ -117,6 +152,21 @@ export type CodingSessionsUpdateResponse = paths["/coding/sessions/{session_id}"
 export type CodingSessionsUpdateInput = NonNullable<paths["/coding/sessions/{session_id}"]["put"]['requestBody']>['content']['application/json'];
 export type CodingSessionsArchiveResponse = paths["/coding/sessions/{session_id}"]["delete"]['responses'][200]['content']['application/json'];
 export type CodingSessionsGetToolsResponse = paths["/coding/sessions/{session_id}/tools"]["get"]['responses'][200]['content']['application/json'];
+export type CodingSessionsGenerateTitleResponse = paths["/coding/sessions/{session_id}/generate-title"]["post"]['responses'][200]['content']['application/json'];
+export type CodingSessionsGenerateTitleQuery = NonNullable<paths["/coding/sessions/{session_id}/generate-title"]["post"]['parameters']['query']>;
+export type CodingSessionsListFilesResponse = paths["/coding/sessions/{session_id}/files"]["get"]['responses'][200]['content']['application/json'];
+export type CodingSessionsListFilesQuery = NonNullable<paths["/coding/sessions/{session_id}/files"]["get"]['parameters']['query']>;
+export type CodingSessionsUploadFileResponse = paths["/coding/sessions/{session_id}/files"]["post"]['responses'][201]['content']['application/json'];
+export type CodingSessionsUploadFileQuery = NonNullable<paths["/coding/sessions/{session_id}/files"]["post"]['parameters']['query']>;
+export type CodingSessionsUploadFileInput = Blob;
+export type CodingSessionsReadFileResponse = paths["/coding/sessions/{session_id}/files/content"]["get"]['responses'][200]['content']['application/json'];
+export type CodingSessionsReadFileQuery = NonNullable<paths["/coding/sessions/{session_id}/files/content"]["get"]['parameters']['query']>;
+export type CodingSessionsDownloadFileResponse = Blob;
+export type CodingSessionsDownloadFileQuery = {file_id: string; path?: never} | {path: string; file_id?: never};
+export type CodingSessionsCreateDownloadLinkResponse = paths["/coding/sessions/{session_id}/files/download-link"]["post"]['responses'][200]['content']['application/json'];
+export type CodingSessionsCreateDownloadLinkInput = {file_id: string; path?: never} | {path: string; file_id?: never};
+export type CodingToolCallsResolveResponse = paths["/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result"]["post"]['responses'][200]['content']['application/json'];
+export type CodingToolCallsResolveInput = {output: unknown; error?: never} | {error: {code: string; message: string}; output?: never};
 export type CodingTurnsStartResponse = paths["/coding/sessions/{session_id}/turns"]["post"]['responses'][202]['content']['application/json'];
 export type CodingTurnsStartInput = NonNullable<paths["/coding/sessions/{session_id}/turns"]["post"]['requestBody']>['content']['application/json'];
 export type CodingTurnsGetResponse = paths["/coding/sessions/{session_id}/turns/{turn_id}"]["get"]['responses'][200]['content']['application/json'];
@@ -139,8 +189,13 @@ export type CodingGitPushResponse = paths["/coding/sessions/{session_id}/push"][
 export type CodingGitPushInput = NonNullable<paths["/coding/sessions/{session_id}/push"]["post"]['requestBody']>['content']['application/json'];
 export type CodingGitCreatePullRequestResponse = paths["/coding/sessions/{session_id}/pull-request"]["post"]['responses'][200]['content']['application/json'];
 export type CodingGitCreatePullRequestInput = NonNullable<paths["/coding/sessions/{session_id}/pull-request"]["post"]['requestBody']>['content']['application/json'];
+export type CodingGitGetIdentityResponse = paths["/coding/agents/{agent_id}/git/identity"]["get"]['responses'][200]['content']['application/json'];
+export type CodingGitUpdateIdentityResponse = paths["/coding/agents/{agent_id}/git/identity"]["put"]['responses'][200]['content']['application/json'];
+export type CodingGitUpdateIdentityInput = NonNullable<paths["/coding/agents/{agent_id}/git/identity"]["put"]['requestBody']>['content']['application/json'];
 export type CodingModelsListResponse = paths["/coding/models"]["get"]['responses'][200]['content']['application/json'];
 export type CodingModelsListQuery = NonNullable<paths["/coding/models"]["get"]['parameters']['query']>;
+export type CodingModesListResponse = paths["/coding/modes"]["get"]['responses'][200]['content']['application/json'];
+export type CodingModesListQuery = NonNullable<paths["/coding/modes"]["get"]['parameters']['query']>;
 export type ChatConversationsListResponse = paths["/chat/conversations"]["get"]['responses'][200]['content']['application/json'];
 export type ChatConversationsListQuery = NonNullable<paths["/chat/conversations"]["get"]['parameters']['query']>;
 export type ChatConversationsCreateResponse = paths["/chat/conversations"]["post"]['responses'][200]['content']['application/json'];
@@ -176,6 +231,8 @@ export type FilesExtractInput = Omit<NonNullable<paths["/files/extract"]["post"]
 export type MemoriesFilterContentsResponse = paths["/memories/{id}/contents-filter"]["post"]['responses'][200]['content']['application/json'];
 export type MemoriesFilterContentsInput = NonNullable<paths["/memories/{id}/contents-filter"]["post"]['requestBody']>['content']['application/json'];
 export type SettingsModelsListResponse = paths["/models"]["get"]['responses'][200]['content']['application/json'];
+export type SettingsModelsTestResponse = paths["/models/test"]["post"]['responses'][200]['content']['application/json'];
+export type SettingsModelsTestInput = NonNullable<paths["/models/test"]["post"]['requestBody']>['content']['application/json'];
 export type SettingsModelsCreateResponse = paths["/models"]["post"]['responses'][200]['content']['application/json'];
 export type SettingsModelsCreateInput = NonNullable<paths["/models"]["post"]['requestBody']>['content']['application/json'];
 export type SettingsModelsGetResponse = paths["/models/{id}"]["get"]['responses'][200]['content']['application/json'];
@@ -196,409 +253,562 @@ export function createZAIClient(options: CreateZAIClientOptions) {
     agents: {
       /** List agents
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(options?: ZAIRequestOptions): Promise<AgentsListResponse> { return transport.request<AgentsListResponse>({method: "get", path: "/agents", auth: "user", successStatuses: [200], options}); },
       /** Create agent
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       create(input: AgentsCreateInput, options?: ZAIRequestOptions): Promise<AgentsCreateResponse> { return transport.request<AgentsCreateResponse>({method: "post", path: "/agents", auth: "user", successStatuses: [201], body: input, options}); },
       /** Get agent
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(agentId: string, options?: ZAIRequestOptions): Promise<AgentsGetResponse> { return transport.request<AgentsGetResponse>({method: "get", path: "/agents/{agent_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
       /** Update agent
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       update(agentId: string, input?: AgentsUpdateInput, options?: ZAIRequestOptions): Promise<AgentsUpdateResponse> { return transport.request<AgentsUpdateResponse>({method: "put", path: "/agents/{agent_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); },
       /** Delete agent
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       delete(agentId: string, input?: AgentsDeleteInput, options?: ZAIRequestOptions): Promise<AgentsDeleteResponse> { return transport.request<AgentsDeleteResponse>({method: "delete", path: "/agents/{agent_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); }
     },
     coding: {
       keys: {
-        /** Get the current user's public key
-         * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+        /** Read the user's SSH public key without creating it
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        getPublic(agentId: string, options?: ZAIRequestOptions): Promise<CodingKeysGetPublicResponse> { return transport.request<CodingKeysGetPublicResponse>({method: "get", path: "/coding/agents/{agent_id}/keys/public", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
-        /** Rotate the current user's key
-         * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+        getPublic(agentId: string, options?: ZAIRequestOptions): Promise<CodingKeysGetPublicResponse> { return transport.request<CodingKeysGetPublicResponse>({method: "get", path: "/coding/agents/{agent_id}/keys/public", auth: "user-only", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
+        /** Rotate the user's SSH key using its current fingerprint
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        rotate(agentId: string, options?: ZAIRequestOptions): Promise<CodingKeysRotateResponse> { return transport.request<CodingKeysRotateResponse>({method: "post", path: "/coding/agents/{agent_id}/keys/rotate", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); }
+        rotate(agentId: string, input: CodingKeysRotateInput, options?: ZAIRequestOptions): Promise<CodingKeysRotateResponse> { return transport.request<CodingKeysRotateResponse>({method: "post", path: "/coding/agents/{agent_id}/keys/rotate", auth: "user-only", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); },
+        /** Ensure the user's SSH key without creating a Runner
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        ensure(agentId: string, input?: CodingKeysEnsureInput, options?: ZAIRequestOptions): Promise<CodingKeysEnsureResponse> { return transport.request<CodingKeysEnsureResponse>({method: "post", path: "/coding/agents/{agent_id}/keys", auth: "user-only", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); }
       },
       workspaces: {
         /** Read workspace AGENTS.md
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         getAgentsMarkdown(agentId: string, workspaceId: string, options?: ZAIRequestOptions): Promise<CodingWorkspacesGetAgentsMarkdownResponse> { return transport.request<CodingWorkspacesGetAgentsMarkdownResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, options}); },
         /** Write workspace AGENTS.md
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         updateAgentsMarkdown(agentId: string, workspaceId: string, input: CodingWorkspacesUpdateAgentsMarkdownInput, options?: ZAIRequestOptions): Promise<CodingWorkspacesUpdateAgentsMarkdownResponse> { return transport.request<CodingWorkspacesUpdateAgentsMarkdownResponse>({method: "put", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, body: input, options}); },
         /** List workspaces
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(agentId: string, options?: ZAIRequestOptions): Promise<CodingWorkspacesListResponse> { return transport.request<CodingWorkspacesListResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
         /** Create a workspace
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        create(agentId: string, input: CodingWorkspacesCreateInput, options?: ZAIRequestOptions): Promise<CodingWorkspacesCreateResponse> { return transport.request<CodingWorkspacesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces", auth: "user", successStatuses: [201], pathParams: {"agent_id": agentId}, body: input, options}); },
+        create(agentId: string, input: CodingWorkspacesCreateInput, options?: ZAIRequestOptions): Promise<CodingWorkspacesCreateResponse> { return transport.request<CodingWorkspacesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces", auth: "user", successStatuses: [201], idempotencyRequired: true, pathParams: {"agent_id": agentId}, body: input, options}); },
         /** Get a workspace
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         get(agentId: string, workspaceId: string, options?: ZAIRequestOptions): Promise<CodingWorkspacesGetResponse> { return transport.request<CodingWorkspacesGetResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, options}); },
         /** Update a workspace
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         update(agentId: string, workspaceId: string, input?: CodingWorkspacesUpdateInput, options?: ZAIRequestOptions): Promise<CodingWorkspacesUpdateResponse> { return transport.request<CodingWorkspacesUpdateResponse>({method: "put", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, body: input, options}); },
         /** Delete a workspace
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         delete(agentId: string, workspaceId: string, options?: ZAIRequestOptions): Promise<CodingWorkspacesDeleteResponse> { return transport.request<CodingWorkspacesDeleteResponse>({method: "delete", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, options}); }
       },
       repositories: {
         /** List repositories
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(agentId: string, workspaceId: string, options?: ZAIRequestOptions): Promise<CodingRepositoriesListResponse> { return transport.request<CodingRepositoriesListResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, options}); },
         /** Add a repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        create(agentId: string, workspaceId: string, input?: CodingRepositoriesCreateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesCreateResponse> { return transport.request<CodingRepositoriesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos", auth: "user", successStatuses: [201], pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, body: input, options}); },
+        create(agentId: string, workspaceId: string, input?: CodingRepositoriesCreateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesCreateResponse> { return transport.request<CodingRepositoriesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos", auth: "user", successStatuses: [201, 202], idempotencyRequired: true, pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, body: input, options}); },
         /** Get a repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         get(agentId: string, workspaceId: string, repositoryId: string, options?: ZAIRequestOptions): Promise<CodingRepositoriesGetResponse> { return transport.request<CodingRepositoriesGetResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, options}); },
         /** Update a repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        update(agentId: string, workspaceId: string, repositoryId: string, input?: CodingRepositoriesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesUpdateResponse> { return transport.request<CodingRepositoriesUpdateResponse>({method: "put", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, body: input, options}); },
+        update(agentId: string, workspaceId: string, repositoryId: string, input?: CodingRepositoriesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesUpdateResponse> { return transport.request<CodingRepositoriesUpdateResponse>({method: "put", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}", auth: "user", successStatuses: [202], idempotencyRequired: true, pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, body: input, options}); },
         /** Delete a repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         delete(agentId: string, workspaceId: string, repositoryId: string, options?: ZAIRequestOptions): Promise<CodingRepositoriesDeleteResponse> { return transport.request<CodingRepositoriesDeleteResponse>({method: "delete", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, options}); },
         /** List repository files
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         listFiles(agentId: string, workspaceId: string, repositoryId: string, query?: CodingRepositoriesListFilesQuery, options?: ZAIRequestOptions): Promise<CodingRepositoriesListFilesResponse> { return transport.request<CodingRepositoriesListFilesResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, query, options}); },
         /** Read a repository file
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         readFile(agentId: string, workspaceId: string, repositoryId: string, query: CodingRepositoriesReadFileQuery, options?: ZAIRequestOptions): Promise<CodingRepositoriesReadFileResponse> { return transport.request<CodingRepositoriesReadFileResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, query, options}); }
       },
       runners: {
-        /** List runners connected to this ZAI instance
+        /** List application runner profiles
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1runners/get
          */
-        list(options?: ZAIRequestOptions): Promise<CodingRunnersListResponse> { return transport.request<CodingRunnersListResponse>({method: "get", path: "/coding/runners", auth: "admin", successStatuses: [200], options}); }
+        list(options?: ZAIRequestOptions): Promise<CodingRunnersListResponse> { return transport.request<CodingRunnersListResponse>({method: "get", path: "/coding/runners", auth: "admin", successStatuses: [200, 201, 202], options}); },
+        /** Create an application runner profile
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1runners/post
+         */
+        create(input: CodingRunnersCreateInput, options?: ZAIRequestOptions): Promise<CodingRunnersCreateResponse> { return transport.request<CodingRunnersCreateResponse>({method: "post", path: "/coding/runners", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, body: input, options}); },
+        /** Get an application runner profile
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/get
+         */
+        get(profileId: string, options?: ZAIRequestOptions): Promise<CodingRunnersGetResponse> { return transport.request<CodingRunnersGetResponse>({method: "get", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"profile_id": profileId}, options}); },
+        /** Update an application runner profile
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/patch
+         */
+        update(profileId: string, input: CodingRunnersUpdateInput, options?: ZAIRequestOptions): Promise<CodingRunnersUpdateResponse> { return transport.request<CodingRunnersUpdateResponse>({method: "patch", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId}, body: input, options}); },
+        /** Delete an unused runner profile
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/delete
+         */
+        delete(profileId: string, options?: ZAIRequestOptions): Promise<CodingRunnersDeleteResponse> { return transport.request<CodingRunnersDeleteResponse>({method: "delete", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId}, options}); },
+        /** List allowed runner image policies
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1runner-image-policies/get
+         */
+        listImagePolicies(options?: ZAIRequestOptions): Promise<CodingRunnersListImagePoliciesResponse> { return transport.request<CodingRunnersListImagePoliciesResponse>({method: "get", path: "/coding/runner-image-policies", auth: "admin", successStatuses: [200, 201, 202], options}); },
+        instances: {
+          /** List user runner instances
+           * Authentication: ak-* required.
+           * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances/get
+           */
+          list(profileId: string, query?: CodingRunnersInstancesListQuery, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesListResponse> { return transport.request<CodingRunnersInstancesListResponse>({method: "get", path: "/coding/runners/{profile_id}/instances", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"profile_id": profileId}, query, options}); },
+          /** Create an instance for an application user
+           * Authentication: ak-* required.
+           * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances/post
+           */
+          create(profileId: string, input: CodingRunnersInstancesCreateInput, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesCreateResponse> { return transport.request<CodingRunnersInstancesCreateResponse>({method: "post", path: "/coding/runners/{profile_id}/instances", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId}, body: input, options}); },
+          /** Get user runner instance
+           * Authentication: ak-* required.
+           * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/get
+           */
+          get(profileId: string, instanceId: string, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesGetResponse> { return transport.request<CodingRunnersInstancesGetResponse>({method: "get", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"profile_id": profileId, "instance_id": instanceId}, options}); },
+          /** Start, stop or reprovision an instance
+           * Authentication: ak-* required.
+           * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/patch
+           */
+          update(profileId: string, instanceId: string, input: CodingRunnersInstancesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesUpdateResponse> { return transport.request<CodingRunnersInstancesUpdateResponse>({method: "patch", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId, "instance_id": instanceId}, body: input, options}); },
+          /** Soft delete an instance and retain its volume
+           * Authentication: ak-* required.
+           * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/delete
+           */
+          delete(profileId: string, instanceId: string, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesDeleteResponse> { return transport.request<CodingRunnersInstancesDeleteResponse>({method: "delete", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId, "instance_id": instanceId}, options}); }
+        }
+      },
+      agents: {
+        /** List coding agents
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1agents/get
+         */
+        list(options?: ZAIRequestOptions): Promise<CodingAgentsListResponse> { return transport.request<CodingAgentsListResponse>({method: "get", path: "/coding/agents", auth: "admin", successStatuses: [200, 201, 202], options}); },
+        /** Create a coding agent
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1agents/post
+         */
+        create(input: CodingAgentsCreateInput, options?: ZAIRequestOptions): Promise<CodingAgentsCreateResponse> { return transport.request<CodingAgentsCreateResponse>({method: "post", path: "/coding/agents", auth: "admin", successStatuses: [200, 201, 202], body: input, options}); },
+        /** Get a coding agent
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/get
+         */
+        get(agentId: string, options?: ZAIRequestOptions): Promise<CodingAgentsGetResponse> { return transport.request<CodingAgentsGetResponse>({method: "get", path: "/coding/agents/{agent_id}", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"agent_id": agentId}, options}); },
+        /** Update or rebind a coding agent
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/patch
+         */
+        update(agentId: string, input: CodingAgentsUpdateInput, options?: ZAIRequestOptions): Promise<CodingAgentsUpdateResponse> { return transport.request<CodingAgentsUpdateResponse>({method: "patch", path: "/coding/agents/{agent_id}", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"agent_id": agentId}, body: input, options}); },
+        /** Soft delete an unused coding agent
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/delete
+         */
+        delete(agentId: string, options?: ZAIRequestOptions): Promise<CodingAgentsDeleteResponse> { return transport.request<CodingAgentsDeleteResponse>({method: "delete", path: "/coding/agents/{agent_id}", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"agent_id": agentId}, options}); },
+        /** Get the current user runner availability
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        getStatus(agentId: string, query?: CodingAgentsGetStatusQuery, options?: ZAIRequestOptions): Promise<CodingAgentsGetStatusResponse> { return transport.request<CodingAgentsGetStatusResponse>({method: "get", path: "/coding/agents/{agent_id}/status", auth: "user", successStatuses: [200, 201, 202], validation: "user-scope", pathParams: {"agent_id": agentId}, query, options}); },
+        /** Ensure the authenticated user runner instance
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        ensureRunnerInstance(agentId: string, input?: CodingAgentsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingAgentsEnsureRunnerInstanceResponse> { return transport.request<CodingAgentsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/agents/{agent_id}/runner-instance", auth: "user-only", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"agent_id": agentId}, body: input, options}); },
+        /** Stream the current user runner availability
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        async streamStatus(agentId: string, query?: CodingAgentsStreamStatusQuery, options?: ZAIRequestOptions): Promise<CodingAgentsStreamStatusResponse> { return parseZAIRunnerStatusStream(await transport.request<Response>({method: "get", path: "/coding/agents/{agent_id}/status/stream", auth: "user", successStatuses: [200], validation: "user-scope", pathParams: {"agent_id": agentId}, query, responseType: 'stream', options}), options?.signal); }
       },
       sessions: {
         /** Create a coding session
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        create(agentId: string, input: CodingSessionsCreateInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateResponse> { return transport.request<CodingSessionsCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/sessions", auth: "user", successStatuses: [201], pathParams: {"agent_id": agentId}, body: input, options}); },
+        create(agentId: string, input: CodingSessionsCreateInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateResponse> { return transport.request<CodingSessionsCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/sessions", auth: "user", successStatuses: [201], idempotencyRequired: true, pathParams: {"agent_id": agentId}, body: input, options}); },
         /** List coding sessions
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(query?: CodingSessionsListQuery, options?: ZAIRequestOptions): Promise<CodingSessionsListResponse> { return transport.request<CodingSessionsListResponse>({method: "get", path: "/coding/sessions", auth: "user", successStatuses: [200], query, options}); },
         /** Get a coding session
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         get(sessionId: string, options?: ZAIRequestOptions): Promise<CodingSessionsGetResponse> { return transport.request<CodingSessionsGetResponse>({method: "get", path: "/coding/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
-        /** Update the session default model
+        /** Update session title, model, execution mode or primary repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        update(sessionId: string, input: CodingSessionsUpdateInput, options?: ZAIRequestOptions): Promise<CodingSessionsUpdateResponse> { return transport.request<CodingSessionsUpdateResponse>({method: "put", path: "/coding/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); },
+        update(sessionId: string, input?: CodingSessionsUpdateInput, options?: ZAIRequestOptions): Promise<CodingSessionsUpdateResponse> { return transport.request<CodingSessionsUpdateResponse>({method: "put", path: "/coding/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Archive a coding session
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         archive(sessionId: string, options?: ZAIRequestOptions): Promise<CodingSessionsArchiveResponse> { return transport.request<CodingSessionsArchiveResponse>({method: "delete", path: "/coding/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
         /** Get the effective custom tool set of a session
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        getTools(sessionId: string, options?: ZAIRequestOptions): Promise<CodingSessionsGetToolsResponse> { return transport.request<CodingSessionsGetToolsResponse>({method: "get", path: "/coding/sessions/{session_id}/tools", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); }
+        getTools(sessionId: string, options?: ZAIRequestOptions): Promise<CodingSessionsGetToolsResponse> { return transport.request<CodingSessionsGetToolsResponse>({method: "get", path: "/coding/sessions/{session_id}/tools", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
+        /** Generate a coding session title
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        generateTitle(sessionId: string, query?: CodingSessionsGenerateTitleQuery, options?: ZAIRequestOptions): Promise<CodingSessionsGenerateTitleResponse> { return transport.request<CodingSessionsGenerateTitleResponse>({method: "post", path: "/coding/sessions/{session_id}/generate-title", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
+        /** List the session workspace directory
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        listFiles(sessionId: string, query?: CodingSessionsListFilesQuery, options?: ZAIRequestOptions): Promise<CodingSessionsListFilesResponse> { return transport.request<CodingSessionsListFilesResponse>({method: "get", path: "/coding/sessions/{session_id}/files", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
+        /** Upload a file to the session workspace
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        uploadFile(sessionId: string, query: CodingSessionsUploadFileQuery, input?: CodingSessionsUploadFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsUploadFileResponse> { return transport.request<CodingSessionsUploadFileResponse>({method: "post", path: "/coding/sessions/{session_id}/files", auth: "user", successStatuses: [201], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
+        /** Preview a session workspace file (up to 128 KiB)
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        readFile(sessionId: string, query: CodingSessionsReadFileQuery, options?: ZAIRequestOptions): Promise<CodingSessionsReadFileResponse> { return transport.request<CodingSessionsReadFileResponse>({method: "get", path: "/coding/sessions/{session_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
+        /** Download a workspace file or an immutable attachment as a binary stream
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        downloadFile(sessionId: string, query: CodingSessionsDownloadFileQuery, options?: ZAIRequestOptions): Promise<CodingSessionsDownloadFileResponse> { return transport.request<CodingSessionsDownloadFileResponse>({method: "get", path: "/coding/sessions/{session_id}/files/download", auth: "user-only", successStatuses: [200], validation: "file-query", pathParams: {"session_id": sessionId}, query, responseType: 'blob', options}); },
+        /** Prepare a single-use browser download
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        createDownloadLink(sessionId: string, input: CodingSessionsCreateDownloadLinkInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateDownloadLinkResponse> { return transport.request<CodingSessionsCreateDownloadLinkResponse>({method: "post", path: "/coding/sessions/{session_id}/files/download-link", auth: "user", successStatuses: [200], validation: "file-body", pathParams: {"session_id": sessionId}, body: input, options}); }
+      },
+      toolCalls: {
+        /** Resolve a client function call
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        resolve(sessionId: string, toolCallId: string, input: CodingToolCallsResolveInput, options?: ZAIRequestOptions): Promise<CodingToolCallsResolveResponse> { return transport.request<CodingToolCallsResolveResponse>({method: "post", path: "/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result", auth: "user-only", successStatuses: [200], validation: "tool-result", pathParams: {"session_id": sessionId, "tool_call_id": toolCallId}, body: input, options}); }
       },
       turns: {
         /** Start a turn
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         start(sessionId: string, input: CodingTurnsStartInput, options?: ZAIRequestOptions): Promise<CodingTurnsStartResponse> { return transport.request<CodingTurnsStartResponse>({method: "post", path: "/coding/sessions/{session_id}/turns", auth: "user", successStatuses: [202], pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Get a turn
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         get(sessionId: string, turnId: string, options?: ZAIRequestOptions): Promise<CodingTurnsGetResponse> { return transport.request<CodingTurnsGetResponse>({method: "get", path: "/coding/sessions/{session_id}/turns/{turn_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "turn_id": turnId}, options}); },
         /** Cancel a turn
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         cancel(sessionId: string, turnId: string, options?: ZAIRequestOptions): Promise<CodingTurnsCancelResponse> { return transport.request<CodingTurnsCancelResponse>({method: "post", path: "/coding/sessions/{session_id}/turns/{turn_id}/cancel", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "turn_id": turnId}, options}); },
         /** Steer the running turn
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         steer(sessionId: string, turnId: string, input: CodingTurnsSteerInput, options?: ZAIRequestOptions): Promise<CodingTurnsSteerResponse> { return transport.request<CodingTurnsSteerResponse>({method: "post", path: "/coding/sessions/{session_id}/turns/{turn_id}/steer", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "turn_id": turnId}, body: input, options}); }
       },
       events: {
         /** List session events
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(sessionId: string, query?: CodingEventsListQuery, options?: ZAIRequestOptions): Promise<CodingEventsListResponse> { return transport.request<CodingEventsListResponse>({method: "get", path: "/coding/sessions/{session_id}/events", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
         /** Stream persisted coding session events
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/zai/coding/events
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/events
          */
         async stream(sessionId: string, query?: CodingEventsStreamQuery, options?: ZAIRequestOptions): Promise<CodingEventsStreamResponse> { return parseZAICodingStream(await transport.request<Response>({method: "get", path: "/coding/sessions/{session_id}/stream", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, responseType: 'stream', options}), options?.signal); }
       },
       interactions: {
         /** List interactions
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(sessionId: string, query?: CodingInteractionsListQuery, options?: ZAIRequestOptions): Promise<CodingInteractionsListResponse> { return transport.request<CodingInteractionsListResponse>({method: "get", path: "/coding/sessions/{session_id}/interactions", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
         /** Resolve an interaction
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         resolve(sessionId: string, interactionId: string, input: CodingInteractionsResolveInput, options?: ZAIRequestOptions): Promise<CodingInteractionsResolveResponse> { return transport.request<CodingInteractionsResolveResponse>({method: "post", path: "/coding/sessions/{session_id}/interactions/{interaction_id}/resolve", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "interaction_id": interactionId}, body: input, options}); }
       },
       git: {
         /** Get the uncommitted diff
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         diff(sessionId: string, query?: CodingGitDiffQuery, options?: ZAIRequestOptions): Promise<CodingGitDiffResponse> { return transport.request<CodingGitDiffResponse>({method: "get", path: "/coding/sessions/{session_id}/diff", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
         /** Commit coding session changes
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         commit(sessionId: string, input?: CodingGitCommitInput, options?: ZAIRequestOptions): Promise<CodingGitCommitResponse> { return transport.request<CodingGitCommitResponse>({method: "post", path: "/coding/sessions/{session_id}/commit", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Push coding session changes
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         push(sessionId: string, input?: CodingGitPushInput, options?: ZAIRequestOptions): Promise<CodingGitPushResponse> { return transport.request<CodingGitPushResponse>({method: "post", path: "/coding/sessions/{session_id}/push", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Create a pull request
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        createPullRequest(sessionId: string, input?: CodingGitCreatePullRequestInput, options?: ZAIRequestOptions): Promise<CodingGitCreatePullRequestResponse> { return transport.request<CodingGitCreatePullRequestResponse>({method: "post", path: "/coding/sessions/{session_id}/pull-request", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); }
+        createPullRequest(sessionId: string, input?: CodingGitCreatePullRequestInput, options?: ZAIRequestOptions): Promise<CodingGitCreatePullRequestResponse> { return transport.request<CodingGitCreatePullRequestResponse>({method: "post", path: "/coding/sessions/{session_id}/pull-request", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); },
+        /** Get the current user's Git commit identity
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        getIdentity(agentId: string, options?: ZAIRequestOptions): Promise<CodingGitGetIdentityResponse> { return transport.request<CodingGitGetIdentityResponse>({method: "get", path: "/coding/agents/{agent_id}/git/identity", auth: "user-only", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
+        /** Set the current user's Git commit identity
+         * Authentication: ek-* required.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        updateIdentity(agentId: string, input: CodingGitUpdateIdentityInput, options?: ZAIRequestOptions): Promise<CodingGitUpdateIdentityResponse> { return transport.request<CodingGitUpdateIdentityResponse>({method: "put", path: "/coding/agents/{agent_id}/git/identity", auth: "user-only", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); }
       },
       models: {
         /** List models available on the runner
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(query: CodingModelsListQuery, options?: ZAIRequestOptions): Promise<CodingModelsListResponse> { return transport.request<CodingModelsListResponse>({method: "get", path: "/coding/models", auth: "user", successStatuses: [200], query, options}); }
+      },
+      modes: {
+        /** List cached provider execution modes
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        list(query: CodingModesListQuery, options?: ZAIRequestOptions): Promise<CodingModesListResponse> { return transport.request<CodingModesListResponse>({method: "get", path: "/coding/modes", auth: "user", successStatuses: [200], query, options}); }
       }
     },
     sessions: {
       /** List sessions
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(query?: SessionsListQuery, options?: ZAIRequestOptions): Promise<SessionsListResponse> { return transport.request<SessionsListResponse>({method: "get", path: "/sessions", auth: "user", successStatuses: [200], query, options}); },
       /** List sessions
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       listForAgent(agentId: string, query?: SessionsListForAgentQuery, options?: ZAIRequestOptions): Promise<SessionsListForAgentResponse> { return transport.request<SessionsListForAgentResponse>({method: "get", path: "/agents/{agent_id}/sessions", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, query, options}); },
       /** Create session
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       create(agentId: string, input?: SessionsCreateInput, options?: ZAIRequestOptions): Promise<SessionsCreateResponse> { return transport.request<SessionsCreateResponse>({method: "post", path: "/agents/{agent_id}/sessions", auth: "user", successStatuses: [201], pathParams: {"agent_id": agentId}, body: input, options}); },
       /** Get session
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(sessionId: string, options?: ZAIRequestOptions): Promise<SessionsGetResponse> { return transport.request<SessionsGetResponse>({method: "get", path: "/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
       /** Update session
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       update(sessionId: string, input?: SessionsUpdateInput, options?: ZAIRequestOptions): Promise<SessionsUpdateResponse> { return transport.request<SessionsUpdateResponse>({method: "put", path: "/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); },
       /** Delete session
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       delete(sessionId: string, options?: ZAIRequestOptions): Promise<SessionsDeleteResponse> { return transport.request<SessionsDeleteResponse>({method: "delete", path: "/sessions/{session_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
       /** Reset session context
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       resetContext(sessionId: string, options?: ZAIRequestOptions): Promise<SessionsResetContextResponse> { return transport.request<SessionsResetContextResponse>({method: "post", path: "/sessions/{session_id}/context/reset", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
       /** Generate session title
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       generateTitle(sessionId: string, options?: ZAIRequestOptions): Promise<SessionsGenerateTitleResponse> { return transport.request<SessionsGenerateTitleResponse>({method: "post", path: "/sessions/{session_id}/generate-title", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
       /** List session files
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       listFiles(sessionId: string, options?: ZAIRequestOptions): Promise<SessionsListFilesResponse> { return transport.request<SessionsListFilesResponse>({method: "get", path: "/sessions/{session_id}/files", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
       /** Read session file
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
-      readFile(sessionId: string, query: SessionsReadFileQuery, options?: ZAIRequestOptions): Promise<SessionsReadFileResponse> { return transport.request<SessionsReadFileResponse>({method: "get", path: "/sessions/{session_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
+      readFile(sessionId: string, query?: SessionsReadFileQuery, options?: ZAIRequestOptions): Promise<SessionsReadFileResponse> { return transport.request<SessionsReadFileResponse>({method: "get", path: "/sessions/{session_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
       /** Download session file
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
-      downloadFile(sessionId: string, query: SessionsDownloadFileQuery, options?: ZAIRequestOptions): Promise<SessionsDownloadFileResponse> { return transport.request<SessionsDownloadFileResponse>({method: "get", path: "/sessions/{session_id}/files/download", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, responseType: 'blob', options}); },
+      downloadFile(sessionId: string, query?: SessionsDownloadFileQuery, options?: ZAIRequestOptions): Promise<SessionsDownloadFileResponse> { return transport.request<SessionsDownloadFileResponse>({method: "get", path: "/sessions/{session_id}/files/download", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, responseType: 'blob', options}); },
       /** Upload session file
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       uploadFile(sessionId: string, input: SessionsUploadFileInput, options?: ZAIRequestOptions): Promise<SessionsUploadFileResponse> { return transport.request<SessionsUploadFileResponse>({method: "post", path: "/sessions/{session_id}/files/upload", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, encoding: 'multipart', options}); },
       /** Generate session images
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       generateImages(sessionId: string, input: SessionsGenerateImagesInput, options?: ZAIRequestOptions): Promise<SessionsGenerateImagesResponse> { return transport.request<SessionsGenerateImagesResponse>({method: "post", path: "/sessions/{session_id}/images/generations", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: input, options}); }
     },
     messages: {
       /** Send message
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       send(sessionId: string, input?: MessagesSendInput, options?: ZAIRequestOptions): Promise<MessagesSendResponse> { return transport.request<MessagesSendResponse>({method: "post", path: "/sessions/{session_id}/messages", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: {...input, stream: false}, options}); },
       /** Stream full SSE chunks. A done event marks successful completion.
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       async stream(sessionId: string, input?: MessagesSendInput, options?: ZAIRequestOptions): Promise<AsyncIterableIterator<ZAIStreamEvent>> { return parseZAIStream(await transport.request<Response>({method: "post", path: "/sessions/{session_id}/messages", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, body: {...input, stream: true}, options, responseType: 'stream'}), options?.signal); },
       /** List messages
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(sessionId: string, options?: ZAIRequestOptions): Promise<MessagesListResponse> { return transport.request<MessagesListResponse>({method: "get", path: "/sessions/{session_id}/messages", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
       /** Get message
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(messageId: string, options?: ZAIRequestOptions): Promise<MessagesGetResponse> { return transport.request<MessagesGetResponse>({method: "get", path: "/messages/{message_id}", auth: "user", successStatuses: [200], pathParams: {"message_id": messageId}, options}); },
       /** Delete message
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       delete(messageId: string, options?: ZAIRequestOptions): Promise<MessagesDeleteResponse> { return transport.request<MessagesDeleteResponse>({method: "delete", path: "/messages/{message_id}", auth: "user", successStatuses: [200], pathParams: {"message_id": messageId}, options}); },
       /** Delete all messages
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       deleteAll(sessionId: string, options?: ZAIRequestOptions): Promise<MessagesDeleteAllResponse> { return transport.request<MessagesDeleteAllResponse>({method: "delete", path: "/sessions/{session_id}/messages", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); }
     },
     agentSkills: {
       /** List agent skills
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(agentId: string, options?: ZAIRequestOptions): Promise<AgentSkillsListResponse> { return transport.request<AgentSkillsListResponse>({method: "get", path: "/agents/{agent_id}/skills", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
       /** Mount skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       mount(agentId: string, input: AgentSkillsMountInput, options?: ZAIRequestOptions): Promise<AgentSkillsMountResponse> { return transport.request<AgentSkillsMountResponse>({method: "post", path: "/agents/{agent_id}/skills", auth: "user", successStatuses: [201], pathParams: {"agent_id": agentId}, body: input, options}); },
       /** Update mounted skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       update(agentId: string, skillId: string, input?: AgentSkillsUpdateInput, options?: ZAIRequestOptions): Promise<AgentSkillsUpdateResponse> { return transport.request<AgentSkillsUpdateResponse>({method: "patch", path: "/agents/{agent_id}/skills/{skill_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "skill_id": skillId}, body: input, options}); },
       /** Unmount skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       unmount(agentId: string, skillId: string, options?: ZAIRequestOptions): Promise<AgentSkillsUnmountResponse> { return transport.request<AgentSkillsUnmountResponse>({method: "delete", path: "/agents/{agent_id}/skills/{skill_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "skill_id": skillId}, options}); }
     },
     skills: {
       /** List skills
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(options?: ZAIRequestOptions): Promise<SkillsListResponse> { return transport.request<SkillsListResponse>({method: "get", path: "/skills", auth: "user", successStatuses: [200], options}); },
       /** Create skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       create(input: SkillsCreateInput, options?: ZAIRequestOptions): Promise<SkillsCreateResponse> { return transport.request<SkillsCreateResponse>({method: "post", path: "/skills", auth: "user", successStatuses: [201], body: input, options}); },
       /** Get skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(skillId: string, options?: ZAIRequestOptions): Promise<SkillsGetResponse> { return transport.request<SkillsGetResponse>({method: "get", path: "/skills/{skill_id}", auth: "user", successStatuses: [200], pathParams: {"skill_id": skillId}, options}); },
       /** Update skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       update(skillId: string, input?: SkillsUpdateInput, options?: ZAIRequestOptions): Promise<SkillsUpdateResponse> { return transport.request<SkillsUpdateResponse>({method: "patch", path: "/skills/{skill_id}", auth: "user", successStatuses: [200], pathParams: {"skill_id": skillId}, body: input, options}); },
       /** Delete skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       delete(skillId: string, options?: ZAIRequestOptions): Promise<SkillsDeleteResponse> { return transport.request<SkillsDeleteResponse>({method: "delete", path: "/skills/{skill_id}", auth: "user", successStatuses: [200], pathParams: {"skill_id": skillId}, options}); },
       /** Restore skill
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       restore(skillId: string, options?: ZAIRequestOptions): Promise<SkillsRestoreResponse> { return transport.request<SkillsRestoreResponse>({method: "post", path: "/skills/{skill_id}/undelete", auth: "user", successStatuses: [200], pathParams: {"skill_id": skillId}, options}); },
       /** Validate skill bundle
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       validateBundle(input: SkillsValidateBundleInput, options?: ZAIRequestOptions): Promise<SkillsValidateBundleResponse> { return transport.request<SkillsValidateBundleResponse>({method: "post", path: "/skills/validate-bundle", auth: "user", successStatuses: [200], body: input, encoding: 'bundle', options}); },
       /** Publish revision
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       publishRevision(skillId: string, input: SkillsPublishRevisionInput, options?: ZAIRequestOptions): Promise<SkillsPublishRevisionResponse> { return transport.request<SkillsPublishRevisionResponse>({method: "post", path: "/skills/{skill_id}/revisions", auth: "user", successStatuses: [201], pathParams: {"skill_id": skillId}, body: input, encoding: 'bundle', options}); },
       /** List revisions
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       listRevisions(skillId: string, options?: ZAIRequestOptions): Promise<SkillsListRevisionsResponse> { return transport.request<SkillsListRevisionsResponse>({method: "get", path: "/skills/{skill_id}/revisions", auth: "user", successStatuses: [200], pathParams: {"skill_id": skillId}, options}); },
       /** List revision contents
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       listRevisionContents(skillId: string, version: string, options?: ZAIRequestOptions): Promise<SkillsListRevisionContentsResponse> { return transport.request<SkillsListRevisionContentsResponse>({method: "get", path: "/skills/{skill_id}/revisions/{version}/contents", auth: "user", successStatuses: [200], pathParams: {"skill_id": skillId, "version": version}, options}); }
     },
     memories: {
       /** List memory collections
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(options?: ZAIRequestOptions): Promise<MemoriesListResponse> { return transport.request<MemoriesListResponse>({method: "get", path: "/memories", auth: "user", successStatuses: [200], options}); },
       /** Create a memory collection (admin only)
@@ -608,7 +818,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
       create(input?: MemoriesCreateInput, options?: ZAIRequestOptions): Promise<MemoriesCreateResponse> { return transport.request<MemoriesCreateResponse>({method: "post", path: "/memories", auth: "admin", successStatuses: [200], body: input, options}); },
       /** Get a memory collection
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(id: string, options?: ZAIRequestOptions): Promise<MemoriesGetResponse> { return transport.request<MemoriesGetResponse>({method: "get", path: "/memories/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); },
       /** Update a memory collection (admin only)
@@ -623,7 +833,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
       delete(id: string, options?: ZAIRequestOptions): Promise<MemoriesDeleteResponse> { return transport.request<MemoriesDeleteResponse>({method: "delete", path: "/memories/{id}", auth: "admin", successStatuses: [200], pathParams: {"id": id}, options}); },
       /** List memory contents
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       listContents(id: string, query?: MemoriesListContentsQuery, options?: ZAIRequestOptions): Promise<MemoriesListContentsResponse> { return transport.request<MemoriesListContentsResponse>({method: "get", path: "/memories/{id}/contents", auth: "user", successStatuses: [200], pathParams: {"id": id}, query, options}); },
       /** Create or update memory content (admin only)
@@ -638,7 +848,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
       createContentsBatch(id: string, input?: MemoriesCreateContentsBatchInput, options?: ZAIRequestOptions): Promise<MemoriesCreateContentsBatchResponse> { return transport.request<MemoriesCreateContentsBatchResponse>({method: "post", path: "/memories/{id}/contents/batch", auth: "admin", successStatuses: [200], pathParams: {"id": id}, body: input, options}); },
       /** Get memory content
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       getContent(id: string, contentId: string, options?: ZAIRequestOptions): Promise<MemoriesGetContentResponse> { return transport.request<MemoriesGetContentResponse>({method: "get", path: "/memories/{id}/contents/{content_id}", auth: "user", successStatuses: [200], pathParams: {"id": id, "content_id": contentId}, options}); },
       /** Update memory content (admin only)
@@ -658,12 +868,12 @@ export function createZAIClient(options: CreateZAIClientOptions) {
       listContentChunks(id: string, contentId: string, options?: ZAIRequestOptions): Promise<MemoriesListContentChunksResponse> { return transport.request<MemoriesListContentChunksResponse>({method: "get", path: "/memories/{id}/contents/{content_id}/chunks", auth: "admin", successStatuses: [200], pathParams: {"id": id, "content_id": contentId}, options}); },
       /** Search memory chunks by embedding
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       searchChunksByEmbedding(id: string, input?: MemoriesSearchChunksByEmbeddingInput, options?: ZAIRequestOptions): Promise<MemoriesSearchChunksByEmbeddingResponse> { return transport.request<MemoriesSearchChunksByEmbeddingResponse>({method: "post", path: "/memories/{id}/embeddings-search-chunks", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: input, options}); },
       /** Search memory contents by embedding
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       searchContentsByEmbedding(id: string, input?: MemoriesSearchContentsByEmbeddingInput, options?: ZAIRequestOptions): Promise<MemoriesSearchContentsByEmbeddingResponse> { return transport.request<MemoriesSearchContentsByEmbeddingResponse>({method: "post", path: "/memories/{id}/embeddings-search-contents", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: input, options}); },
       /** Get embedding queue status (admin only)
@@ -676,84 +886,94 @@ export function createZAIClient(options: CreateZAIClientOptions) {
        * @see ../zai-openapi.json#/paths/~1memories~1{id}~1contents~1{content_id}~1jobs/get
        */
       listContentEmbeddingJobs(id: string, contentId: string, options?: ZAIRequestOptions): Promise<MemoriesListContentEmbeddingJobsResponse> { return transport.request<MemoriesListContentEmbeddingJobsResponse>({method: "get", path: "/memories/{id}/contents/{content_id}/jobs", auth: "admin", successStatuses: [200], pathParams: {"id": id, "content_id": contentId}, options}); },
+      /** Rebuild memory collection embeddings (admin only)
+       * Authentication: ak-* required.
+       * @see ../zai-openapi.json#/paths/~1memories~1{id}~1rebuild/post
+       */
+      rebuild(id: string, input: MemoriesRebuildInput, options?: ZAIRequestOptions): Promise<MemoriesRebuildResponse> { return transport.request<MemoriesRebuildResponse>({method: "post", path: "/memories/{id}/rebuild", auth: "admin", successStatuses: [202], pathParams: {"id": id}, body: input, options}); },
+      /** List failed memory contents and embedding reasons
+       * Authentication: ak-* or ek-*; auto uses ek-*.
+       * @see ../zai-openapi.json#/paths/~1memories~1{id}~1failures/get
+       */
+      listFailures(id: string, query?: MemoriesListFailuresQuery, options?: ZAIRequestOptions): Promise<MemoriesListFailuresResponse> { return transport.request<MemoriesListFailuresResponse>({method: "get", path: "/memories/{id}/failures", auth: "user", successStatuses: [200], pathParams: {"id": id}, query, options}); },
       /** Filter memory contents with advanced operators
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       filterContents(id: string, input?: MemoriesFilterContentsInput, options?: ZAIRequestOptions): Promise<MemoriesFilterContentsResponse> { return transport.request<MemoriesFilterContentsResponse>({method: "post", path: "/memories/{id}/contents-filter", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: input, options}); }
     },
     chat: {
       /** Send a message without building a conversation id
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       send(input?: ChatSendInput, options?: ZAIRequestOptions): Promise<ChatSendResponse> { return transport.request<ChatSendResponse>({method: "post", path: "/chat/conversation", auth: "user", successStatuses: [200], body: {...input, stream: false}, options}); },
       /** Stream full SSE chunks. A done event marks successful completion.
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       async stream(input?: ChatSendInput, options?: ZAIRequestOptions): Promise<AsyncIterableIterator<ZAIStreamEvent>> { return parseZAIStream(await transport.request<Response>({method: "post", path: "/chat/conversation", auth: "user", successStatuses: [200], body: {...input, stream: true}, options, responseType: 'stream'}), options?.signal); },
       conversations: {
         /** List conversations
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(query?: ChatConversationsListQuery, options?: ZAIRequestOptions): Promise<ChatConversationsListResponse> { return transport.request<ChatConversationsListResponse>({method: "get", path: "/chat/conversations", auth: "user", successStatuses: [200], query, options}); },
         /** Create a conversation
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         create(input?: ChatConversationsCreateInput, options?: ZAIRequestOptions): Promise<ChatConversationsCreateResponse> { return transport.request<ChatConversationsCreateResponse>({method: "post", path: "/chat/conversations", auth: "user", successStatuses: [200], body: input, options}); },
         /** Get a conversation
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         get(id: string, options?: ZAIRequestOptions): Promise<ChatConversationsGetResponse> { return transport.request<ChatConversationsGetResponse>({method: "get", path: "/chat/conversations/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); },
         /** Update conversation title and custom data
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         update(id: string, input?: ChatConversationsUpdateInput, options?: ZAIRequestOptions): Promise<ChatConversationsUpdateResponse> { return transport.request<ChatConversationsUpdateResponse>({method: "put", path: "/chat/conversations/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: input, options}); },
         /** Delete a conversation (soft delete)
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         delete(id: string, options?: ZAIRequestOptions): Promise<ChatConversationsDeleteResponse> { return transport.request<ChatConversationsDeleteResponse>({method: "delete", path: "/chat/conversations/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); },
         /** Generate a title for the conversation
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         generateTitle(id: string, options?: ZAIRequestOptions): Promise<ChatConversationsGenerateTitleResponse> { return transport.request<ChatConversationsGenerateTitleResponse>({method: "post", path: "/chat/conversations/{id}/generate-title", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); }
       },
       messages: {
         /** Send a message and get the AI response
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         send(id: string, input?: ChatMessagesSendInput, options?: ZAIRequestOptions): Promise<ChatMessagesSendResponse> { return transport.request<ChatMessagesSendResponse>({method: "post", path: "/chat/conversations/{id}/messages", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: {...input, stream: false}, options}); },
         /** Stream full SSE chunks. A done event marks successful completion.
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         async stream(id: string, input?: ChatMessagesSendInput, options?: ZAIRequestOptions): Promise<AsyncIterableIterator<ZAIStreamEvent>> { return parseZAIStream(await transport.request<Response>({method: "post", path: "/chat/conversations/{id}/messages", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: {...input, stream: true}, options, responseType: 'stream'}), options?.signal); },
         /** List messages of a conversation
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(id: string, options?: ZAIRequestOptions): Promise<ChatMessagesListResponse> { return transport.request<ChatMessagesListResponse>({method: "get", path: "/chat/conversations/{id}/messages", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); },
         /** Get a single message
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         get(id: string, messageId: string, options?: ZAIRequestOptions): Promise<ChatMessagesGetResponse> { return transport.request<ChatMessagesGetResponse>({method: "get", path: "/chat/conversations/{id}/messages/{message_id}", auth: "user", successStatuses: [200], pathParams: {"id": id, "message_id": messageId}, options}); },
         /** Delete a single message
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         delete(id: string, messageId: string, options?: ZAIRequestOptions): Promise<ChatMessagesDeleteResponse> { return transport.request<ChatMessagesDeleteResponse>({method: "delete", path: "/chat/conversations/{id}/messages/{message_id}", auth: "user", successStatuses: [200], pathParams: {"id": id, "message_id": messageId}, options}); },
         /** Delete all messages of a conversation
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+         * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         deleteAll(id: string, options?: ZAIRequestOptions): Promise<ChatMessagesDeleteAllResponse> { return transport.request<ChatMessagesDeleteAllResponse>({method: "delete", path: "/chat/conversations/{id}/messages", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); }
       }
@@ -761,59 +981,64 @@ export function createZAIClient(options: CreateZAIClientOptions) {
     qa: {
       /** List QA pairs
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       list(options?: ZAIRequestOptions): Promise<QaListResponse> { return transport.request<QaListResponse>({method: "get", path: "/qa/pairs", auth: "user", successStatuses: [200], options}); },
       /** Create a QA pair (upsert by key)
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       create(input?: QaCreateInput, options?: ZAIRequestOptions): Promise<QaCreateResponse> { return transport.request<QaCreateResponse>({method: "post", path: "/qa/pairs", auth: "user", successStatuses: [200, 201], body: input, options}); },
       /** Get a QA pair
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(id: string, options?: ZAIRequestOptions): Promise<QaGetResponse> { return transport.request<QaGetResponse>({method: "get", path: "/qa/pairs/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); },
       /** Update a QA pair
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       update(id: string, input?: QaUpdateInput, options?: ZAIRequestOptions): Promise<QaUpdateResponse> { return transport.request<QaUpdateResponse>({method: "put", path: "/qa/pairs/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, body: input, options}); },
       /** Soft-delete a QA pair
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       delete(id: string, options?: ZAIRequestOptions): Promise<QaDeleteResponse> { return transport.request<QaDeleteResponse>({method: "delete", path: "/qa/pairs/{id}", auth: "user", successStatuses: [200], pathParams: {"id": id}, options}); },
       /** Batch soft-delete QA pairs
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       batchDelete(input?: QaBatchDeleteInput, options?: ZAIRequestOptions): Promise<QaBatchDeleteResponse> { return transport.request<QaBatchDeleteResponse>({method: "post", path: "/qa/batch/delete", auth: "user", successStatuses: [200], body: input, options}); },
       /** Search matching QA pairs
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       search(input?: QaSearchInput, options?: ZAIRequestOptions): Promise<QaSearchResponse> { return transport.request<QaSearchResponse>({method: "post", path: "/qa/search", auth: "user", successStatuses: [200], body: input, options}); },
       /** Get the best matching QA pair
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       match(query?: QaMatchQuery, options?: ZAIRequestOptions): Promise<QaMatchResponse> { return transport.request<QaMatchResponse>({method: "get", path: "/qa/match", auth: "user", successStatuses: [200], query, options}); }
     },
     files: {
       /** Extract text from an uploaded file
        * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-zjy.sh.oop.cc/docs/authentication/app-api
+       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       extract(input?: FilesExtractInput, options?: ZAIRequestOptions): Promise<FilesExtractResponse> { return transport.request<FilesExtractResponse>({method: "post", path: "/files/extract", auth: "user", successStatuses: [200], body: input, encoding: 'file', options}); }
     },
     settings: {
       models: {
-        /** List models owned by this app
-         * Authentication: ak-* required.
+        /** List models available to this app
+         * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see ../zai-openapi.json#/paths/~1models/get
          */
-        list(options?: ZAIRequestOptions): Promise<SettingsModelsListResponse> { return transport.request<SettingsModelsListResponse>({method: "get", path: "/models", auth: "admin", successStatuses: [200], options}); },
+        list(options?: ZAIRequestOptions): Promise<SettingsModelsListResponse> { return transport.request<SettingsModelsListResponse>({method: "get", path: "/models", auth: "user", successStatuses: [200], options}); },
+        /** Test whether given models actually work against their upstreams
+         * Authentication: ak-* required.
+         * @see ../zai-openapi.json#/paths/~1models~1test/post
+         */
+        test(input: SettingsModelsTestInput, options?: ZAIRequestOptions): Promise<SettingsModelsTestResponse> { return transport.request<SettingsModelsTestResponse>({method: "post", path: "/models/test", auth: "admin", successStatuses: [200], body: input, options}); },
         /** Register a model with a dedicated OpenAI-compatible channel
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1models/post

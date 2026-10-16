@@ -20,6 +20,14 @@ export async function runConversationExample(client: ZAIClient, agentID: string)
     });
     const file = await client.sessions.downloadFile(session.id, {path: 'example/hello.txt'});
     console.log(await file.text());
+    const attachment = await client.sessions.uploadFile(session.id, {
+      file: {blob: new Blob(['附件正文'], {type: 'text/plain'}), filename: 'attachment.txt'},
+    });
+    if (!attachment.id) throw new Error('The attachment upload did not return a file ID.');
+    await client.messages.send(session.id, {content: [
+      {type: 'input_text', text: '请概括这个附件'},
+      {type: 'input_file', file_id: attachment.id},
+    ]});
   } finally {
     await client.sessions.delete(session.id);
   }

@@ -52,6 +52,21 @@ export async function loadSpecification(): Promise<Specification> {
   return mergeSpecifications(original!, supplement!);
 }
 
+/** Expand required-only attachment branches that openapi-typescript otherwise widens to unknown. */
+export function specificationForTypes(spec: Specification): Specification {
+  const copy = structuredClone(spec);
+  const attachments = copy.paths['/sessions/{session_id}/messages']?.post?.requestBody?.content['application/json']?.schema.properties?.content?.items?.oneOf;
+  for (const attachment of attachments ?? []) {
+    if (!attachment.properties || !attachment.anyOf?.every(branch => Object.keys(branch).length === 1 && branch.required)) continue;
+    const {anyOf, ...base} = attachment;
+    attachment.anyOf = anyOf.map(branch => ({...base, required: [...new Set([...(base.required ?? []), ...branch.required!])]}));
+    delete attachment.type;
+    delete attachment.properties;
+    delete attachment.required;
+  }
+  return copy;
+}
+
 /** Resolve a local reference at this node; children remain lazy to support recursive schemas. */
 export function resolveSchema(schema: Schema | undefined, spec: Specification): Schema {
   let resolved = schema ?? {};

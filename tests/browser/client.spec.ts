@@ -82,12 +82,14 @@ test('uploads File and explicitly named Blob using native multipart and download
     const namedBlob = await client.sessions.uploadFile('session', {
       path: 'nested/blob.txt', file: {blob: new Blob(['来自 Blob'], {type: 'text/plain'}), filename: 'named.txt'},
     });
+    const attachment = await client.sessions.uploadFile('session', {file: new File(['附件'], 'attachment.txt', {type: 'text/plain'})});
     const blob = await client.sessions.downloadFile('session', {path: 'nested/file.bin'});
-    return {uploads: [nativeFile, namedBlob], isBlob: blob instanceof Blob, bytes: Array.from(new Uint8Array(await blob.arrayBuffer()))};
+    return {uploads: [nativeFile, namedBlob, attachment], isBlob: blob instanceof Blob, bytes: Array.from(new Uint8Array(await blob.arrayBuffer()))};
   });
   expect(result.uploads).toEqual([
     {name: 'native.txt', path: 'nested/file.txt', mime_type: 'text/plain', size: 11, test_content: '来自 File'},
     {name: 'named.txt', path: 'nested/blob.txt', mime_type: 'text/plain', size: 11, test_content: '来自 Blob'},
+    {name: 'attachment.txt', id: 'attachment-id', status: 'ready', mime_type: 'text/plain', size: 6, test_content: '附件'},
   ]);
   expect(result.isBlob).toBe(true);
   expect(result.bytes).toEqual([0, 1, 127, 128, 255]);
@@ -214,11 +216,13 @@ test('selects ak/ek and shares signing-secret acquisition in every browser', asy
   await page.evaluate(async () => {
     const client = window.zai.createZAIClient({baseUrl: '/v1/zai', auth: {mode: 'auto', appID: 'browser-app', appKey: 'admin-key', userID: '用户😀', userName: '昵称🌟'}});
     await Promise.all([client.agents.list(), client.agents.list(), client.settings.models.list()]);
+    await client.settings.models.list({tokenType: 'admin'});
     await client.agents.list();
   });
   expect(received.filter(entry => entry.path.endsWith('/signing_secret'))).toHaveLength(1);
+  expect(received.filter(entry => entry.path.endsWith('/models')).map(entry => entry.prefix)).toEqual(['ek-', 'ak-']);
   for (const entry of received) {
-    const admin = !entry.path.endsWith('/agents');
+    const admin = entry.path.endsWith('/signing_secret') || (entry.path.endsWith('/models') && entry.prefix === 'ak-');
     expect(entry.prefix).toBe(admin ? 'ak-' : 'ek-');
     expect(entry.payload.user_id).toBe('用户😀');
     expect(entry.payload.user_name).toBe('昵称🌟');
@@ -242,6 +246,7 @@ test('passes the required permission to an async getToken before each native req
     }});
     await client.agents.list();
     await client.settings.models.list();
+    await client.settings.models.list({tokenType: 'admin'});
     await client.messages.send('session', {content: [{type: 'input_text', text: 'hello'}]});
     try {
       await client.memories.create({name: 'test'});
@@ -251,9 +256,10 @@ test('passes the required permission to an async getToken before each native req
       return {permissions, code: error.code, status: error.status};
     }
   });
-  expect(result).toEqual({permissions: [false, true, false, true], code: 'authentication', status: 403});
+  expect(result).toEqual({permissions: [false, false, true, false, true], code: 'authentication', status: 403});
   expect(received).toEqual([
     {path: '/v1/zai/agents', token: 'Bearer ek-backend'},
+    {path: '/v1/zai/models', token: 'Bearer ek-backend'},
     {path: '/v1/zai/models', token: 'Bearer ak-backend'},
     {path: '/v1/zai/sessions/session/messages', token: 'Bearer ek-backend'},
     {path: '/v1/zai/memories', token: 'Bearer ak-backend'},
@@ -275,10 +281,55 @@ test('reads a persistent native Coding stream across turns and cancels without D
     const first = await stream.next();
     const second = await stream.next();
     const third = await stream.next();
+    const fourth = await stream.next();
     await stream.return?.();
-    return {events: [first.value, second.value, third.value], closed: await stream.next()};
+    return {events: [first.value, second.value, third.value, fourth.value], closed: await stream.next()};
   });
-  expect(result.events.map(event => event.data.seq)).toEqual([41, 42, 43]);
-  expect(result.events.map(event => event.event)).toEqual(['turn.completed', 'turn.started', 'message.delta']);
+  expect(result.events.map(event => event.data.seq)).toEqual([41, 42, 43, 44]);
+  expect(result.events.map(event => event.event)).toEqual(['error', 'turn.failed', 'turn.started', 'message.delta']);
   expect(result.closed.done).toBe(true);
+});
+
+test('uploads raw Blob bytes and consumes native Runner status snapshots to EOF', async ({page}) => {
+  const result = await page.evaluate(async () => {
+    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: () => 'ek-browser'});
+    const file = await client.coding.sessions.uploadFile('browser', {name: '图片.txt'}, new Blob(['你好😀'], {type: 'text/plain'}));
+    const empty = await client.coding.sessions.uploadFile('browser', {name: 'empty'}, new Blob());
+    const events = [];
+    for await (const event of await client.coding.agents.streamStatus('browser')) events.push(event);
+    return {file, empty, events};
+  });
+  expect(result.file).toMatchObject({name: '图片.txt', size: 10, test_content: '你好😀', request_type: 'application/octet-stream'});
+  expect(result.empty).toMatchObject({name: 'empty', size: 0, test_content: '', request_type: 'application/octet-stream'});
+  expect(result.events.map(event => event.data)).toEqual([
+    {agent_id: 'browser', status: 'starting', reason: null}, {agent_id: 'browser', status: 'ready', reason: null},
+  ]);
+  expect(result.events.every(event => event.event === 'runner.status')).toBe(true);
+});
+
+test('generates and reuses idempotency keys and downloads Coding attachments with user tokens', async ({page}) => {
+  const keys: string[] = [];
+  await page.route('**/v1/zai/coding/agents/agent/workspaces', async route => {
+    keys.push((await route.request().headerValue('idempotency-key'))!);
+    expect(await route.request().headerValue('authorization')).toBe('Bearer ek-browser');
+    await route.fulfill({status: 201, json: {id: 'workspace'}});
+  });
+  await page.route('**/v1/zai/coding/sessions/session/files/download*', async route => {
+    expect(await route.request().headerValue('authorization')).toBe('Bearer ek-browser');
+    expect(new URL(route.request().url()).searchParams.get('file_id')).toBe('attachment');
+    await route.fulfill({contentType: 'application/octet-stream', body: Buffer.from([0, 128, 255])});
+  });
+  const bytes = await page.evaluate(async () => {
+    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: admin => admin ? 'ak-browser' : 'ek-browser'});
+    await client.coding.workspaces.create('agent', {name: 'first'});
+    await client.coding.workspaces.create('agent', {name: 'second'});
+    await client.coding.workspaces.create('agent', {name: 'retry'}, {idempotencyKey: 'workspace-retry', headers: {'Idempotency-Key': 'ignored'}});
+    await client.coding.workspaces.create('agent', {name: 'retry'}, {idempotencyKey: 'workspace-retry'});
+    const blob = await client.coding.sessions.downloadFile('session', {file_id: 'attachment'});
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+  expect(keys.slice(0, 2).every(key => /^[a-f0-9]{32}$/.test(key))).toBe(true);
+  expect(keys[0]).not.toBe(keys[1]);
+  expect(keys.slice(2)).toEqual(['workspace-retry', 'workspace-retry']);
+  expect(bytes).toEqual([0, 128, 255]);
 });

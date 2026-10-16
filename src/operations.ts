@@ -7,12 +7,15 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/agents",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -24,12 +27,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/agents",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -41,14 +47,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/agents/{agent_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -60,14 +69,17 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/agents/{agent_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -79,14 +91,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/agents/{agent_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -97,15 +112,18 @@ export const ZAI_OPERATIONS = [
     "name": "getPublic",
     "method": "get",
     "path": "/coding/agents/{agent_id}/keys/public",
-    "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -116,15 +134,40 @@ export const ZAI_OPERATIONS = [
     "name": "rotate",
     "method": "post",
     "path": "/coding/agents/{agent_id}/keys/rotate",
-    "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
-    "hasBody": false,
+    "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.keys",
+    "name": "ensure",
+    "method": "post",
+    "path": "/coding/agents/{agent_id}/keys",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -136,8 +179,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -145,6 +189,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -156,8 +202,9 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/AGENTS.md",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -165,6 +212,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -176,14 +225,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -195,14 +247,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/agents/{agent_id}/workspaces",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -214,8 +269,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -223,6 +279,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -234,8 +292,9 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -243,6 +302,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -254,8 +315,9 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -263,6 +325,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -274,8 +338,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -283,6 +348,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -294,8 +361,9 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id"
@@ -303,9 +371,12 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
     "responseType": "json",
     "statuses": [
-      201
+      201,
+      202
     ]
   },
   {
@@ -314,8 +385,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id",
@@ -324,6 +396,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -335,8 +409,9 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id",
@@ -345,9 +420,11 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
     "responseType": "json",
     "statuses": [
-      200
+      202
     ]
   },
   {
@@ -356,8 +433,9 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id",
@@ -366,6 +444,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -377,8 +457,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id",
@@ -389,6 +470,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -400,8 +483,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "workspace_id",
@@ -412,6 +496,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -423,8 +509,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/sessions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [
       "category",
@@ -435,6 +522,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -446,8 +535,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/agents/{agent_id}/sessions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
@@ -460,6 +550,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -471,14 +563,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/agents/{agent_id}/sessions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -490,14 +585,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/sessions/{session_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -509,14 +607,17 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/sessions/{session_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -528,14 +629,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/sessions/{session_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -547,14 +651,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/sessions/{session_id}/context/reset",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -566,14 +673,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/sessions/{session_id}/generate-title",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -585,14 +695,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/sessions/{session_id}/files",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -604,16 +717,20 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/sessions/{session_id}/files/content",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [
-      "path"
+      "path",
+      "file_id"
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -625,16 +742,20 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/sessions/{session_id}/files/download",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [
-      "path"
+      "path",
+      "file_id"
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "blob",
     "statuses": [
       200
@@ -646,14 +767,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/sessions/{session_id}/files/upload",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "multipart",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -665,14 +789,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/sessions/{session_id}/images/generations",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -684,14 +811,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/sessions/{session_id}/messages",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": "stream",
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -703,14 +833,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/sessions/{session_id}/messages",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -722,14 +855,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/messages/{message_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "message_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -741,14 +877,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/messages/{message_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "message_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -760,14 +899,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/sessions/{session_id}/messages",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -779,14 +921,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/agents/{agent_id}/skills",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -798,14 +943,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/agents/{agent_id}/skills",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -817,8 +965,9 @@ export const ZAI_OPERATIONS = [
     "method": "patch",
     "path": "/agents/{agent_id}/skills/{skill_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "skill_id"
@@ -826,6 +975,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -837,8 +988,9 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/agents/{agent_id}/skills/{skill_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id",
       "skill_id"
@@ -846,6 +998,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -857,12 +1011,15 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/skills",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -874,12 +1031,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/skills",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -891,14 +1051,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/skills/{skill_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -910,14 +1073,17 @@ export const ZAI_OPERATIONS = [
     "method": "patch",
     "path": "/skills/{skill_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -929,14 +1095,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/skills/{skill_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -948,14 +1117,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/skills/{skill_id}/undelete",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -967,12 +1139,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/skills/validate-bundle",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "bundle",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -984,14 +1159,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/skills/{skill_id}/revisions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "bundle",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -1003,14 +1181,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/skills/{skill_id}/revisions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1022,8 +1203,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/skills/{skill_id}/revisions/{version}/contents",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "skill_id",
       "version"
@@ -1031,6 +1213,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1042,12 +1226,15 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/memories",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1061,10 +1248,13 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories/post",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1076,14 +1266,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/memories/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1097,12 +1290,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}/put",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1116,12 +1312,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}/delete",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1133,8 +1332,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/memories/{id}/contents",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
@@ -1144,6 +1344,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1157,12 +1359,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}~1contents/post",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1176,12 +1381,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}~1contents~1batch/post",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1193,8 +1401,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/memories/{id}/contents/{content_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "content_id"
@@ -1202,6 +1411,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1215,6 +1426,7 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}~1contents~1{content_id}/put",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "content_id"
@@ -1222,6 +1434,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1235,6 +1449,7 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}~1contents~1{content_id}/delete",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "content_id"
@@ -1242,6 +1457,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1255,6 +1472,7 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}~1contents~1{content_id}~1chunks/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "content_id"
@@ -1262,6 +1480,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1273,14 +1493,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/memories/{id}/embeddings-search-chunks",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1292,14 +1515,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/memories/{id}/embeddings-search-contents",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1313,10 +1539,13 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1queue~1stats/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1330,6 +1559,7 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1memories~1{id}~1contents~1{content_id}~1jobs/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "content_id"
@@ -1337,6 +1567,55 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "memories",
+    "name": "rebuild",
+    "method": "post",
+    "path": "/memories/{id}/rebuild",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1memories~1{id}~1rebuild/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      202
+    ]
+  },
+  {
+    "group": "memories",
+    "name": "listFailures",
+    "method": "get",
+    "path": "/memories/{id}/failures",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1memories~1{id}~1failures/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "id"
+    ],
+    "query": [
+      "page",
+      "page_size"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1350,11 +1629,451 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1coding~1runners/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners",
+    "name": "create",
+    "method": "post",
+    "path": "/coding/runners",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners",
+    "name": "get",
+    "method": "get",
+    "path": "/coding/runners/{profile_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners",
+    "name": "update",
+    "method": "patch",
+    "path": "/coding/runners/{profile_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/patch",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners",
+    "name": "delete",
+    "method": "delete",
+    "path": "/coding/runners/{profile_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/delete",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners",
+    "name": "listImagePolicies",
+    "method": "get",
+    "path": "/coding/runner-image-policies",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runner-image-policies/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners.instances",
+    "name": "list",
+    "method": "get",
+    "path": "/coding/runners/{profile_id}/instances",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id"
+    ],
+    "query": [
+      "page",
+      "page_size",
+      "status"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners.instances",
+    "name": "create",
+    "method": "post",
+    "path": "/coding/runners/{profile_id}/instances",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners.instances",
+    "name": "get",
+    "method": "get",
+    "path": "/coding/runners/{profile_id}/instances/{instance_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id",
+      "instance_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners.instances",
+    "name": "update",
+    "method": "patch",
+    "path": "/coding/runners/{profile_id}/instances/{instance_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/patch",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id",
+      "instance_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.runners.instances",
+    "name": "delete",
+    "method": "delete",
+    "path": "/coding/runners/{profile_id}/instances/{instance_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/delete",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "profile_id",
+      "instance_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "list",
+    "method": "get",
+    "path": "/coding/agents",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1agents/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "create",
+    "method": "post",
+    "path": "/coding/agents",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1agents/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "get",
+    "method": "get",
+    "path": "/coding/agents/{agent_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "update",
+    "method": "patch",
+    "path": "/coding/agents/{agent_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/patch",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "delete",
+    "method": "delete",
+    "path": "/coding/agents/{agent_id}",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/delete",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "getStatus",
+    "method": "get",
+    "path": "/coding/agents/{agent_id}/status",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [
+      "external_user_id",
+      "session_id"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": "user-scope",
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "ensureRunnerInstance",
+    "method": "post",
+    "path": "/coding/agents/{agent_id}/runner-instance",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.agents",
+    "name": "streamStatus",
+    "method": "get",
+    "path": "/coding/agents/{agent_id}/status/stream",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": "status",
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [
+      "external_user_id",
+      "session_id"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": "user-scope",
+    "responseType": "stream",
     "statuses": [
       200
     ]
@@ -1365,14 +2084,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/agents/{agent_id}/sessions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "agent_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       201
@@ -1384,8 +2106,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [
       "agent_id",
@@ -1396,6 +2119,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1407,14 +2132,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1426,14 +2154,17 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/coding/sessions/{session_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1445,14 +2176,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/coding/sessions/{session_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1464,14 +2198,183 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/tools",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "generateTitle",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/generate-title",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [
+      "automatic"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "listFiles",
+    "method": "get",
+    "path": "/coding/sessions/{session_id}/files",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [
+      "path"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "uploadFile",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/files",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [
+      "name"
+    ],
+    "hasBody": true,
+    "encoding": "binary",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      201
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "readFile",
+    "method": "get",
+    "path": "/coding/sessions/{session_id}/files/content",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [
+      "path"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "downloadFile",
+    "method": "get",
+    "path": "/coding/sessions/{session_id}/files/download",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [
+      "file_id",
+      "path"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": "file-query",
+    "responseType": "blob",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "createDownloadLink",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/files/download-link",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": "file-body",
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.toolCalls",
+    "name": "resolve",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id",
+      "tool_call_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": "tool-result",
     "responseType": "json",
     "statuses": [
       200
@@ -1483,14 +2386,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/turns",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       202
@@ -1502,8 +2408,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/turns/{turn_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id",
       "turn_id"
@@ -1511,6 +2418,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1522,8 +2431,9 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/turns/{turn_id}/cancel",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id",
       "turn_id"
@@ -1531,6 +2441,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1542,8 +2454,9 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/turns/{turn_id}/steer",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id",
       "turn_id"
@@ -1551,6 +2464,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1562,8 +2477,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/events",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
@@ -1573,6 +2489,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1584,8 +2502,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/stream",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/zai/coding/events",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/events",
     "streamName": null,
+    "streamKind": "coding",
     "pathParams": [
       "session_id"
     ],
@@ -1594,6 +2513,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "stream",
     "statuses": [
       200
@@ -1605,8 +2526,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/interactions",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
@@ -1615,6 +2537,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1626,8 +2550,9 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/interactions/{interaction_id}/resolve",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id",
       "interaction_id"
@@ -1635,6 +2560,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1646,8 +2573,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/diff",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
@@ -1656,6 +2584,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1667,14 +2597,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/commit",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1686,14 +2619,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/push",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1705,14 +2641,61 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/coding/sessions/{session_id}/pull-request",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "session_id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.git",
+    "name": "getIdentity",
+    "method": "get",
+    "path": "/coding/agents/{agent_id}/git/identity",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.git",
+    "name": "updateIdentity",
+    "method": "put",
+    "path": "/coding/agents/{agent_id}/git/identity",
+    "auth": "user-only",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1724,17 +2707,42 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/models",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [
       "provider",
       "agent_id",
-      "runner_id",
       "refresh"
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.modes",
+    "name": "list",
+    "method": "get",
+    "path": "/coding/modes",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [
+      "agent_id",
+      "session_id"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1746,8 +2754,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/chat/conversations",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [
       "category",
@@ -1757,6 +2766,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1768,12 +2779,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/chat/conversations",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1785,14 +2799,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/chat/conversations/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1804,14 +2821,17 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/chat/conversations/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1823,14 +2843,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/chat/conversations/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1842,14 +2865,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/chat/conversations/{id}/generate-title",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1861,14 +2887,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/chat/conversations/{id}/messages",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": "stream",
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1880,14 +2909,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/chat/conversations/{id}/messages",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1899,8 +2931,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/chat/conversations/{id}/messages/{message_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "message_id"
@@ -1908,6 +2941,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1919,8 +2954,9 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/chat/conversations/{id}/messages/{message_id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id",
       "message_id"
@@ -1928,6 +2964,8 @@ export const ZAI_OPERATIONS = [
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1939,14 +2977,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/chat/conversations/{id}/messages",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1958,12 +2999,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/chat/conversation",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": "stream",
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1975,12 +3019,15 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/qa/pairs",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -1992,12 +3039,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/qa/pairs",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200,
@@ -2010,14 +3060,17 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/qa/pairs/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2029,14 +3082,17 @@ export const ZAI_OPERATIONS = [
     "method": "put",
     "path": "/qa/pairs/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2048,14 +3104,17 @@ export const ZAI_OPERATIONS = [
     "method": "delete",
     "path": "/qa/pairs/{id}",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2067,12 +3126,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/qa/batch/delete",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2084,12 +3146,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/qa/search",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2101,8 +3166,9 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/qa/match",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [
       "q",
@@ -2111,6 +3177,8 @@ export const ZAI_OPERATIONS = [
     ],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2122,12 +3190,15 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/files/extract",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "file",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2139,14 +3210,17 @@ export const ZAI_OPERATIONS = [
     "method": "post",
     "path": "/memories/{id}/contents-filter",
     "auth": "user",
-    "source": "https://zai-zjy.sh.oop.cc/docs/authentication/app-api",
+    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2157,13 +3231,36 @@ export const ZAI_OPERATIONS = [
     "name": "list",
     "method": "get",
     "path": "/models",
-    "auth": "admin",
+    "auth": "user",
     "source": "../zai-openapi.json#/paths/~1models/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "settings.models",
+    "name": "test",
+    "method": "post",
+    "path": "/models/test",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1models~1test/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2177,10 +3274,13 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1models/post",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2194,12 +3294,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1models~1{id}/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2213,12 +3316,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1models~1{id}/patch",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2232,12 +3338,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1models~1{id}/delete",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2251,10 +3360,13 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1channels/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2268,12 +3380,15 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1channels~1{id}/put",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [
       "id"
     ],
     "query": [],
     "hasBody": true,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2287,10 +3402,13 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1signing_secret/get",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200
@@ -2304,10 +3422,13 @@ export const ZAI_OPERATIONS = [
     "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1signing_secret~1generate/post",
     "streamName": null,
+    "streamKind": null,
     "pathParams": [],
     "query": [],
     "hasBody": false,
     "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
     "responseType": "json",
     "statuses": [
       200

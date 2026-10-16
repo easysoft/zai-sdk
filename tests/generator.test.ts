@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {loadSpecification, mergeSpecifications, resolveSchema, typeName, type Specification} from '../scripts/openapi.js';
+import {loadSpecification, mergeSpecifications, resolveSchema, specificationForTypes, typeName, type Specification} from '../scripts/openapi.js';
 import {operations, validateOperationMappings, type OperationMapping} from '../scripts/operations.js';
 
 const spec = await loadSpecification();
@@ -20,6 +20,20 @@ describe('OpenAPI generation safeguards', () => {
 
   it('rejects supplementary paths that overlap the original contract', () => {
     expect(() => mergeSpecifications(spec, {paths: {'/agents': {}}})).toThrow('Supplement duplicates existing paths');
+  });
+
+  it('expands attachment requirements on a type-generation copy without changing the contract', () => {
+    const normalized = specificationForTypes(spec);
+    const items = (input: Specification) => input.paths['/sessions/{session_id}/messages']!.post!.requestBody!.content['application/json']!.schema.properties!.content!.items!.oneOf!;
+    for (const [index, type] of [[1, 'input_image'], [2, 'input_file']] as const) {
+      expect(items(spec)[index]!.anyOf).toEqual([{required: ['file_id']}, {required: ['path']}]);
+      expect(items(normalized)[index]).not.toHaveProperty('properties');
+      expect(items(normalized)[index]!.anyOf).toEqual([
+        expect.objectContaining({type: 'object', properties: expect.objectContaining({type: {type: 'string', enum: [type]}}), required: ['type', 'file_id']}),
+        expect.objectContaining({type: 'object', properties: expect.objectContaining({type: {type: 'string', enum: [type]}}), required: ['type', 'path']}),
+      ]);
+    }
+    expect(specificationForTypes({...spec, paths: {}}).paths).toEqual({});
   });
 
   it('rejects missing, duplicate, and unclassified operations and public namespace collisions', () => {

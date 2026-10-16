@@ -43,9 +43,10 @@ test('live ZAI authentication renewal, session, messages, SSE and files', {timeo
       assert.ok(sentTokens.length === 2 && sentTokens.every(token => token.startsWith(tokenType === 'admin' ? 'Bearer ak-' : 'Bearer ek-')), 'Both live reads must carry the selected token type.');
       assert.notEqual(sentTokens[0], sentTokens[1], 'The server must accept a renewed token.');
       sentTokens.length = 0;
-      if (tokenType === 'admin') await renewalClient.settings.models.list(requestOptions());
-      else await assert.rejects(renewalClient.settings.models.list(requestOptions()), error => error instanceof ZAIClientError && error.status === 403);
-      t.diagnostic('Authenticated reads and model-list permissions succeeded for ' + tokenType + ' tokens.');
+      await renewalClient.settings.models.list({...requestOptions(), tokenType});
+      if (tokenType === 'admin') await renewalClient.settings.channels.list(requestOptions());
+      else await assert.rejects(renewalClient.settings.channels.list(requestOptions()), error => error instanceof ZAIClientError && error.status === 403);
+      t.diagnostic('Authenticated model reads and channel permissions succeeded for ' + tokenType + ' tokens.');
     }
 
     const explicitAgentID = process.env.TEST_ZAI_AGENT_ID?.trim();

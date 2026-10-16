@@ -1,7 +1,7 @@
 import {readFile, writeFile} from 'node:fs/promises';
 import openapiTS, {astToString} from 'openapi-typescript';
 import {operations, validateOperationMappings, type OperationMapping} from './operations.js';
-import {loadSpecification, resolveSchema, typeName} from './openapi.js';
+import {loadSpecification, resolveSchema, specificationForTypes, typeName} from './openapi.js';
 
 const spec = await loadSpecification();
 validateOperationMappings(spec);
@@ -12,8 +12,16 @@ const root: Resource = {members: [], children: new Map()};
 const metadata: object[] = [];
 const camel = (value: string) => value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 const q = JSON.stringify;
+const validations: Record<string, string> = {
+  'coding.sessions.downloadFile': 'file-query',
+  'coding.sessions.createDownloadLink': 'file-body',
+  'coding.toolCalls.resolve': 'tool-result',
+  'coding.agents.getStatus': 'user-scope',
+  'coding.agents.streamStatus': 'user-scope',
+};
+const fileSelector = '{file_id: string; path?: never} | {path: string; file_id?: never}';
 
-for (const [group, name, method, path, auth, source, streamName, streamOnly] of operations as readonly OperationMapping[]) {
+for (const [group, name, method, path, auth, source, streamName, streamKind] of operations as readonly OperationMapping[]) {
   const op = spec.paths[path]![method]!;
   const publicType = typeName(group, name);
   const ref = `paths[${q(path)}][${q(method)}]`;
@@ -21,54 +29,61 @@ for (const [group, name, method, path, auth, source, streamName, streamOnly] of 
   const pathParams = [...path.matchAll(/\{([^}]+)\}/g)].map(match => match[1]!);
   const query = parameters.filter(parameter => parameter.in === 'query');
   const content = op.requestBody?.content;
+  const binaryInput = !!content?.['application/octet-stream'];
   const multipart = content?.['multipart/form-data'];
   const multipartSchema = resolveSchema(multipart?.schema, spec);
   const isUpload = !!multipart && !content?.['application/json'];
   const isBundle = !!multipart && !!content?.['application/json'];
-  const encoding = isUpload ? (multipartSchema.properties?.path ? 'multipart' : 'file') : isBundle ? 'bundle' : 'json';
+  const encoding = binaryInput ? 'binary' : isUpload ? (multipartSchema.properties?.path ? 'multipart' : 'file') : isBundle ? 'bundle' : 'json';
   const statuses = Object.keys(op.responses).filter(status => /^2\d\d$/.test(status));
   const binary = statuses.some(status => !!op.responses[status]?.content?.['application/octet-stream']);
-  const response = streamOnly ? 'AsyncIterableIterator<ZAICodingStreamEvent>' : binary ? 'Blob' : statuses.map(status => `${ref}['responses'][${status}]['content']['application/json']`).join(' | ');
+  const response = streamKind ? `AsyncIterableIterator<${streamKind === 'coding' ? 'ZAICodingStreamEvent' : 'ZAIRunnerStatusStreamEvent'}>` : binary ? 'Blob' : statuses.map(status => `${ref}['responses'][${status}]['content']['application/json']`).join(' | ');
   aliases.push(`export type ${publicType}Response = ${response};`);
   const args = pathParams.map(param => `${camel(param)}: string`);
   const fields = [`method: ${q(method)}`, `path: ${q(path)}`, `auth: ${q(auth)}`, `successStatuses: [${statuses.join(', ')}]`];
+  const validation = validations[`${group}.${name}`];
+  const idempotencyRequired = parameters.some(parameter => parameter.in === 'header' && parameter.name.toLowerCase() === 'idempotency-key' && parameter.required);
+  if (validation) fields.push(`validation: ${q(validation)}`);
+  if (idempotencyRequired) fields.push('idempotencyRequired: true');
   if (pathParams.length) fields.push(`pathParams: {${pathParams.map(param => `${q(param)}: ${camel(param)}`).join(', ')}}`);
   if (query.length) {
-    aliases.push(`export type ${publicType}Query = NonNullable<${ref}['parameters']['query']>;`);
-    args.push(`query${query.some(param => param.required) ? '' : '?'}: ${publicType}Query`);
+    aliases.push(`export type ${publicType}Query = ${validation === 'file-query' ? fileSelector : `NonNullable<${ref}['parameters']['query']>`};`);
+    args.push(`query${validation === 'file-query' || query.some(param => param.required) ? '' : '?'}: ${publicType}Query`);
     fields.push('query');
   }
   if (content) {
     const jsonType = `NonNullable<${ref}['requestBody']>['content']['application/json']`;
     const multipartType = `NonNullable<${ref}['requestBody']>['content']['multipart/form-data']`;
     const uploadType = (key: string) => `Omit<${multipartType}, '${key}'> & {${key}${multipartSchema.required?.includes(key) ? '' : '?'}: ZAIUploadFile}`;
-    let bodyType = isUpload ? uploadType('file') : jsonType;
+    let bodyType = binaryInput ? 'Blob' : isUpload ? uploadType('file') : jsonType;
     if (isBundle) bodyType = `${jsonType} | (${uploadType('bundle')})`;
     if (streamName) bodyType = `Omit<${jsonType}, 'stream'>`;
+    if (validation === 'file-body') bodyType = fileSelector;
+    if (validation === 'tool-result') bodyType = '{output: unknown; error?: never} | {error: {code: string; message: string}; output?: never}';
     aliases.push(`export type ${publicType}Input = ${bodyType};`);
-    const required = op.requestBody?.required || Object.values(content).some(media => resolveSchema(media.schema, spec).required?.length);
+    const required = validation === 'file-body' || validation === 'tool-result' || op.requestBody?.required || Object.values(content).some(media => resolveSchema(media.schema, spec).required?.length);
     args.push(`input${required ? '' : '?'}: ${publicType}Input`);
     fields.push(streamName ? 'body: {...input, stream: false}' : 'body: input');
-    if (isUpload || isBundle) fields.push(`encoding: '${encoding}'`);
+    if (isUpload || isBundle || binaryInput) fields.push(`encoding: '${encoding}'`);
   }
-  if (binary || streamOnly) fields.push(`responseType: '${streamOnly ? 'stream' : 'blob'}'`);
+  if (binary || streamKind) fields.push(`responseType: '${streamKind ? 'stream' : 'blob'}'`);
   args.push('options?: ZAIRequestOptions');
   fields.push('options');
-  const comment = (summary: string) => `/** ${summary.replace(/\*\//g, '')}\n * Authentication: ${auth === 'admin' ? 'ak-* required' : 'ak-* or ek-*; auto uses ek-*'}.\n * @see ${source}\n */`;
+  const comment = (summary: string) => `/** ${summary.replace(/\*\//g, '')}\n * Authentication: ${auth === 'admin' ? 'ak-* required' : auth === 'user-only' ? 'ek-* required' : 'ak-* or ek-*; auto uses ek-*'}.\n * @see ${source}\n */`;
   let resource = root;
   for (const part of group.split('.')) {
     if (!resource.children.has(part)) resource.children.set(part, {members: [], children: new Map()});
     resource = resource.children.get(part)!;
   }
-  const request = `transport.request<${streamOnly ? 'Response' : `${publicType}Response`}>({${fields.join(', ')}})`;
-  const body = streamOnly ? `parseZAICodingStream(await ${request}, options?.signal)` : request;
-  resource.members.push(`${comment(op.summary ?? name)}\n${streamOnly ? 'async ' : ''}${name}(${args.join(', ')}): Promise<${publicType}Response> { return ${body}; }`);
+  const request = `transport.request<${streamKind ? 'Response' : `${publicType}Response`}>({${fields.join(', ')}})`;
+  const body = streamKind ? `${streamKind === 'coding' ? 'parseZAICodingStream' : 'parseZAIRunnerStatusStream'}(await ${request}, options?.signal)` : request;
+  resource.members.push(`${comment(op.summary ?? name)}\n${streamKind ? 'async ' : ''}${name}(${args.join(', ')}): Promise<${publicType}Response> { return ${body}; }`);
   if (streamName) {
     const streamFields = fields.map(field => field === 'body: {...input, stream: false}' ? 'body: {...input, stream: true}' : field);
     streamFields.push("responseType: 'stream'");
     resource.members.push(`${comment('Stream full SSE chunks. A done event marks successful completion.')}\nasync ${streamName}(${args.join(', ')}): Promise<AsyncIterableIterator<ZAIStreamEvent>> { return parseZAIStream(await transport.request<Response>({${streamFields.join(', ')}}), options?.signal); }`);
   }
-  metadata.push({group, name, method, path, auth, source, streamName: streamName ?? null, pathParams, query: query.map(param => param.name), hasBody: !!content, encoding, responseType: streamOnly ? 'stream' : binary ? 'blob' : 'json', statuses: statuses.map(Number)});
+  metadata.push({group, name, method, path, auth, source, streamName: streamName ?? null, streamKind: streamKind ?? null, pathParams, query: query.map(param => param.name), hasBody: !!content, encoding, idempotencyRequired, validation: validation ?? null, responseType: streamKind ? 'stream' : binary ? 'blob' : 'json', statuses: statuses.map(Number)});
 }
 
 function renderResource(resource: Resource, indent = 2): string {
@@ -79,7 +94,7 @@ function renderResource(resource: Resource, indent = 2): string {
 const client = generated + `import type {paths} from './schema.js';
 import type {CreateZAIClientOptions, ZAIRequestOptions, ZAIUploadFile} from './types.js';
 import {createTransport} from './transport.js';
-import {parseZAIStream, parseZAICodingStream, type ZAIStreamEvent, type ZAICodingStreamEvent} from './stream.js';
+import {parseZAIStream, parseZAICodingStream, parseZAIRunnerStatusStream, type ZAIStreamEvent, type ZAICodingStreamEvent, type ZAIRunnerStatusStreamEvent} from './stream.js';
 import {runZAIDoctor, type ZAIDoctorOptions, type ZAIDoctorResult} from './doctor.js';
 
 ${aliases.join('\n')}
@@ -100,7 +115,7 @@ ${renderResource(root, 4)}
 
 export type ZAIClient = ReturnType<typeof createZAIClient>;
 `;
-const schema = astToString(await openapiTS(spec as unknown as Parameters<typeof openapiTS>[0], {emptyObjectsUnknown: true}));
+const schema = astToString(await openapiTS(specificationForTypes(spec) as unknown as Parameters<typeof openapiTS>[0], {emptyObjectsUnknown: true}));
 const outputs = new Map([
   ['src/schema.ts', schema],
   ['src/client.ts', client],

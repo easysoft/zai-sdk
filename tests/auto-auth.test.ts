@@ -41,7 +41,7 @@ describe('automatic authentication configuration', () => {
     const client = createZAIClient({baseUrl, getToken, fetch});
     await client.settings.models.list();
     await client.agents.list();
-    expect(getToken.mock.calls).toEqual([[true], [false]]);
+    expect(getToken.mock.calls).toEqual([[false], [false]]);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -64,7 +64,7 @@ describe('automatic token selection and acquisition lifecycle', () => {
     });
     const client = createZAIClient({baseUrl, auth, fetch});
     expect(fetch).not.toHaveBeenCalled();
-    await Promise.all([client.settings.models.list(), client.coding.runners.list()]);
+    await Promise.all([client.settings.models.list({tokenType: 'admin'}), client.coding.runners.list()]);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -82,7 +82,7 @@ describe('automatic token selection and acquisition lifecycle', () => {
     const client = createZAIClient({baseUrl, auth: mutableAuth, fetch, headers: {'x-tenant': 'app-tenant', authorization: 'ignored'}});
     mutableAuth.appID = 'other'; mutableAuth.appKey = 'other-key'; mutableAuth.userID = 'other-user'; mutableAuth.userName = 'other-name';
     await Promise.all(Array.from({length: 8}, () => client.agents.list({headers: {'x-request': 'business', authorization: 'also ignored'}})));
-    await client.settings.models.list();
+    await client.settings.models.list({tokenType: 'admin'});
     const secretRequests = requests.filter(request => pathname(request).endsWith('/signing_secret'));
     expect(secretRequests).toHaveLength(1);
     expect(secretRequests[0]!.headers.get('authorization')).toMatch(/^Bearer ak-/);

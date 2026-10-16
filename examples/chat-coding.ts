@@ -16,9 +16,12 @@ export async function chatExample(client: ZAIClient) {
   }
 }
 
-/** Requires an existing test workspace and a connected Codex runner. */
+/** Requires an existing test workspace and a ready user Runner configured by the application. */
 export async function codingExample(client: ZAIClient, agentId: string, workspaceId: string, signal?: AbortSignal) {
-  const session = await client.coding.sessions.create(agentId, {workspace_id: workspaceId, provider: 'codex', title: 'SDK Coding 示例'}, {signal});
+  const status = await client.coding.agents.getStatus(agentId, undefined, {signal});
+  if (status.status !== 'ready') throw new Error('Runner is not ready. Query its status before starting a turn.');
+  const idempotencyKey = crypto.randomUUID(); // Persist and reuse this value if session creation is retried.
+  const session = await client.coding.sessions.create(agentId, {workspace_id: workspaceId, title: 'SDK Coding 示例'}, {signal, idempotencyKey});
   let turn: Awaited<ReturnType<ZAIClient['coding']['turns']['start']>> | undefined;
   let terminal = false;
   try {
@@ -26,7 +29,7 @@ export async function codingExample(client: ZAIClient, agentId: string, workspac
     let lastSeq = '0';
     const events: ZAICodingEvent[] = [];
     for await (const event of await client.coding.events.stream(session.id, {after_seq: lastSeq}, {signal})) {
-      lastSeq = String(event.data.seq);
+      lastSeq = String(event.data.seq); // Advance for empty-text and nonterminal error events too.
       events.push(event.data);
       if (event.data.turn_id === turn.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
         terminal = true;

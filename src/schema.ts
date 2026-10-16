@@ -94,8 +94,11 @@ export interface paths {
                          * @example 256000
                          */
                         context_length?: number | null;
-                        /** @description Runner agent only: bind this agent to a ZAI runner by its ZAI_RUNNER_ID. When omitted and exactly one runner is connected, the control plane picks it automatically. */
-                        runner_id?: string;
+                        /**
+                         * Format: uuid
+                         * @description Coding agent profile in this application. Omit to select the application's default profile. Requires an administrator token.
+                         */
+                        runner_profile_id?: string;
                         /** @description Optional skill_id list to mount during agent creation. */
                         skills?: string[];
                     };
@@ -138,6 +141,17 @@ export interface paths {
                 };
                 /** @description Bad request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description An application administrator token is required to manage coding agents */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -271,8 +285,11 @@ export interface paths {
                          * @example 256000
                          */
                         context_length?: number | null;
-                        /** @description Runner agent only: rebind this agent to another ZAI runner (ZAI_RUNNER_ID). */
-                        runner_id?: string;
+                        /**
+                         * Format: uuid
+                         * @description Rebind a coding agent to an application profile. Existing sessions keep their original instance.
+                         */
+                        runner_profile_id?: string;
                     };
                 };
             };
@@ -313,6 +330,17 @@ export interface paths {
                 };
                 /** @description Bad request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description An application administrator token is required to manage coding agents */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -417,6 +445,17 @@ export interface paths {
                 };
                 /** @description Bad request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description An application administrator token is required to manage coding agents */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -988,12 +1027,14 @@ export interface paths {
         put?: never;
         /**
          * Create a coding session
-         * @description Create a coding session bound to one workspace and one provider. The provider cannot be changed afterwards.
+         * @description Ensure the current user's instance and freeze its profile, instance ID and revision. Caller runner/provider overrides are rejected. Creation is allowed while the instance starts.
          */
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "idempotency-key": string;
+                };
                 path: {
                     agent_id: string;
                 };
@@ -1002,12 +1043,17 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Codex-only independent planning switch; defaults to false. */
+                        plan_mode?: boolean;
+                        /** @description Provider-native execution mode. Omitted or null initializes a saved platform default: codex auto, claude default, opencode build; pi has no mode. */
+                        mode?: string | null;
+                        /** @description Additional session instructions, immutable after creation; blank means none. */
+                        system_prompt?: string | null;
+                        primary_repo_key?: string | null;
+                        auto_title?: boolean;
                         workspace_id: string;
-                        /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode";
                         model?: string | null;
                         title?: string | null;
-                        runner_id?: string;
                     };
                 };
             };
@@ -1019,10 +1065,16 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            plan_mode: boolean;
+                            mode: string | null;
+                            system_prompt: string | null;
+                            primary_repo_key: string | null;
                             id: string;
                             agent_id: string;
                             workspace_id: string;
-                            runner_id: string;
+                            runner_profile_id: string;
+                            runner_instance_id: string;
+                            runner_profile_version: number;
                             provider: string;
                             model: string | null;
                             title: string | null;
@@ -1045,7 +1097,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1056,7 +1126,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1067,7 +1155,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1078,7 +1184,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1124,10 +1248,16 @@ export interface paths {
                     content: {
                         "application/json": {
                             sessions: {
+                                plan_mode: boolean;
+                                mode: string | null;
+                                system_prompt: string | null;
+                                primary_repo_key: string | null;
                                 id: string;
                                 agent_id: string;
                                 workspace_id: string;
-                                runner_id: string;
+                                runner_profile_id: string;
+                                runner_instance_id: string;
+                                runner_profile_version: number;
                                 provider: string;
                                 model: string | null;
                                 title: string | null;
@@ -1155,7 +1285,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1166,7 +1314,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1177,7 +1343,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1188,7 +1372,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1228,10 +1430,16 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            plan_mode: boolean;
+                            mode: string | null;
+                            system_prompt: string | null;
+                            primary_repo_key: string | null;
                             id: string;
                             agent_id: string;
                             workspace_id: string;
-                            runner_id: string;
+                            runner_profile_id: string;
+                            runner_instance_id: string;
+                            runner_profile_version: number;
                             provider: string;
                             model: string | null;
                             title: string | null;
@@ -1254,7 +1462,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1265,7 +1491,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1276,7 +1520,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1287,15 +1549,33 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
             };
         };
         /**
-         * Update the session default model
-         * @description Only allowed while no turn is queued or running (otherwise 409).
+         * Update session title, model, execution mode or primary repository
+         * @description Update session settings atomically. Title-only changes are allowed during a turn. Model, mode, plan_mode and primary repository changes require an idle session (otherwise 409). Mode is a provider-native Paseo mode ID; null restores inherited defaults.
          */
         put: {
             parameters: {
@@ -1309,7 +1589,11 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        model: string | null;
+                        plan_mode?: boolean;
+                        mode?: string | null;
+                        primary_repo_key?: string | null;
+                        model?: string | null;
+                        title?: string;
                     };
                 };
             };
@@ -1321,10 +1605,16 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            plan_mode: boolean;
+                            mode: string | null;
+                            system_prompt: string | null;
+                            primary_repo_key: string | null;
                             id: string;
                             agent_id: string;
                             workspace_id: string;
-                            runner_id: string;
+                            runner_profile_id: string;
+                            runner_instance_id: string;
+                            runner_profile_version: number;
                             provider: string;
                             model: string | null;
                             title: string | null;
@@ -1347,7 +1637,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1358,7 +1666,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1369,7 +1695,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1380,7 +1724,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1409,10 +1771,16 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            plan_mode: boolean;
+                            mode: string | null;
+                            system_prompt: string | null;
+                            primary_repo_key: string | null;
                             id: string;
                             agent_id: string;
                             workspace_id: string;
-                            runner_id: string;
+                            runner_profile_id: string;
+                            runner_instance_id: string;
+                            runner_profile_version: number;
                             provider: string;
                             model: string | null;
                             title: string | null;
@@ -1435,7 +1803,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1446,7 +1832,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1457,7 +1861,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1468,12 +1890,191 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/generate-title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a coding session title
+         * @description Generate and save a title using the session model and up to 20 initial turns. Does not start a runner. Explicit invocation incurs model usage. Returns 409 if the title changed during generation.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    automatic?: "true" | "false";
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Generated title */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            title: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1488,7 +2089,7 @@ export interface paths {
         };
         /**
          * Get the effective custom tool set of a session
-         * @description Returns the agent-level custom tools (MCP) currently effective for this session, in the same shape sent to the runner: `mode=zai` tools carry no binding/secret. `null` when no custom tools are configured.
+         * @description Returns the agent-level tools and built-in zai_publish_asset and zai_register_repository tools in the same shape sent to the runner: mode=zai tools carry no binding/secret.
          */
         get: {
             parameters: {
@@ -1519,7 +2120,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1530,7 +2149,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1541,7 +2178,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1552,7 +2207,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1591,13 +2264,34 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Image and file delivery: reference (default) emits asset://ID; client_proxy substitutes an HTTPS url_template containing exactly one {asset_id} in the path or query. Images use ![alt](URL); other files use [filename](URL). The caller implements and authenticates the proxy; ZAI does not fetch or upload to it. Fixed for the turn, including streaming, replay and history. */
+                        asset_delivery?: {
+                            /** @enum {string} */
+                            mode: "reference";
+                        } | {
+                            /** @enum {string} */
+                            mode: "client_proxy";
+                            url_template: string;
+                        };
                         content: string;
+                        attachment_ids?: string[];
+                        /** @description Optional model override for this turn only. Must be authorized for the application and compatible with the fixed engine. The selected model is snapshotted for execution, routing and billing; it does not create a new instance. */
                         model?: string | null;
-                        /** @description 把这一轮限定到工作区内的某个仓库（repo_key）；不传用工作区默认仓库。 */
-                        repo_key?: string;
+                        /** @description 设置会话主仓库，通过每轮提示词聚焦该仓库；不传沿用会话设置，null 清除。CLI 始终从工作区根目录启动。 */
+                        repo_key?: string | null;
                         client_turn_id?: string;
                         /** @description 本轮生效的自定义工具集（MCP）。turn 级同名工具覆盖 agent.config.tools；不传则只用 agent 级配置。 */
                         tools?: {
+                            /** @enum {string} */
+                            type: "function";
+                            function: {
+                                name: string;
+                                description?: string;
+                                parameters: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        }[] | {
                             /** @enum {number} */
                             version: 1;
                             serverName?: string;
@@ -1619,7 +2313,7 @@ export interface paths {
                                  * @default zai
                                  * @enum {string}
                                  */
-                                mode?: "zai" | "runner" | "interaction" | "schema-only";
+                                mode?: "zai" | "runner" | "interaction" | "client" | "schema-only";
                                 binding?: {
                                     /** @enum {string} */
                                     type: "http";
@@ -1667,7 +2361,21 @@ export interface paths {
                             session_id: string;
                             status: string;
                             user_content: string;
+                            attachments?: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                size: number;
+                            }[];
                             assistant_content: string;
+                            asset_delivery?: {
+                                /** @enum {string} */
+                                mode: "reference";
+                            } | {
+                                /** @enum {string} */
+                                mode: "client_proxy";
+                                url_template: string;
+                            };
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
@@ -1694,7 +2402,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1705,7 +2431,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1716,7 +2460,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1727,7 +2489,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1770,7 +2550,21 @@ export interface paths {
                             session_id: string;
                             status: string;
                             user_content: string;
+                            attachments?: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                size: number;
+                            }[];
                             assistant_content: string;
+                            asset_delivery?: {
+                                /** @enum {string} */
+                                mode: "reference";
+                            } | {
+                                /** @enum {string} */
+                                mode: "client_proxy";
+                                url_template: string;
+                            };
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
@@ -1797,7 +2591,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1808,7 +2620,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1819,7 +2649,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1830,7 +2678,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1880,7 +2746,21 @@ export interface paths {
                             session_id: string;
                             status: string;
                             user_content: string;
+                            attachments?: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                size: number;
+                            }[];
                             assistant_content: string;
+                            asset_delivery?: {
+                                /** @enum {string} */
+                                mode: "reference";
+                            } | {
+                                /** @enum {string} */
+                                mode: "client_proxy";
+                                url_template: string;
+                            };
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
@@ -1907,7 +2787,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1918,7 +2816,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1929,7 +2845,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1940,7 +2874,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -1994,7 +2946,21 @@ export interface paths {
                             session_id: string;
                             status: string;
                             user_content: string;
+                            attachments?: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                size: number;
+                            }[];
                             assistant_content: string;
+                            asset_delivery?: {
+                                /** @enum {string} */
+                                mode: "reference";
+                            } | {
+                                /** @enum {string} */
+                                mode: "client_proxy";
+                                url_template: string;
+                            };
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
@@ -2021,7 +2987,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2032,7 +3016,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2043,7 +3045,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2054,7 +3074,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2118,7 +3156,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2129,7 +3185,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2140,7 +3214,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2151,7 +3243,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2159,6 +3269,988 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the session workspace directory */
+        get: {
+            parameters: {
+                query?: {
+                    path?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Directory entries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            entries: {
+                                name: string;
+                                path: string;
+                                /** @enum {string} */
+                                type: "file" | "directory";
+                                size?: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Upload a file to the session workspace
+         * @description Stream a binary file (up to 50 MiB) to the session workspace. Filename is supplied in the name query parameter. Returns a stable file ID; send it in attachment_ids when creating a turn. Unreferenced uploads expire after 24 hours.
+         */
+        post: {
+            parameters: {
+                query: {
+                    name: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            responses: {
+                /** @description Uploaded file */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            size: number;
+                            /** @enum {string} */
+                            status: "ready";
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/files/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview a session workspace file (up to 128 KiB) */
+        get: {
+            parameters: {
+                query: {
+                    path: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded file content */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            path: string;
+                            content: string;
+                            /** @enum {string} */
+                            encoding: "utf-8" | "base64";
+                            size: number;
+                            truncated?: boolean;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/files/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a workspace file or an immutable attachment as a binary stream
+         * @description Use file_id (the ID in asset://ID) to download a stored original without starting the Runner. Use path for a workspace file. Exactly one is required.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    file_id?: string;
+                    path?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Complete file, up to 50 MiB */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/octet-stream": string;
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/files/download-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare a single-use browser download */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        file_id: string;
+                    } | {
+                        path: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Download link valid for up to ten minutes, usable once */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            url: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a client function call */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    tool_call_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        output?: unknown;
+                    } | {
+                        error: {
+                            code: string;
+                            message: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Result persisted, including identical retries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            status: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Result exceeds 1 MiB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2222,7 +4314,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2233,7 +4343,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2244,7 +4372,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2255,7 +4401,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2341,7 +4505,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2352,7 +4534,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2363,7 +4563,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2374,7 +4592,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2395,7 +4631,7 @@ export interface paths {
         };
         /**
          * List workspaces
-         * @description List development workspaces of the current user. The default workspace is created lazily.
+         * @description Read development workspaces of the current user without creating a workspace or runner instance.
          */
         get: {
             parameters: {
@@ -2427,6 +4663,10 @@ export interface paths {
                                 };
                                 created_at: string;
                                 updated_at: string;
+                                /** Format: uuid */
+                                runner_instance_id?: string;
+                                /** @enum {string} */
+                                runner_status?: "ready" | "starting";
                             }[];
                         };
                     };
@@ -2438,7 +4678,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2449,7 +4707,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2460,7 +4736,9 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "idempotency-key": string;
+                };
                 path: {
                     agent_id: string;
                 };
@@ -2504,6 +4782,10 @@ export interface paths {
                             };
                             created_at: string;
                             updated_at: string;
+                            /** Format: uuid */
+                            runner_instance_id?: string;
+                            /** @enum {string} */
+                            runner_status?: "ready" | "starting";
                         };
                     };
                 };
@@ -2514,7 +4796,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2525,7 +4825,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2575,6 +4893,10 @@ export interface paths {
                             };
                             created_at: string;
                             updated_at: string;
+                            /** Format: uuid */
+                            runner_instance_id?: string;
+                            /** @enum {string} */
+                            runner_status?: "ready" | "starting";
                         };
                     };
                 };
@@ -2585,7 +4907,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2632,6 +4972,10 @@ export interface paths {
                             };
                             created_at: string;
                             updated_at: string;
+                            /** Format: uuid */
+                            runner_instance_id?: string;
+                            /** @enum {string} */
+                            runner_status?: "ready" | "starting";
                         };
                     };
                 };
@@ -2642,7 +4986,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2680,6 +5042,10 @@ export interface paths {
                             };
                             created_at: string;
                             updated_at: string;
+                            /** Format: uuid */
+                            runner_instance_id?: string;
+                            /** @enum {string} */
+                            runner_status?: "ready" | "starting";
                         };
                     };
                 };
@@ -2690,7 +5056,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2701,7 +5085,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2763,7 +5165,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2777,7 +5197,9 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "idempotency-key": string;
+                };
                 path: {
                     agent_id: string;
                     workspace_id: string;
@@ -2821,6 +5243,33 @@ export interface paths {
                                 created_at: string;
                                 updated_at: string;
                             };
+                            /** @enum {string} */
+                            runner_status?: "materialization_pending";
+                        };
+                    };
+                };
+                /** @description Materialization pending */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repository: {
+                                id: string;
+                                workspace_id: string | null;
+                                repo_key: string;
+                                name: string;
+                                description: string | null;
+                                default_branch: string;
+                                source_type: string;
+                                status: string;
+                                is_default: boolean;
+                                url?: string | null;
+                                created_at: string;
+                                updated_at: string;
+                            };
+                            runner_status: string;
                         };
                     };
                 };
@@ -2831,7 +5280,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2842,7 +5309,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2896,6 +5381,8 @@ export interface paths {
                                 created_at: string;
                                 updated_at: string;
                             };
+                            /** @enum {string} */
+                            runner_status?: "materialization_pending";
                         };
                     };
                 };
@@ -2906,7 +5393,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -2916,7 +5421,9 @@ export interface paths {
         put: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "idempotency-key": string;
+                };
                 path: {
                     agent_id: string;
                     workspace_id: string;
@@ -2938,8 +5445,8 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Updated */
-                200: {
+                /** @description Metadata updated; materialization pending */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2959,6 +5466,8 @@ export interface paths {
                                 created_at: string;
                                 updated_at: string;
                             };
+                            /** @enum {string} */
+                            runner_status?: "materialization_pending";
                         };
                     };
                 };
@@ -2969,7 +5478,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3008,7 +5535,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3069,7 +5614,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3080,7 +5643,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3140,7 +5721,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3151,7 +5750,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3206,7 +5823,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3252,146 +5887,31 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
             };
         };
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/coding/agents/{agent_id}/keys/public": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get the current user's public key
-         * @description Public key of this user on the runner machine (one key per user per runner). Add it as a deploy key with write access.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Public key */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            key_type: string;
-                            public_key: string;
-                            fingerprint: string;
-                            key_generated_at: string;
-                        };
-                    };
-                };
-                /** @description Agent not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Runner offline */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/coding/agents/{agent_id}/keys/rotate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rotate the current user's key */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    agent_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description New public key */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            key_type: string;
-                            public_key: string;
-                            fingerprint: string;
-                            key_generated_at: string;
-                        };
-                    };
-                };
-                /** @description Agent not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-                /** @description Runner offline */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: string;
-                        };
-                    };
-                };
-            };
-        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3405,10 +5925,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List runners connected to this ZAI instance
-         * @description 运维排障用：返回当前进程里已连接的执行面及其上报的 connector / paseo 版本。需要 admin 令牌（ak-*）。
-         */
+        /** List application runner profiles */
         get: {
             parameters: {
                 query?: never;
@@ -3418,7 +5935,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Connected runners */
+                /** @description Success */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -3426,48 +5943,112 @@ export interface paths {
                     content: {
                         "application/json": {
                             runners: {
-                                runner_id: string;
-                                protocol: string;
-                                connector_version: string | null;
-                                paseo_version: string | null;
-                                providers: string[];
-                                connected_at: string;
-                                last_seen_at: string;
-                                online: boolean;
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                                model: string;
+                                image_policy_id: string;
+                                idle_stop_seconds: number;
+                                is_default: boolean;
+                                enabled: boolean;
+                                version: number;
+                                created_at: string;
+                                updated_at: string;
                             }[];
                         };
                     };
                 };
-                /** @description Bad request */
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runners: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                                model: string;
+                                image_policy_id: string;
+                                idle_stop_seconds: number;
+                                is_default: boolean;
+                                enabled: boolean;
+                                version: number;
+                                created_at: string;
+                                updated_at: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runners: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                                model: string;
+                                image_policy_id: string;
+                                idle_stop_seconds: number;
+                                is_default: boolean;
+                                enabled: boolean;
+                                version: number;
+                                created_at: string;
+                                updated_at: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            error: {
+                                code: string;
+                                message: string;
+                            };
                         };
                     };
                 };
-                /** @description Admin token required */
+                /** @description Administrator token required */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            error: {
+                                code: string;
+                                message: string;
+                            };
                         };
                     };
                 };
-                /** @description Not found */
+                /** @description Not found in this application */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            error: {
+                                code: string;
+                                message: string;
+                            };
                         };
                     };
                 };
@@ -3478,18 +6059,2762 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            error: {
+                                code: string;
+                                message: string;
+                            };
                         };
                     };
                 };
-                /** @description Runner offline */
+                /** @description Deployment unavailable */
                 503: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an application runner profile */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** @enum {string} */
+                        runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                        model: string;
+                        image_policy_id: string;
+                        is_default?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/runner-image-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List allowed runner image policies */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            policies: {
+                                id: string;
+                                runner_adapter: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            policies: {
+                                id: string;
+                                runner_adapter: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            policies: {
+                                id: string;
+                                runner_adapter: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/runners/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an application runner profile */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    profile_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                            instances: {
+                                [key: string]: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                            instances: {
+                                [key: string]: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                            instances: {
+                                [key: string]: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete an unused runner profile */
+        delete: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    profile_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update an application runner profile */
+        patch: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    profile_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        model?: string;
+                        image_policy_id?: string;
+                        is_default?: boolean;
+                        enabled?: boolean;
+                        idle_stop_seconds?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** @enum {string} */
+                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            model: string;
+                            image_policy_id: string;
+                            idle_stop_seconds: number;
+                            is_default: boolean;
+                            enabled: boolean;
+                            version: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/coding/runners/{profile_id}/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List user runner instances */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    page_size?: number;
+                    status?: string;
+                };
+                header?: never;
+                path: {
+                    profile_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            instances: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                runner_profile_id: string;
+                                /** Format: uuid */
+                                agent_id: string | null;
+                                external_user_id: string;
+                                enabled: boolean;
+                                /** @enum {string} */
+                                desired_state: "running" | "stopped";
+                                status: string;
+                                created_at: string;
+                                updated_at: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            instances: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                runner_profile_id: string;
+                                /** Format: uuid */
+                                agent_id: string | null;
+                                external_user_id: string;
+                                enabled: boolean;
+                                /** @enum {string} */
+                                desired_state: "running" | "stopped";
+                                status: string;
+                                created_at: string;
+                                updated_at: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            instances: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                runner_profile_id: string;
+                                /** Format: uuid */
+                                agent_id: string | null;
+                                external_user_id: string;
+                                enabled: boolean;
+                                /** @enum {string} */
+                                desired_state: "running" | "stopped";
+                                status: string;
+                                created_at: string;
+                                updated_at: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an instance for an application user */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    profile_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        external_user_id: string;
+                        /** Format: uuid */
+                        agent_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/runners/{profile_id}/instances/{instance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get user runner instance */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    profile_id: string;
+                    instance_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Soft delete an instance and retain its volume */
+        delete: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    profile_id: string;
+                    instance_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Start, stop or reprovision an instance */
+        patch: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    profile_id: string;
+                    instance_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        operation: "start" | "stop" | "reprovision";
+                        enabled?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/coding/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List coding agents */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            agents: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                runner_profile_id: string;
+                                /** @enum {string} */
+                                status: "active" | "disabled" | "deleted";
+                                created_at: string;
+                                updated_at?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            agents: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                runner_profile_id: string;
+                                /** @enum {string} */
+                                status: "active" | "disabled" | "deleted";
+                                created_at: string;
+                                updated_at?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            agents: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                runner_profile_id: string;
+                                /** @enum {string} */
+                                status: "active" | "disabled" | "deleted";
+                                created_at: string;
+                                updated_at?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a coding agent */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** Format: uuid */
+                        runner_profile_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a coding agent */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Soft delete an unused coding agent */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deleted: boolean;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update or rebind a coding agent */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        /** Format: uuid */
+                        runner_profile_id?: string;
+                        /** @enum {string} */
+                        status?: "active" | "disabled";
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** @enum {string} */
+                            status: "active" | "disabled" | "deleted";
+                            created_at: string;
+                            updated_at?: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the current user runner availability */
+        get: {
+            parameters: {
+                query?: {
+                    external_user_id?: string;
+                    session_id?: string;
+                };
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            agent_id: string;
+                            /** @enum {string} */
+                            status: "ready" | "starting" | "unavailable";
+                            reason: string | null;
+                            updated_at: string | null;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            agent_id: string;
+                            /** @enum {string} */
+                            status: "ready" | "starting" | "unavailable";
+                            reason: string | null;
+                            updated_at: string | null;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            agent_id: string;
+                            /** @enum {string} */
+                            status: "ready" | "starting" | "unavailable";
+                            reason: string | null;
+                            updated_at: string | null;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/runner-instance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ensure the authenticated user runner instance */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, unknown>;
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/status/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream the current user runner availability */
+        get: {
+            parameters: {
+                query?: {
+                    external_user_id?: string;
+                    session_id?: string;
+                };
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description SSE runner.status snapshots; reconnect after the stream closes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description User scope not allowed */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
                         };
                     };
                 };
@@ -3510,7 +8835,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the uncommitted diff */
+        /**
+         * Get the uncommitted diff
+         * @description Read-only query; never provisions repositories. Returns ready, no_repository or not_ready. Offline runners return 409; timeouts return 503 with Retry-After; Git command failures return 400 git_diff_failed.
+         */
         get: {
             parameters: {
                 query?: {
@@ -3531,6 +8859,11 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            /**
+                             * @description not_ready means the diff may be incomplete because a local repository is not materialized.
+                             * @enum {string}
+                             */
+                            status: "ready" | "no_repository" | "not_ready";
                             diffs: {
                                 repo_key?: string | null;
                                 path: string;
@@ -3548,7 +8881,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3559,7 +8910,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3570,7 +8939,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3581,7 +8968,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3651,7 +9056,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3662,7 +9085,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3673,7 +9114,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3684,7 +9143,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3752,7 +9229,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3763,7 +9258,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3774,7 +9287,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3785,7 +9316,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3853,7 +9402,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3864,7 +9431,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3875,7 +9460,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3886,12 +9489,908 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/git/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the current user's Git commit identity
+         * @description User token required. Stored per application and user. Does not start an instance. Applied on the next task or Git operation.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Git identity */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            name: string;
+                            /** Format: email */
+                            email: string;
+                        };
+                    };
+                };
+                /** @description Invalid identity */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description User token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        /**
+         * Set the current user's Git commit identity
+         * @description User token required. Stored per application and user. Does not start an instance. Applied on the next task or Git operation.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Git identity */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            name: string;
+                            /** Format: email */
+                            email: string;
+                        };
+                    };
+                };
+                /** @description Invalid identity */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description User token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Agent not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/keys/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the user's SSH public key without creating it
+         * @description User token required. Credentials are scoped to application and external user. Updates persist before container synchronization; failed synchronization is retried automatically. New SSH-dependent commands wait until synchronization succeeds. Private keys are never returned.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            key_type: string;
+                            public_key: string;
+                            fingerprint: string;
+                            key_generated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description User token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Agent or key not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Key fingerprint changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Credential storage unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ensure the user's SSH key without creating a Runner
+         * @description User token required. Credentials are scoped to application and external user. Updates persist before container synchronization; failed synchronization is retried automatically. New SSH-dependent commands wait until synchronization succeeds. Private keys are never returned.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, unknown>;
+                };
+            };
+            responses: {
+                /** @description Public key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            key_type: string;
+                            public_key: string;
+                            fingerprint: string;
+                            key_generated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description User token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Agent or key not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Key fingerprint changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Credential storage unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/keys/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the user's SSH key using its current fingerprint
+         * @description User token required. Credentials are scoped to application and external user. Updates persist before container synchronization; failed synchronization is retried automatically. New SSH-dependent commands wait until synchronization succeeds. Private keys are never returned.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        fingerprint: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Public key */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            key_type: string;
+                            public_key: string;
+                            fingerprint: string;
+                            key_generated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description User token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Agent or key not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Key fingerprint changed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Credential storage unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/modes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List cached provider execution modes
+         * @description Returns the latest persisted catalog for the provider, or the built-in catalog before discovery. Works offline without creating, starting, or querying a runner. default_mode is the platform initial choice.
+         */
+        get: {
+            parameters: {
+                query: {
+                    agent_id: string;
+                    session_id?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Execution modes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            provider: string;
+                            default_mode: string | null;
+                            supports_plan_mode: boolean;
+                            /** @enum {string} */
+                            source: "snapshot" | "builtin";
+                            updated_at: string | null;
+                            stale: boolean;
+                            modes: {
+                                id: string;
+                                label: string;
+                                description?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3907,14 +10406,13 @@ export interface paths {
         };
         /**
          * List models available on the runner
-         * @description Return the model catalog discovered from the runner for a provider. Pass agent_id to select the runner bound to that agent.
+         * @description List application-authorized models compatible with the agent engine, without creating or starting an instance. Models can change per turn; provider switching is not supported.
          */
         get: {
             parameters: {
                 query: {
-                    provider: string;
-                    agent_id?: string;
-                    runner_id?: string;
+                    provider?: string;
+                    agent_id: string;
                     refresh?: string;
                 };
                 header?: never;
@@ -3959,7 +10457,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3970,7 +10486,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3981,7 +10515,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -3992,7 +10544,25 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            error: string;
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -4105,13 +10675,17 @@ export interface paths {
                                 } | {
                                     /** @enum {string} */
                                     type: "input_image";
-                                    path: string;
+                                    path?: string;
+                                    /** Format: uuid */
+                                    file_id?: string;
                                     mime_type?: string;
                                     name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "input_file";
-                                    path: string;
+                                    path?: string;
+                                    /** Format: uuid */
+                                    file_id?: string;
                                     mime_type?: string;
                                     name?: string;
                                 })[];
@@ -4159,19 +10733,55 @@ export interface paths {
                             /** @enum {string} */
                             type: "input_text";
                             text: string;
+                        } | ({
+                            /** @enum {string} */
+                            type: "input_image";
+                            /** @description Legacy session-relative file path. */
+                            path?: string;
+                            /**
+                             * Format: uuid
+                             * @description Uploaded attachment ID.
+                             */
+                            file_id: string;
+                            mime_type?: string;
+                            name?: string;
                         } | {
                             /** @enum {string} */
                             type: "input_image";
+                            /** @description Legacy session-relative file path. */
                             path: string;
+                            /**
+                             * Format: uuid
+                             * @description Uploaded attachment ID.
+                             */
+                            file_id?: string;
+                            mime_type?: string;
+                            name?: string;
+                        }) | ({
+                            /** @enum {string} */
+                            type: "input_file";
+                            /** @description Legacy session-relative file path. */
+                            path?: string;
+                            /**
+                             * Format: uuid
+                             * @description Uploaded attachment ID.
+                             */
+                            file_id: string;
                             mime_type?: string;
                             name?: string;
                         } | {
                             /** @enum {string} */
                             type: "input_file";
+                            /** @description Legacy session-relative file path. */
                             path: string;
+                            /**
+                             * Format: uuid
+                             * @description Uploaded attachment ID.
+                             */
+                            file_id?: string;
                             mime_type?: string;
                             name?: string;
-                        })[];
+                        }))[];
                         /** @description Whether to stream the response. Defaults to true. When false, the response is a single JSON object. */
                         stream?: boolean;
                         /** @description Optional mounted skill id to explicitly target for this turn. */
@@ -4438,13 +11048,17 @@ export interface paths {
                                 } | {
                                     /** @enum {string} */
                                     type: "input_image";
-                                    path: string;
+                                    path?: string;
+                                    /** Format: uuid */
+                                    file_id?: string;
                                     mime_type?: string;
                                     name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "input_file";
-                                    path: string;
+                                    path?: string;
+                                    /** Format: uuid */
+                                    file_id?: string;
                                     mime_type?: string;
                                     name?: string;
                                 })[];
@@ -5007,8 +11621,9 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    path: string;
+                query?: {
+                    path?: string;
+                    file_id?: string;
                 };
                 header?: never;
                 path: {
@@ -5081,8 +11696,9 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    path: string;
+                query?: {
+                    path?: string;
+                    file_id?: string;
                 };
                 header?: never;
                 path: {
@@ -5144,7 +11760,7 @@ export interface paths {
         put?: never;
         /**
          * Upload session file
-         * @description Upload a file into the session working directory using a required relative target file path.
+         * @description Upload an immutable attachment (omit path), or write a workspace file using a legacy relative target path.
          */
         post: {
             parameters: {
@@ -5163,8 +11779,8 @@ export interface paths {
                          * @description File to upload into the session working directory.
                          */
                         file: string;
-                        /** @description Required relative target file path inside the session working directory, including the final file name. */
-                        path: string;
+                        /** @description Optional legacy workspace target path. Omit to upload an immutable attachment and receive a file ID. */
+                        path?: string;
                     };
                 };
             };
@@ -5176,7 +11792,11 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            path: string;
+                            path?: string;
+                            /** Format: uuid */
+                            id?: string;
+                            /** @enum {string} */
+                            status?: "ready";
                             name: string;
                             mime_type: string;
                             size: number;
@@ -6092,7 +12712,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a memory collection */
+        /**
+         * Get a memory collection
+         * @description Includes model availability and content synchronization counts. Use GET /memories/{id}/failures for failed content IDs and redacted Worker reasons.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -6104,17 +12727,28 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Memory collection */
+                /** @description Memory collection and current model/content synchronization status */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["MemoryCollection"];
+                        "application/json": components["schemas"]["MemoryCollectionDetails"];
                     };
                 };
                 /** @description Bad request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Memory collection not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -6221,6 +12855,161 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memories/{id}/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebuild memory collection embeddings (admin only)
+         * @description Atomically clears only this collection's old embedding jobs and vectors/chunks, preserves source contents, and queues new jobs. Allows rebuilding with the same model. Poll GET /memories/{id} for completion; embedding calls may incur charges. Send {} to keep the current model.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MemoryCollectionRebuildRequest"];
+                };
+            };
+            responses: {
+                /** @description Rebuild accepted and queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryCollectionRebuildResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Memory collection not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Rebuild failed; transaction rolled back */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/memories/{id}/failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List failed memory contents and embedding reasons
+         * @description Available to regular app user tokens and admin tokens. Returns paginated failed, non-deleted contents with redacted latest embedding job diagnostics. Disabled collections and contents remain observable. Successful or retrying contents are not listed; rebuilding clears previous errors.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    page_size?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Failed content IDs and redacted reasons */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryCollectionFailures"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Memory collection not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7915,8 +14704,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List models owned by this app
-         * @description Only models whose ownership is registered to the authenticated app are returned. Ownership controls visibility and management only; whether an end user can call a model is decided by abilities. Requires an app admin token (ak-*).
+         * List models available to this app
+         * @description App admin tokens (ak-*) list app-owned models for management. Regular user tokens (ek-*) list models available to the app, filtered by application scope, the app owner's user group, enabled abilities and enabled channels. Runtime availability does not grant model management permissions. Both catalogs use the same response shape.
          */
         get: {
             parameters: {
@@ -7927,7 +14716,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description App-owned models */
+                /** @description App-owned models for ak-*; app-available models for ek-* */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -7940,15 +14729,6 @@ export interface paths {
                 };
                 /** @description Unauthorized: missing or invalid bearer token */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SettingsError"];
-                    };
-                };
-                /** @description Forbidden: requires an app admin token (ak-*) */
-                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -8308,6 +15088,85 @@ export interface paths {
         };
         trace?: never;
     };
+    "/models/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test whether given models actually work against their upstreams
+         * @description Takes the model ids to test and reports two independent facts for each. `access` is authorization, resolved from the database and always checked first: a model that is not_configured / model_not_found / unauthorized is never probed, so no billable request is issued for it. `probe` is live upstream connectivity, null when the model was not probed. The upstream path is derived from the model's own capabilities: chat models via /chat/completions (or /responses when the model declares Native Responses API), embedding models via /embeddings. Requires an app admin token (ak-*). This endpoint is billable — each probed model issues exactly one real upstream request, and charged_calls reports how many were actually issued.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TestSettingsModelsRequest"];
+                };
+            };
+            responses: {
+                /** @description Per-model access and probe results, in request order */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TestSettingsModelsResponse"];
+                    };
+                };
+                /** @description Missing or invalid body */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid bearer token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+                /** @description Unexpected server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channels": {
         parameters: {
             query?: never;
@@ -8632,7 +15491,7 @@ export interface paths {
         };
         /**
          * Stream persisted coding session events
-         * @description Persistent session SSE stream. Resume with after_seq; terminal turn events do not close the session stream. Heartbeat comments are ignored. Source: https://zai-zjy.sh.oop.cc/docs/zai/coding/events
+         * @description Persistent session SSE stream. Resume with after_seq; terminal turn events do not close the session stream. Valid persisted error events are non-terminal data, followed by turn.failed; only malformed envelopes or channel failures interrupt parsing. Heartbeat comments are ignored. Source: https://zai-dev.sh.oop.cc/docs/zai/coding/events
          */
         get: {
             parameters: {
@@ -8703,6 +15562,57 @@ export interface components {
             max_tokens_per_chunk?: number | string;
             /** @description 可选。默认 0 */
             overlap_tokens?: number | string;
+        };
+        MemoryCollectionDetails: components["schemas"]["MemoryCollection"] & {
+            /** @description Whether the effective embedding model (collection model, otherwise app default) is available to this app, with an app default configured. Checks embedding capability, app access, owner group, and enabled channels/abilities; does not probe upstream health. */
+            embedding_model_available: boolean;
+            /** @description Embedding synchronization counts for this app and collection's non-deleted contents, including disabled contents; independent of model availability. */
+            content_sync: {
+                /**
+                 * @description Overall synchronization state; error takes precedence if any content has failed.
+                 * @enum {string}
+                 */
+                status: "empty" | "syncing" | "synced" | "error";
+                total: number;
+                pending: number;
+                processing: number;
+                completed: number;
+                /** @description Failed content count. GET /memories/{id}/failures returns the paginated failed content IDs and redacted reasons. */
+                error: number;
+            };
+        };
+        MemoryCollectionRebuildResponse: {
+            /** @enum {boolean} */
+            success: true;
+            /** @description Number of non-deleted contents queued for embedding; acceptance does not mean embedding has completed. */
+            requeued: number;
+        };
+        MemoryCollectionRebuildRequest: {
+            /** @description Optional model override; defaults to the collection model, then app default. The same model can be rebuilt. */
+            embedding_model?: string;
+        };
+        MemoryCollectionFailures: {
+            collection_id: string;
+            /** @description Total failed, non-deleted contents, including disabled contents; not just the current page. */
+            total: number;
+            page: number;
+            page_size: number;
+            contents: {
+                id: string;
+                /** @enum {string} */
+                embedding_status: "error";
+                updated_at: string | null;
+                /** @description Latest applicable embedding job feedback. message is redacted and may be null when no current failure reason is available. Successful contents are never listed. */
+                embedding_feedback: {
+                    /** @enum {string} */
+                    status: "retrying" | "failed";
+                    /** @enum {string} */
+                    kind: "model_unavailable" | "timeout" | "rate_limit" | "authentication" | "upstream" | "unknown";
+                    message: string | null;
+                    retry_count: number;
+                    max_retries: number;
+                } | null;
+            }[];
         };
         MemoryCollectionUpdateRequest: {
             /** @description 必填。缺失时返回 400 `{"error":"name is required"}` */
@@ -9271,6 +16181,53 @@ export interface components {
                 /** @enum {string} */
                 function_calling?: "supported" | "unsupported" | "unknown";
             };
+        };
+        ModelTestProbe: {
+            ok: boolean;
+            /**
+             * @description Failure class; null on success. 'network' = unreachable or timed out, 'auth' = upstream rejected the key, 'model_not_found' = the upstream has no such model, 'upstream' = any other upstream error, including a probe that could not be sent at all.
+             * @enum {string|null}
+             */
+            kind: "network" | "auth" | "model_not_found" | "upstream" | null;
+            /** @description Round-trip latency; 0 when the request was never sent */
+            latency_ms: number;
+            /** @description Upstream HTTP status; 0 for network-level failures and for probes that were never sent. Named http_status rather than status to stay distinct from the aggregate status field. */
+            http_status: number;
+            /** @description Upstream error text, or 'OK'. Safe to show; never contains the key. */
+            message: string;
+        };
+        ModelTestResult: {
+            /** @description The identifier exactly as it appeared in the request, echoed so results can be matched by index. */
+            requested: string;
+            /** @description Resolved model id, or null when the request carried an empty identifier. */
+            model: string | null;
+            /**
+             * @description Capability the probe was resolved against; null when the model has no probeable capability. Determines the upstream path: text.chat via /chat/completions (or /responses when the model declares Native Responses API), text.embeddings via /embeddings.
+             * @enum {string|null}
+             */
+            capability: "text.chat" | "text.embeddings" | "image.generate" | "image.edit" | "image.variation" | "audio.transcribe" | "audio.translate" | "audio.speech" | null;
+            /**
+             * @description Authorization state, checked before any billable request. 'ok' = the app may call this model; 'not_configured' = the request carried an empty model id; 'model_not_found' = no such model exists; 'unauthorized' = no enabled ability for the app owner's user group, no enabled channel, or the model is not available to this app. A non-'ok' value short-circuits: no upstream request is sent and charged_calls is not incremented.
+             * @enum {string}
+             */
+            access: "ok" | "not_configured" | "unauthorized" | "model_not_found";
+            /** @description Upstream connectivity result, or null when not probed (short-circuited by a non-'ok' access). Deliberately carries no upstream URL: this is an app-facing API, and the probed channel may be a platform-owned one whose base_url the app cannot read through GET /channels. Diagnose from kind, http_status and message instead. */
+            probe: components["schemas"]["ModelTestProbe"] | null;
+        };
+        TestSettingsModelsResponse: {
+            /**
+             * @description Aggregate verdict. 'unhealthy' = at least one model is unauthorized, missing or empty; 'degraded' = all are authorized but at least one probe failed or could not be sent; 'healthy' = every probe succeeded.
+             * @enum {string}
+             */
+            status: "healthy" | "degraded" | "unhealthy";
+            /** @description Number of billable upstream requests this call actually issued. 0 when every entry short-circuited. */
+            charged_calls: number;
+            /** @description One entry per requested id, in request order. */
+            results: components["schemas"]["ModelTestResult"][];
+        };
+        TestSettingsModelsRequest: {
+            /** @description Model ids to test, 1 to 20 entries. Results come back in the same order. Each id must be a model this app may call; ids the app has no access to are reported as unauthorized rather than rejected, so a bulk check stays diagnosable. */
+            models: string[];
         };
         SettingsChannel: {
             /** @description Channel id */

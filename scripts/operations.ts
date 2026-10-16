@@ -8,13 +8,16 @@ const skill = '/skills/{skill_id}';
 const memory = '/memories/{id}';
 const content = `${memory}/contents/{content_id}`;
 const codingSession = '/coding/sessions/{session_id}';
+const runner = '/coding/runners/{profile_id}';
+const instance = `${runner}/instances/{instance_id}`;
 const turn = `${codingSession}/turns/{turn_id}`;
 const conversation = '/chat/conversations/{id}';
-const authSource = 'https://zai-zjy.sh.oop.cc/docs/authentication/app-api';
+const authSource = 'https://zai-dev.sh.oop.cc/docs/authentication/app-api';
 const specificationSource = (method: string, path: string) => `../zai-openapi.json#/paths/${path.replace(/~/g, '~0').replace(/\//g, '~1')}/${method}`;
-const codingEventsSource = 'https://zai-zjy.sh.oop.cc/docs/zai/coding/events';
+const codingEventsSource = 'https://zai-dev.sh.oop.cc/docs/zai/coding/events';
+const codingAPISource = 'https://zai-dev.sh.oop.cc/docs/zai/coding/api';
 
-export type OperationMapping = readonly [group: string, name: string, method: string, path: string, auth: 'admin' | 'user', source: string, streamName?: string, streamOnly?: boolean];
+export type OperationMapping = readonly [group: string, name: string, method: string, path: string, auth: 'admin' | 'user' | 'user-only', source: string, streamName?: string, streamKind?: 'coding' | 'status'];
 
 export const operations = [
   ['agents', 'list', 'get', '/agents', 'user', authSource],
@@ -22,8 +25,9 @@ export const operations = [
   ['agents', 'get', 'get', agent, 'user', authSource],
   ['agents', 'update', 'put', agent, 'user', authSource],
   ['agents', 'delete', 'delete', agent, 'user', authSource],
-  ['coding.keys', 'getPublic', 'get', `${codingAgent}/keys/public`, 'user', authSource],
-  ['coding.keys', 'rotate', 'post', `${codingAgent}/keys/rotate`, 'user', authSource],
+  ['coding.keys', 'getPublic', 'get', `${codingAgent}/keys/public`, 'user-only', codingAPISource],
+  ['coding.keys', 'rotate', 'post', `${codingAgent}/keys/rotate`, 'user-only', codingAPISource],
+  ['coding.keys', 'ensure', 'post', `${codingAgent}/keys`, 'user-only', codingAPISource],
   ['coding.workspaces', 'getAgentsMarkdown', 'get', `${workspace}/AGENTS.md`, 'user', authSource],
   ['coding.workspaces', 'updateAgentsMarkdown', 'put', `${workspace}/AGENTS.md`, 'user', authSource],
   ['coding.workspaces', 'list', 'get', `${codingAgent}/workspaces`, 'user', authSource],
@@ -86,26 +90,56 @@ export const operations = [
   ['memories', 'searchContentsByEmbedding', 'post', `${memory}/embeddings-search-contents`, 'user', authSource],
   ['memories', 'getEmbeddingQueueStats', 'get', '/memories/queue/stats', 'admin', specificationSource('get', '/memories/queue/stats')],
   ['memories', 'listContentEmbeddingJobs', 'get', `${content}/jobs`, 'admin', specificationSource('get', `${content}/jobs`)],
+  ['memories', 'rebuild', 'post', `${memory}/rebuild`, 'admin', specificationSource('post', `${memory}/rebuild`)],
+  ['memories', 'listFailures', 'get', `${memory}/failures`, 'user', specificationSource('get', `${memory}/failures`)],
   ['coding.runners', 'list', 'get', '/coding/runners', 'admin', specificationSource('get', '/coding/runners')],
+  ['coding.runners', 'create', 'post', '/coding/runners', 'admin', specificationSource('post', '/coding/runners')],
+  ['coding.runners', 'get', 'get', runner, 'admin', specificationSource('get', runner)],
+  ['coding.runners', 'update', 'patch', runner, 'admin', specificationSource('patch', runner)],
+  ['coding.runners', 'delete', 'delete', runner, 'admin', specificationSource('delete', runner)],
+  ['coding.runners', 'listImagePolicies', 'get', '/coding/runner-image-policies', 'admin', specificationSource('get', '/coding/runner-image-policies')],
+  ['coding.runners.instances', 'list', 'get', `${runner}/instances`, 'admin', specificationSource('get', `${runner}/instances`)],
+  ['coding.runners.instances', 'create', 'post', `${runner}/instances`, 'admin', specificationSource('post', `${runner}/instances`)],
+  ['coding.runners.instances', 'get', 'get', instance, 'admin', specificationSource('get', instance)],
+  ['coding.runners.instances', 'update', 'patch', instance, 'admin', specificationSource('patch', instance)],
+  ['coding.runners.instances', 'delete', 'delete', instance, 'admin', specificationSource('delete', instance)],
+  ['coding.agents', 'list', 'get', '/coding/agents', 'admin', specificationSource('get', '/coding/agents')],
+  ['coding.agents', 'create', 'post', '/coding/agents', 'admin', specificationSource('post', '/coding/agents')],
+  ['coding.agents', 'get', 'get', codingAgent, 'admin', specificationSource('get', codingAgent)],
+  ['coding.agents', 'update', 'patch', codingAgent, 'admin', specificationSource('patch', codingAgent)],
+  ['coding.agents', 'delete', 'delete', codingAgent, 'admin', specificationSource('delete', codingAgent)],
+  ['coding.agents', 'getStatus', 'get', `${codingAgent}/status`, 'user', codingAPISource],
+  ['coding.agents', 'ensureRunnerInstance', 'post', `${codingAgent}/runner-instance`, 'user-only', codingAPISource],
+  ['coding.agents', 'streamStatus', 'get', `${codingAgent}/status/stream`, 'user', codingAPISource, undefined, 'status'],
   ['coding.sessions', 'create', 'post', `${codingAgent}/sessions`, 'user', authSource],
   ['coding.sessions', 'list', 'get', '/coding/sessions', 'user', authSource],
   ['coding.sessions', 'get', 'get', codingSession, 'user', authSource],
   ['coding.sessions', 'update', 'put', codingSession, 'user', authSource],
   ['coding.sessions', 'archive', 'delete', codingSession, 'user', authSource],
   ['coding.sessions', 'getTools', 'get', `${codingSession}/tools`, 'user', authSource],
+  ['coding.sessions', 'generateTitle', 'post', `${codingSession}/generate-title`, 'user', codingAPISource],
+  ['coding.sessions', 'listFiles', 'get', `${codingSession}/files`, 'user', codingAPISource],
+  ['coding.sessions', 'uploadFile', 'post', `${codingSession}/files`, 'user', codingAPISource],
+  ['coding.sessions', 'readFile', 'get', `${codingSession}/files/content`, 'user', codingAPISource],
+  ['coding.sessions', 'downloadFile', 'get', `${codingSession}/files/download`, 'user-only', codingAPISource],
+  ['coding.sessions', 'createDownloadLink', 'post', `${codingSession}/files/download-link`, 'user', codingAPISource],
+  ['coding.toolCalls', 'resolve', 'post', `${codingSession}/tool-calls/{tool_call_id}/result`, 'user-only', codingAPISource],
   ['coding.turns', 'start', 'post', `${codingSession}/turns`, 'user', authSource],
   ['coding.turns', 'get', 'get', turn, 'user', authSource],
   ['coding.turns', 'cancel', 'post', `${turn}/cancel`, 'user', authSource],
   ['coding.turns', 'steer', 'post', `${turn}/steer`, 'user', authSource],
   ['coding.events', 'list', 'get', `${codingSession}/events`, 'user', authSource],
-  ['coding.events', 'stream', 'get', `${codingSession}/stream`, 'user', codingEventsSource, undefined, true],
+  ['coding.events', 'stream', 'get', `${codingSession}/stream`, 'user', codingEventsSource, undefined, 'coding'],
   ['coding.interactions', 'list', 'get', `${codingSession}/interactions`, 'user', authSource],
   ['coding.interactions', 'resolve', 'post', `${codingSession}/interactions/{interaction_id}/resolve`, 'user', authSource],
   ['coding.git', 'diff', 'get', `${codingSession}/diff`, 'user', authSource],
   ['coding.git', 'commit', 'post', `${codingSession}/commit`, 'user', authSource],
   ['coding.git', 'push', 'post', `${codingSession}/push`, 'user', authSource],
   ['coding.git', 'createPullRequest', 'post', `${codingSession}/pull-request`, 'user', authSource],
+  ['coding.git', 'getIdentity', 'get', `${codingAgent}/git/identity`, 'user-only', codingAPISource],
+  ['coding.git', 'updateIdentity', 'put', `${codingAgent}/git/identity`, 'user-only', codingAPISource],
   ['coding.models', 'list', 'get', '/coding/models', 'user', authSource],
+  ['coding.modes', 'list', 'get', '/coding/modes', 'user', codingAPISource],
   ['chat.conversations', 'list', 'get', '/chat/conversations', 'user', authSource],
   ['chat.conversations', 'create', 'post', '/chat/conversations', 'user', authSource],
   ['chat.conversations', 'get', 'get', conversation, 'user', authSource],
@@ -128,7 +162,8 @@ export const operations = [
   ['qa', 'match', 'get', '/qa/match', 'user', authSource],
   ['files', 'extract', 'post', '/files/extract', 'user', authSource],
   ['memories', 'filterContents', 'post', `${memory}/contents-filter`, 'user', authSource],
-  ['settings.models', 'list', 'get', '/models', 'admin', specificationSource('get', '/models')],
+  ['settings.models', 'list', 'get', '/models', 'user', specificationSource('get', '/models')],
+  ['settings.models', 'test', 'post', '/models/test', 'admin', specificationSource('post', '/models/test')],
   ['settings.models', 'create', 'post', '/models', 'admin', specificationSource('post', '/models')],
   ['settings.models', 'get', 'get', '/models/{id}', 'admin', specificationSource('get', '/models/{id}')],
   ['settings.models', 'update', 'patch', '/models/{id}', 'admin', specificationSource('patch', '/models/{id}')],
@@ -152,7 +187,7 @@ export function validateOperationMappings(spec: {paths: Record<string, Record<st
   if (new Set(names).size !== names.length || new Set(types).size !== types.length) throw new Error('Duplicate public method or generated type name.');
   for (const [group, name, , , auth, source, streamName] of mappings) {
     if (![...group.split('.'), name, ...(streamName ? [streamName] : [])].every(part => /^[a-zA-Z_$][\w$]*$/.test(part))) throw new Error('Invalid public method name.');
-    if ((auth !== 'admin' && auth !== 'user') || !(source?.startsWith('https://') || source?.startsWith('../zai-openapi.json#/paths/'))) throw new Error(`Missing authorization or source: ${group}.${name}`);
+    if (!['admin', 'user', 'user-only'].includes(auth) || !(source?.startsWith('https://') || source?.startsWith('../zai-openapi.json#/paths/'))) throw new Error(`Missing authorization or source: ${group}.${name}`);
   }
   if (names.some(name => names.some(other => other.startsWith(`${name}.`)))) throw new Error('Public method conflicts with a resource namespace.');
 }

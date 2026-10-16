@@ -21,4 +21,4 @@ const client = createZAIClient({
 });
 
 const [{agents}, {models}] = await Promise.all([client.agents.list(), client.settings.models.list()]);
-console.log(`Available agents: ${agents.length}; app-owned models: ${models.length}`);
+console.log(`Available agents: ${agents.length}; available models: ${models.length}`);

@@ -3,7 +3,8 @@ import {
   createZAIClient, createZAITokenProvider,
   type ZAIClient, type AgentsListResponse, type MessagesSendResponse,
   type SettingsModelsListResponse, type SessionsDownloadFileResponse, type ZAIStreamEvent,
-  type CodingSessionsCreateInput, type CodingEventsStreamResponse, type ZAICodingStreamEvent,
+  type CodingSessionsCreateInput, type CodingEventsStreamResponse, type ZAICodingStreamEvent, type ZAIRunnerStatusStreamEvent,
+  type CodingAgentsStreamStatusResponse, type CodingSessionsUploadFileInput, type MessagesSendInput,
   type ChatMessagesSendResponse, type ChatSendResponse, type FilesExtractInput,
   type ZAITokenProvider, type ZAIUploadFile, type ZAIDoctorResult, type ZAIDoctorDetail,
 } from '../src/index.js';
@@ -15,17 +16,24 @@ function assertPublicAPI(client: ZAIClient) {
     expectTypeOf(detail).toEqualTypeOf<ZAIDoctorDetail>();
   }});
   void client.agents.create({name: '助手', type: 'custom', skills: ['skill']});
-  void client.agents.create({name: '编程助手', type: 'runner', runner_id: 'runner'});
+  void client.agents.create({name: '编程助手', type: 'runner', runner_profile_id: 'profile'}, {tokenType: 'admin'});
+  void client.coding.agents.create({name: '编程助手'});
   void client.agents.get('agent', {signal: new AbortController().signal, headers: {'x-trace': 'id'}});
   void client.sessions.list({model: 'historical/model', page: 2, page_size: 20});
   void client.settings.models.list();
+  void client.settings.models.list({tokenType: 'admin'});
   void client.settings.models.get('3');
   void client.sessions.update('session', {custom_data: null});
   void client.coding.repositories.update('agent', 'workspace', 'repo', {custom_data: null});
   void client.coding.workspaces.create('agent', {name: '工作区'});
-  void client.coding.sessions.create('agent', {workspace_id: 'workspace', provider: 'codex'} satisfies CodingSessionsCreateInput);
+  void client.coding.sessions.create('agent', {workspace_id: 'workspace', mode: 'default', plan_mode: true} satisfies CodingSessionsCreateInput, {idempotencyKey: 'session-create'});
   void client.coding.sessions.archive('session');
   void client.coding.events.stream('session', {after_seq: '12'}, {signal: new AbortController().signal});
+  void client.coding.agents.streamStatus('agent');
+  void client.coding.agents.getStatus('agent', {external_user_id: 'user'}, {tokenType: 'admin'});
+  void client.coding.agents.ensureRunnerInstance('agent', {}, {idempotencyKey: 'ensure-runner'});
+  void client.coding.models.list({agent_id: 'agent'});
+  void client.coding.modes.list({agent_id: 'agent'});
   void client.coding.turns.start('session', {content: 'Fix the regression'});
   void client.sessions.create('agent', {workspace_id: 'workspace'});
   void client.messages.send('session', {
@@ -33,11 +41,24 @@ function assertPublicAPI(client: ZAIClient) {
     tools: [{type: 'function'}], tool_execution_mode: 'schema-only',
   });
   void client.messages.stream('session', {messages: [{role: 'user', content: 'hi'}]});
+  void client.messages.send('session', {content: [
+    {type: 'input_image', file_id: 'file'}, {type: 'input_file', path: 'file.txt'},
+    {type: 'input_file', file_id: 'file', path: 'file.txt'},
+  ]});
   void client.chat.messages.send('conversation', {content: 'hi', attachments: [{type: 'image', url: 'image.png'}], tool_execution_mode: 'schema-only'});
   void client.chat.messages.stream('conversation', {content: 'hi'});
   void client.chat.send({content: 'hi'});
   void client.chat.stream({content: 'hi'});
   void client.sessions.downloadFile('session', {path: 'file.txt'});
+  void client.sessions.downloadFile('session', {file_id: 'file'});
+  void client.coding.sessions.uploadFile('session', {name: 'file.txt'}, new Blob(['text']));
+  void client.coding.sessions.uploadFile('session', {name: 'empty.txt'});
+  void client.coding.sessions.downloadFile('session', {path: 'file.txt'});
+  void client.coding.sessions.downloadFile('session', {file_id: 'file'});
+  void client.coding.sessions.createDownloadLink('session', {file_id: 'file'});
+  void client.coding.toolCalls.resolve('session', 'tool', {output: null});
+  void client.coding.toolCalls.resolve('session', 'tool', {error: {code: 'failed', message: 'Failed'}});
+  void client.sessions.uploadFile('session', {file: new Blob(['text'])});
   void client.sessions.uploadFile('session', {file: new File(['x'], 'x.txt'), path: 'x.txt'});
   void client.sessions.uploadFile('session', {file: {blob: new Blob(['x']), filename: 'x.txt'}, path: 'x.txt'});
   void client.files.extract({file: {blob: new Blob(['text']), filename: 'readme.txt'}});
@@ -68,8 +89,42 @@ function assertPublicAPI(client: ZAIClient) {
   void client.agents.create({name: 'old', type: 'executor'});
   // @ts-expect-error IDs are separate string parameters.
   void client.agents.get(3);
-  // @ts-expect-error A required file query cannot be omitted.
-  void client.sessions.downloadFile('session');
+  // @ts-expect-error Coding downloads require one file selector.
+  void client.coding.sessions.downloadFile('session');
+  // @ts-expect-error Coding downloads reject missing file selectors.
+  void client.coding.sessions.downloadFile('session', {});
+  // @ts-expect-error Coding downloads reject two selectors.
+  void client.coding.sessions.downloadFile('session', {file_id: 'file', path: 'file.txt'});
+  // @ts-expect-error Download links require a selector body.
+  void client.coding.sessions.createDownloadLink('session');
+  // @ts-expect-error Download links reject missing selectors.
+  void client.coding.sessions.createDownloadLink('session', {});
+  // @ts-expect-error Download links reject two selectors.
+  void client.coding.sessions.createDownloadLink('session', {file_id: 'file', path: 'file.txt'});
+  // @ts-expect-error Tool results require an explicit body.
+  void client.coding.toolCalls.resolve('session', 'tool');
+  // @ts-expect-error Tool results require output or error.
+  void client.coding.toolCalls.resolve('session', 'tool', {});
+  // @ts-expect-error Tool results cannot supply output and error together.
+  void client.coding.toolCalls.resolve('session', 'tool', {output: null, error: {code: 'failed', message: 'Failed'}});
+  // @ts-expect-error Raw uploads require Blob data.
+  void client.coding.sessions.uploadFile('session', {name: 'file'}, {file: new Blob()});
+  // @ts-expect-error Raw uploads require a name query.
+  void client.coding.sessions.uploadFile('session', {});
+  // @ts-expect-error Image inputs require a file_id or legacy path.
+  void client.messages.send('session', {content: [{type: 'input_image'}]});
+  // @ts-expect-error File inputs require a file_id or legacy path.
+  void client.messages.send('session', {content: [{type: 'input_file'}]});
+  // @ts-expect-error Attachment items cannot widen to unknown.
+  void client.messages.send('session', {content: [42]});
+  // @ts-expect-error Legacy runner identifiers are removed.
+  void client.agents.create({name: 'old', type: 'runner', runner_id: 'runner'});
+  // @ts-expect-error Session creation no longer accepts runner overrides.
+  void client.coding.sessions.create('agent', {workspace_id: 'workspace', runner_id: 'runner'});
+  // @ts-expect-error Session creation no longer accepts provider overrides.
+  void client.coding.sessions.create('agent', {workspace_id: 'workspace', provider: 'codex'});
+  // @ts-expect-error Model lookup requires an agent.
+  void client.coding.models.list({provider: 'codex'});
   // @ts-expect-error Paths must be strings, not an untyped query bag.
   void client.sessions.downloadFile('session', {path: 42});
   // @ts-expect-error Pagination uses numeric values.
@@ -145,6 +200,9 @@ it('exports precise nested request, response, upload, and asynchronous stream ty
   expectTypeOf<ReturnType<ZAIClient['chat']['stream']>>().toEqualTypeOf<Promise<AsyncIterableIterator<ZAIStreamEvent>>>();
   expectTypeOf<ReturnType<ZAIClient['coding']['events']['stream']>>().toEqualTypeOf<Promise<CodingEventsStreamResponse>>();
   expectTypeOf<CodingEventsStreamResponse>().toEqualTypeOf<AsyncIterableIterator<ZAICodingStreamEvent>>();
+  expectTypeOf<CodingAgentsStreamStatusResponse>().toEqualTypeOf<AsyncIterableIterator<ZAIRunnerStatusStreamEvent>>();
+  expectTypeOf<CodingSessionsUploadFileInput>().toEqualTypeOf<Blob>();
+  expectTypeOf<NonNullable<MessagesSendInput['content']>[number]>().not.toBeUnknown();
   expectTypeOf<SessionsDownloadFileResponse>().toEqualTypeOf<Blob>();
   expectTypeOf<ReturnType<typeof createZAITokenProvider>>().toEqualTypeOf<ZAITokenProvider>();
   expectTypeOf<ZAIUploadFile>().toEqualTypeOf<Blob | {blob: Blob; filename: string}>();

@@ -117,7 +117,7 @@ describe('explicit token permission callbacks', () => {
       const request = input as Request;
       requests.push(request);
       const path = new URL(request.url).pathname;
-      const admin = path.endsWith('/models') || path.endsWith('/memories');
+      const admin = path.endsWith('/memories');
       expect(request.headers.get('authorization')).toBe(admin ? 'Bearer ak-backend' : 'Bearer ek-backend');
       return ok();
     }});
@@ -125,7 +125,7 @@ describe('explicit token permission callbacks', () => {
       client.agents.list(), client.memories.create({name: 'test'}),
       client.settings.models.list(), client.messages.send('session', {content: [{type: 'input_text', text: 'hello'}]}),
     ]);
-    expect(getToken.mock.calls).toEqual([[false], [true], [true], [false]]);
+    expect(getToken.mock.calls).toEqual([[false], [true], [false], [false]]);
     expect(fetchAdminToken).toHaveBeenCalledTimes(1);
     expect(fetchUserToken).toHaveBeenCalledTimes(1);
     expect(requests).toHaveLength(4);
@@ -142,7 +142,7 @@ describe('explicit token permission callbacks', () => {
       return Response.json({error: 'Forbidden'}, {status});
     });
     const client = createZAIClient({baseUrl, getToken, fetch: fetcher});
-    await expect(admin ? client.settings.models.list() : client.agents.list()).rejects.toMatchObject({code: 'authentication', status});
+    await expect(admin ? client.settings.models.list({tokenType: 'admin'}) : client.agents.list()).rejects.toMatchObject({code: 'authentication', status});
     expect(getToken.mock.calls).toEqual([[admin]]);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
