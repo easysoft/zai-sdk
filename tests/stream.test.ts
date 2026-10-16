@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest';
 import {ZAIClientError} from '../src/errors.js';
-import {parseZAICodingStream, parseZAIStream, type ZAIStreamEvent} from '../src/stream.js';
+import {parseZAICodingStream, parseZAIRunnerStatusStream, parseZAIStream, type ZAIStreamEvent} from '../src/stream.js';
 
 const encoder = new TextEncoder();
 const done = 'data: [DONE]\n\n';
@@ -57,6 +57,24 @@ describe('persistent Coding SSE', () => {
     expect(await collect(parseZAICodingStream(response))).toMatchObject([{type: 'data', data}]);
   });
 
+  it('preserves a persisted error and continues through failure into the next turn', async () => {
+    const events = ['error', 'turn.failed', 'turn.started', 'message.delta'].map((type, index) => ({
+      ...event, seq: index + 1, type,
+      payload: {turn_id: index < 2 ? 'failed' : 'next', error: {code: 'upstream', message: 'Failed', reason_code: 'future_reason'}, future: true},
+    }));
+    const {response} = source(events.map(data => `id: ${data.seq}\nevent: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`), {close: true});
+    expect(await collect(parseZAICodingStream(response))).toEqual(events.map(data => ({
+      type: 'data', event: data.type, id: String(data.seq), rawData: JSON.stringify(data), data,
+    })));
+    expect(response.body?.locked).toBe(false);
+    const malformed = {...events[0], seq: 'invalid'};
+    const invalid = source([`event: error\ndata: ${JSON.stringify(malformed)}\n\n`]);
+    await expect(collect(parseZAICodingStream(invalid.response))).rejects.toMatchObject({code: 'invalid-response', body: malformed});
+    expect(invalid.cancel).toHaveBeenCalledTimes(1);
+    const message = source([`event: error\ndata: ${JSON.stringify(events[0])}\n\n`]);
+    await expect(collect(parseZAIStream(message.response))).rejects.toMatchObject({code: 'invalid-response', body: events[0]});
+  });
+
   it('reports channel error and rejects a message-only completion sentinel', async () => {
     for (const text of ['event: error\ndata: {"message":"runner offline"}\n\n', done]) {
       const {response, cancel} = source([text]);
@@ -80,6 +98,47 @@ describe('persistent Coding SSE', () => {
     await expect(pending).rejects.toMatchObject({code: 'aborted'});
     expect(second.cancel).toHaveBeenCalledTimes(1);
     expect(second.response.body?.locked).toBe(false);
+  });
+});
+
+describe('Runner status SSE', () => {
+  it('preserves snapshots and future data, ignores heartbeats, and ends normally at EOF', async () => {
+    const data = {agent_id: 'agent', status: 'starting', reason: null, future: '你好😀', error: {diagnostic: true}};
+    const bytes = encoder.encode(`: ping\n\nid: first\nevent: runner.status\ndata: ${JSON.stringify(data)}\n\ndata: null\n\n`);
+    const {response} = source(Array.from(bytes, byte => Uint8Array.of(byte)), {close: true});
+    expect(await collect(parseZAIRunnerStatusStream(response))).toEqual([
+      {type: 'data', event: 'runner.status', id: 'first', rawData: JSON.stringify(data), data},
+      {type: 'data', event: 'message', rawData: 'null', data: null},
+    ]);
+    expect(response.body?.locked).toBe(false);
+    expect(await collect(parseZAIRunnerStatusStream(source([], {close: true}).response))).toEqual([]);
+  });
+
+  it.each(['event: error\ndata: {"message":"failed"}\n\n', 'data: invalid\n\n', done])('rejects status protocol errors %s', async frame => {
+    const {response, cancel} = source([frame]);
+    await expect(collect(parseZAIRunnerStatusStream(response))).rejects.toMatchObject({code: 'invalid-response'});
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects truncated UTF-8 and releases the reader', async () => {
+    const {response} = source([Uint8Array.of(0xe4, 0xbd)], {close: true});
+    await expect(collect(parseZAIRunnerStatusStream(response))).rejects.toMatchObject({code: 'invalid-response'});
+    expect(response.body?.locked).toBe(false);
+  });
+
+  it('releases status streams on return and abort, including pending reads', async () => {
+    const first = source();
+    const stream = parseZAIRunnerStatusStream(first.response);
+    const next = stream.next();
+    await stream.return!();
+    expect(await next).toEqual({done: true, value: undefined});
+    expect(first.cancel).toHaveBeenCalledTimes(1);
+    const second = source();
+    const controller = new AbortController();
+    const pending = parseZAIRunnerStatusStream(second.response, controller.signal).next();
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({code: 'aborted'});
+    expect(second.cancel).toHaveBeenCalledTimes(1);
   });
 });
 
