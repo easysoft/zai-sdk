@@ -1,6 +1,6 @@
 # ZAI SDK
 
-面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.3.0 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **100 条路径、153 个 HTTP 操作、156 个资源方法**。
+面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.3.1 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **100 条路径、153 个 HTTP 操作、156 个资源方法**。
 
 中文完整文档在 [`docs/index.html`](./docs/index.html)，包含每个接口的权限、来源、字段、调用签名和可复制示例。页面可离线打开，无需启动服务。升级旧项目请先阅读 [`docs/MIGRATION.md`](./docs/MIGRATION.md)。
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm build
 pnpm pack --pack-destination /tmp/zai-sdk-pack
 # 在消费项目中执行：
-pnpm add /tmp/zai-sdk-pack/zai-sdk-0.3.0.tgz
+pnpm add /tmp/zai-sdk-pack/zai-sdk-0.3.1.tgz
 ```
 
 服务端使用应用 API Key，SDK 按接口权限自动选择令牌：
