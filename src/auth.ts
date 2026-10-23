@@ -1,6 +1,7 @@
 import {md5} from '@noble/hashes/legacy.js';
 import {bytesToHex} from '@noble/hashes/utils.js';
 import {ZAIClientError} from './errors.js';
+import {createAuthError, sanitizeAuthError} from './auth-errors.js';
 import {createTransport} from './transport.js';
 
 export interface ZAIIdentity {
@@ -99,10 +100,10 @@ const nowSeconds = (): number => Math.floor(Date.now() / 1000);
 function validateIdentity(credentials: ZAIIdentity & {userName?: string}): void {
   if (!credentials || typeof credentials !== 'object'
     || [credentials.appID, credentials.userID].some(value => typeof value !== 'string' || value.length === 0)) {
-    throw new ZAIClientError('invalid-input', 'appID and userID must be non-empty strings.');
+    throw createAuthError('invalid-input', 'appID and userID must be non-empty strings.');
   }
   if (credentials.userName !== undefined && typeof credentials.userName !== 'string') {
-    throw new ZAIClientError('invalid-input', 'userName must be a string when provided.');
+    throw createAuthError('invalid-input', 'userName must be a string when provided.');
   }
 }
 
@@ -119,7 +120,7 @@ function signToken(
   userName?: string,
 ): string {
   if (!validSeconds(expiredTime, 0)) {
-    throw new ZAIClientError('invalid-input', 'expiredTime must be a non-negative integer Unix timestamp in seconds.');
+    throw createAuthError('invalid-input', 'expiredTime must be a non-negative integer Unix timestamp in seconds.');
   }
   const payload = {
     hash: bytesToHex(md5(new TextEncoder().encode(signingKey + appID + userID + expiredTime))),
@@ -142,7 +143,7 @@ export function createZAIToken(
 ): string {
   validateIdentity({appID, userID, userName});
   if (typeof appKey !== 'string' || !appKey.length) {
-    throw new ZAIClientError('invalid-input', 'appKey must be a non-empty string.');
+    throw createAuthError('invalid-input', 'appKey must be a non-empty string.');
   }
   return signToken('ak-', appID, appKey, userID, expiredTime, userName);
 }
@@ -151,11 +152,11 @@ export function createZAIToken(
 export function createZAIUserToken(options: ZAIUserTokenOptions): string {
   validateIdentity(options);
   if (typeof options.signingSecret !== 'string' || !options.signingSecret.trim()) {
-    throw new ZAIClientError('invalid-input', 'signingSecret must be a non-empty string.');
+    throw createAuthError('invalid-input', 'signingSecret must be a non-empty string.');
   }
   const expiresAt = options.expiresAt === undefined ? nowSeconds() + 1000 : options.expiresAt;
   if (!validSeconds(expiresAt, 0) || expiresAt <= nowSeconds()) {
-    throw new ZAIClientError('invalid-input', 'expiresAt must be a future integer Unix timestamp in seconds.');
+    throw createAuthError('invalid-input', 'expiresAt must be a future integer Unix timestamp in seconds.');
   }
   return signToken('ek-', options.appID, options.signingSecret, options.userID, expiresAt, options.userName);
 }
@@ -167,16 +168,16 @@ export function createZAIUserToken(options: ZAIUserTokenOptions): string {
  */
 export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITokenProvider {
   if (!options || typeof options !== 'object') {
-    throw new ZAIClientError('invalid-input', 'Token provider options are required.');
+    throw createAuthError('invalid-input', 'Token provider options are required.');
   }
   const refreshBeforeSeconds = options.refreshBeforeSeconds ?? 60;
   if (!validSeconds(refreshBeforeSeconds, 0)) {
-    throw new ZAIClientError('invalid-input', 'refreshBeforeSeconds must be a non-negative integer.');
+    throw createAuthError('invalid-input', 'refreshBeforeSeconds must be a non-negative integer.');
   }
   const hasCredentials = options.credentials !== undefined;
   const hasFetcher = options.fetchToken !== undefined;
   if (hasCredentials === hasFetcher) {
-    throw new ZAIClientError('invalid-input', 'Provide exactly one of credentials or fetchToken.');
+    throw createAuthError('invalid-input', 'Provide exactly one of credentials or fetchToken.');
   }
 
   let acquire: (context: ZAITokenAcquisitionContext) => ZAIToken | Promise<ZAIToken>;
@@ -186,7 +187,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   let secretRequest = false;
   if (hasCredentials) {
     if (options.acquireTimeoutMs !== undefined) {
-      throw new ZAIClientError('invalid-input', 'acquireTimeoutMs applies only to fetchToken.');
+      throw createAuthError('invalid-input', 'acquireTimeoutMs applies only to fetchToken.');
     }
     const credentials = options.credentials as ZAICredentials | ZAIUserCredentials;
     validateIdentity(credentials);
@@ -195,22 +196,22 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       || (appKey !== undefined && (typeof appKey !== 'string' || !appKey.length))
       || (configuredSecret !== undefined && (typeof configuredSecret !== 'string' || !configuredSecret.trim()))
       || (getSigningSecret !== undefined && typeof getSigningSecret !== 'function')) {
-      throw new ZAIClientError('invalid-input', 'Provide exactly one non-empty appKey, signingSecret, or getSigningSecret function.');
+      throw createAuthError('invalid-input', 'Provide exactly one non-empty appKey, signingSecret, or getSigningSecret function.');
     }
     if (appKey === undefined && (options.tokenType !== 'user' || options.baseUrl !== undefined || options.fetch !== undefined || options.headers !== undefined)) {
-      throw new ZAIClientError('invalid-input', 'Direct signing-secret credentials require user tokens and cannot use HTTP signing-secret options.');
+      throw createAuthError('invalid-input', 'Direct signing-secret credentials require user tokens and cannot use HTTP signing-secret options.');
     }
     const expiresInSeconds = options.expiresInSeconds ?? 1000;
     if (!validSeconds(expiresInSeconds, 1)) {
-      throw new ZAIClientError('invalid-input', 'expiresInSeconds must be a positive integer.');
+      throw createAuthError('invalid-input', 'expiresInSeconds must be a positive integer.');
     }
     if (options.tokenType !== undefined && options.tokenType !== 'admin' && options.tokenType !== 'user') {
-      throw new ZAIClientError('invalid-input', 'tokenType must be admin or user.');
+      throw createAuthError('invalid-input', 'tokenType must be admin or user.');
     }
     if (options.tokenType === 'user') {
       timeoutMs = options.signingSecretTimeoutMs ?? 30_000;
       if (!validSeconds(timeoutMs, 1) || timeoutMs > 2_147_483_647) {
-        throw new ZAIClientError('invalid-input', 'signingSecretTimeoutMs must be a positive integer no greater than 2147483647.');
+        throw createAuthError('invalid-input', 'signingSecretTimeoutMs must be a positive integer no greater than 2147483647.');
       }
       let loadSecret: (context: ZAITokenAcquisitionContext) => string | Promise<string>;
       let invalidateSource: (() => void) | undefined;
@@ -218,7 +219,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
         secretRequest = true;
         let headers: Headers;
         try {headers = new Headers(options.headers);} catch {
-          throw new ZAIClientError('invalid-input', 'Invalid signing-secret request headers.');
+          throw createAuthError('invalid-input', 'Invalid signing-secret request headers.');
         }
         // A fixed administrator provider prevents auto-auth recursion in the transport.
         const adminProvider = createZAITokenProvider({credentials: {appID, appKey, userID, userName}, expiresInSeconds, refreshBeforeSeconds});
@@ -230,7 +231,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
           if (!result || typeof result !== 'object' || !('app_id' in result) || result.app_id !== appID
             || !('signing_secret' in result) || typeof result.signing_secret !== 'string' || !result.signing_secret.trim()
             || !('token_prefix' in result) || result.token_prefix !== 'ek-') {
-            throw new ZAIClientError('authentication', 'The signing-secret response does not match the app and user-token protocol.');
+            throw createAuthError('authentication', 'The signing-secret response does not match the app and user-token protocol.');
           }
           return result.signing_secret;
         };
@@ -246,7 +247,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
             const result = await loadSecret(context);
             signal.throwIfAborted();
             if (typeof result !== 'string' || !result.trim()) {
-              throw new ZAIClientError('authentication', 'The signing-secret source returned an invalid secret.');
+              throw createAuthError('authentication', 'The signing-secret source returned an invalid secret.');
             }
             signingSecret = result;
           } catch (cause) {
@@ -254,7 +255,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
             // The response and custom fetch errors can contain key material. Keep
             // only safe transport metadata, never the original body or cause.
             const transportError = secretRequest && cause instanceof ZAIClientError ? cause : undefined;
-            throw new ZAIClientError(transportError?.code ?? 'authentication',
+            throw createAuthError(transportError?.code ?? 'authentication',
               'Unable to obtain the app signing secret.',
               {status: transportError?.status, ...(secretRequest ? {method: 'GET', path: '/signing_secret'} : {})});
           }
@@ -265,7 +266,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       };
     } else {
       if (options.baseUrl !== undefined || options.fetch !== undefined || options.headers !== undefined || options.signingSecretTimeoutMs !== undefined) {
-        throw new ZAIClientError('invalid-input', 'Signing-secret request options apply only to user tokens.');
+        throw createAuthError('invalid-input', 'Signing-secret request options apply only to user tokens.');
       }
       acquire = () => {
         const expiresAt = nowSeconds() + expiresInSeconds;
@@ -275,12 +276,12 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   } else {
     if (typeof options.fetchToken !== 'function' || options.expiresInSeconds !== undefined || options.tokenType !== undefined
       || options.baseUrl !== undefined || options.fetch !== undefined || options.headers !== undefined || options.signingSecretTimeoutMs !== undefined) {
-      throw new ZAIClientError('invalid-input', 'fetchToken must be a function and cannot be combined with local signing options.');
+      throw createAuthError('invalid-input', 'fetchToken must be a function and cannot be combined with local signing options.');
     }
     acquire = options.fetchToken;
     timeoutMs = options.acquireTimeoutMs ?? 30_000;
     if (!validSeconds(timeoutMs, 1) || timeoutMs > 2_147_483_647) {
-      throw new ZAIClientError('invalid-input', 'acquireTimeoutMs must be a positive integer no greater than 2147483647.');
+      throw createAuthError('invalid-input', 'acquireTimeoutMs must be a positive integer no greater than 2147483647.');
     }
   }
 
@@ -289,7 +290,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   let disposed = false;
   let reason: ZAITokenAcquisitionContext['reason'] = 'initial';
   const getToken = () => {
-    if (disposed) return Promise.reject(new ZAIClientError('aborted', 'The token provider has been disposed.'));
+    if (disposed) return Promise.reject(createAuthError('aborted', 'The token provider has been disposed.'));
     if (pending) return pending.promise;
     if (cached && cached.expiresAt - nowSeconds() > refreshBeforeSeconds) {
       return Promise.resolve(cached.token);
@@ -305,25 +306,23 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
     });
     const acquisition = Promise.resolve().then(async () => {
       signal.throwIfAborted();
-      let result: ZAIToken;
-      try {
-        result = await acquire(context);
-      } catch (cause) {
-        if (signal.aborted) throw signal.reason;
-        if (cause instanceof ZAIClientError && (hasCredentials || cause.code === 'invalid-input')) throw cause;
-        throw new ZAIClientError('authentication', 'Failed to acquire a ZAI token.', {cause});
-      }
+      const result = await acquire(context);
       signal.throwIfAborted();
-      if (!result || typeof result.token !== 'string' || result.token.trim().length === 0
-        || !validSeconds(result.expiresAt, 0) || result.expiresAt <= nowSeconds()) {
-        throw new ZAIClientError('authentication', 'Token source must return a non-empty token with a future integer expiresAt in Unix seconds.');
+      const token = result?.token;
+      const expiresAt = result?.expiresAt;
+      signal.throwIfAborted();
+      if (typeof token !== 'string' || token.trim().length === 0
+        || !validSeconds(expiresAt, 0) || expiresAt <= nowSeconds()) {
+        throw createAuthError('authentication', 'Token source must return a non-empty token with a future integer expiresAt in Unix seconds.');
       }
       // Snapshot the result: later mutation by the fetcher cannot alter our cache.
-      cached = {token: result.token, expiresAt: result.expiresAt};
+      cached = {token, expiresAt};
       reason = 'refresh';
       return cached.token;
     });
-    const promise = Promise.race([acquisition, interrupted]).finally(() => {
+    const promise = Promise.race([acquisition, interrupted]).catch(cause => {
+      throw sanitizeAuthError(cause, 'Failed to acquire a ZAI token.');
+    }).finally(() => {
       clearTimeout(timer);
       signal.removeEventListener('abort', cancel);
       if (pending?.controller === controller) pending = undefined;
@@ -331,8 +330,8 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
     pending = {promise, controller};
     if (timeoutMs !== undefined) {
       timer = setTimeout(() => controller.abort(hasCredentials
-        ? new ZAIClientError('authentication', 'Signing-secret request timed out.', secretRequest ? {method: 'GET', path: '/signing_secret'} : undefined)
-        : new ZAIClientError('authentication', 'Token acquisition timed out.')), timeoutMs);
+        ? createAuthError('authentication', 'Signing-secret request timed out.', secretRequest ? {method: 'GET', path: '/signing_secret'} : undefined)
+        : createAuthError('authentication', 'Token acquisition timed out.')), timeoutMs);
     }
     return promise;
   };
@@ -340,14 +339,14 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   const invalidate = (options?: {signingSecret?: boolean}): void => {
     if (options !== undefined && (!options || typeof options !== 'object'
       || (options.signingSecret !== undefined && typeof options.signingSecret !== 'boolean'))) {
-      throw new ZAIClientError('invalid-input', 'signingSecret must be a boolean when provided.');
+      throw createAuthError('invalid-input', 'signingSecret must be a boolean when provided.');
     }
     cached = undefined;
     reason = 'invalidated';
     const previous = pending;
     pending = undefined;
     if (options?.signingSecret) clearSecret?.();
-    previous?.controller.abort(new ZAIClientError('aborted', disposed ? 'The token provider has been disposed.' : 'The token provider was invalidated.'));
+    previous?.controller.abort(createAuthError('aborted', disposed ? 'The token provider has been disposed.' : 'The token provider was invalidated.'));
   };
   return Object.assign(getToken, {invalidate, dispose() {
     if (disposed) return;

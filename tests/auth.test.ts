@@ -147,7 +147,7 @@ describe('createZAITokenProvider backend tokens', () => {
     const getToken = createZAITokenProvider({fetchToken});
     const attempts = await Promise.allSettled([getToken(), getToken(), getToken()]);
     for (const attempt of attempts) {
-      expect(attempt).toMatchObject({status: 'rejected', reason: {code: 'authentication', cause}});
+      expect(attempt).toMatchObject({status: 'rejected', reason: {code: 'authentication', cause: undefined}});
     }
     expect(fetchToken).toHaveBeenCalledTimes(1);
     expect(await getToken()).toBe('recovered');

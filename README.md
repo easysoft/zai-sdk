@@ -361,7 +361,11 @@ await client.coding.toolCalls.resolve('coding-session-id', 'tool-call-id', {outp
 
 `doctor()` 默认检查配置、协议、连接和 Agent，不请求管理员模型目录。Agent 列表支持 runner；聊天探针仍选择活跃 custom Agent。仅显式 `chat:true` 才创建临时普通会话验证 JSON 对话，`model` 仅传入探针。失败和取消仍使用独立超时清理临时会话，清理失败使整体 `pass:false`。诊断不验证 SSE、Coding、文件或技能。
 
-错误统一为 `ZAIClientError`，稳定 `code` 为 `authentication/http/network/aborted/invalid-input/invalid-response`。结构有效的服务端 `error_info` 会提取为 `errorInfo: ZAIErrorInfo`，保留 SDK 错误分类及完整 `body`；可读取 `reason_code/user_message/retryable/details`。正常 HTTP 内的 `ok:false` 等业务结果原样返回。
+错误统一为 `ZAIClientError`，稳定 `code` 为 `authentication/http/network/aborted/invalid-input/invalid-response`。普通业务 HTTP 响应中结构有效的 `error_info` 会提取为 `errorInfo: ZAIErrorInfo`，保留 SDK 错误分类及完整 `body`；可读取 `reason_code/user_message/retryable/details`。正常 HTTP 内的 `ok:false` 等业务结果原样返回。
+
+`fetchToken`、`getToken` 和 `getSigningSecret` 自行抛出的外部异常，即使是 `new ZAIClientError(...)`，也统一转为 `authentication` 和固定消息，不保留原消息、`cause` 或原异常的其他元数据。SDK 自己产生的超时、失效、释放和无效 Token 错误保留安全分类与固定文案；跨认证边界会重建错误，不保证对象引用相同。内部 `GET /signing_secret` 失败仅保留允许的错误分类、合法 HTTP 状态和固定方法路径；非法 Token 写入 Authorization 失败也不保留原 `cause`。
+
+这些规则只处理认证边界。普通业务 HTTP 错误（含 401/403）的 `body/errorInfo/headers` 诊断和业务 `AbortSignal.reason` 保持原行为，不能据此将所有错误对象直接写入公开日志。原先依赖认证回调异常的 `cause` 或对象引用的代码，应改按返回的安全 `code` 处理。
 
 规范要求的 11 个写操作自动生成幂等键。`options.idempotencyKey` 优先于合并后的同名请求头；显式键必须非空且为 1–128 字符。每次独立调用生成新键，业务重试必须复用原键；SDK 不自动重试。
 

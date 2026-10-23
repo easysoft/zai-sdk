@@ -293,13 +293,13 @@ describe('token errors and request cancellation', () => {
   it('classifies provider failure without exposing request headers', async () => {
     const cause = new Error('backend unavailable');
     const client = createZAIClient({...defaults, getToken: async () => {throw cause;}});
-    await expect(client.agents.list()).rejects.toMatchObject({code: 'authentication', cause});
+    await expect(client.agents.list()).rejects.toMatchObject({code: 'authentication', cause: undefined});
   });
 
-  it('retains a structured provider error', async () => {
+  it('sanitizes an externally constructed structured provider error', async () => {
     const error = new ZAIClientError('authentication', 'Token refresh failed');
     const client = createZAIClient({...defaults, getToken: () => {throw error;}});
-    await expect(client.agents.list()).rejects.toBe(error);
+    await expect(client.agents.list()).rejects.toMatchObject({code: 'authentication', message: 'Unable to obtain an authentication token.', cause: undefined});
   });
 
   it('rejects a token containing illegal header characters', async () => {

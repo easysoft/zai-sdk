@@ -2,6 +2,12 @@
 
 0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
 
+## 认证错误脱敏
+
+`fetchToken`、`getToken` 和 `getSigningSecret` 自行抛出的外部异常统一转为 `authentication` 和固定消息，包括调用方创建的 `ZAIClientError`。原异常的消息、`cause`、`body`、`headers`、`errorInfo`、`code`、`status`、`method` 和 `path` 均不透传。SDK 自己产生的超时、失效、释放和无效 Token 错误保留安全分类及固定文案；跨认证边界会重建错误，依赖原异常 `cause` 或对象引用的代码应改按返回的安全 `code` 处理。
+
+内部 `GET /signing_secret` 失败只保留允许的错误分类、合法 HTTP 状态和固定方法路径，不保留原响应内容。非法 Token 写入 Authorization 失败不保留原 `cause`。普通业务 HTTP 错误（含 401/403）的 `body/errorInfo/headers` 诊断和业务 `AbortSignal.reason` 保持原行为；此调整不是全局错误日志脱敏器。
+
 ## 认证上下文
 
 `getToken(admin: boolean)` 已替换为 `getToken(context: ZAIAuthContext): string | Promise<string>`，不保留布尔参数兼容层。将 `admin ? ... : ...` 改为 `context.purpose === 'admin' ? ... : ...`；上下文对象始终为真，不能继续用旧布尔判断。返回值仍为不含 `Bearer` 的 Token。
@@ -94,7 +100,7 @@ await client.coding.sessions.create(agentId, {workspace_id: workspaceId}, {idemp
 // 不确定上次响应时，在确认业务重试条件后复用同一个 idempotencyKey。
 ```
 
-新增 `ZAIErrorInfo` 与 `ZAIClientError.errorInfo`，结构有效时提取服务端 `error_info` 中的 `code/message/reason_code/user_message/details` 和可选 `retryable`。SDK 原有错误分类 `code`、消息与完整 `body` 保持不变；畸形或缺失的诊断信息不会被当作有效 `errorInfo`。
+新增 `ZAIErrorInfo` 与 `ZAIClientError.errorInfo`，普通业务 HTTP 响应中结构有效时提取服务端 `error_info` 中的 `code/message/reason_code/user_message/details` 和可选 `retryable`。这类响应的 SDK 错误分类 `code`、消息与完整 `body` 保持不变；畸形或缺失的诊断信息不会被当作有效 `errorInfo`。认证边界的异常按上方“认证错误脱敏”处理。
 
 ## 文件、附件与客户端工具
 

@@ -699,7 +699,9 @@ try {
 <tr><td>invalid-input</td><td>无法构造请求、无效路径 ID、上传格式或配置错误。</td><td>修正调用参数。</td></tr>
 <tr><td>invalid-response</td><td>意外成功状态、错误媒体类型、无效 JSON / SSE 等。</td><td>核对 API 版本及服务端响应。</td></tr>
 </tbody></table></div>
-<p><code>ZAIClientError</code> 继承 Error，包含 <code>code</code>；还可包含 <code>status</code>、<code>body</code>、<code>method</code>、<code>path</code>、<code>headers</code>、<code>cause</code>。这些可选字段只在信息可用时存在。结构有效的服务端 error_info 会提取为 errorInfo（ZAIErrorInfo），包含 code、message、reason_code、user_message、details 和可选 retryable；原始 body 与 SDK 错误分类不变。根据 SDK code 分支，避免依赖错误文案。</p>
+<p><code>ZAIClientError</code> 继承 Error，包含 <code>code</code>；还可包含 <code>status</code>、<code>body</code>、<code>method</code>、<code>path</code>、<code>headers</code>、<code>cause</code>。这些可选字段只在信息可用时存在。普通业务 HTTP 响应中结构有效的 error_info 会提取为 errorInfo（ZAIErrorInfo），包含 code、message、reason_code、user_message、details 和可选 retryable；原始 body 与 SDK 错误分类不变。根据 SDK code 分支，避免依赖错误文案。</p>
+<p>fetchToken、getToken 和 getSigningSecret 自行抛出的外部异常，即使是 new ZAIClientError，也统一转为 authentication 和固定消息；不保留原消息、cause、body、headers、errorInfo、code、status、method 或 path。SDK 自己产生的超时、失效、释放与无效 Token 错误保留安全分类和固定文案；跨认证边界会重建错误，不保证对象引用相同。内部 GET /signing_secret 失败只保留允许的错误分类、合法 HTTP 状态及固定方法路径；非法 Token 写入 Authorization 失败也不保留原 cause。</p>
+<p>认证错误脱敏不改变普通业务 HTTP 错误（含 401/403）的 body、errorInfo、headers 诊断，也不改变业务 AbortSignal.reason。因此这不是全局错误日志脱敏器，仍应选择需要记录的字段。依赖认证回调 cause 或异常对象引用的代码，应改按返回的安全 code 处理。</p>
 <details class="faq"><summary>为什么返回了 ok: false，却没有抛出异常？</summary><p>正常 HTTP 响应内的业务结果原样返回。请检查 ok、success 等字段，按相应接口处理。</p></details>
 <details class="faq"><summary>原来的 models.list 在哪里？</summary><p>settings.models.list 默认用 ek 查询应用可用目录，传 {tokenType: "admin"} 查询自有管理目录；其他模型管理操作需要 ak。不再支持 all。数字 id 标识配置记录，调用模型使用 model_id。</p></details>
 <details class="faq"><summary>SDK 会自动重试、重连或执行工具吗？</summary><p>不会。缓存、重试、工具执行和 UI 状态由应用负责；尤其是消息发送、创建或删除操作，重试前应确认上一次请求的结果。</p></details>

@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch';
 import {ZAIClientError} from './errors.js';
+import {createAuthError, sanitizeAuthError} from './auth-errors.js';
 import {createZAITokenProvider} from './auth.js';
 import type {CreateZAIClientOptions, ZAIAuthContext, ZAIOperationRequest, ZAITransport, ZAIUploadFile} from './types.js';
 
@@ -40,13 +41,13 @@ async function waitForToken(getToken: (context: ZAIAuthContext) => string | Prom
       }),
     ]) : pending);
     if (typeof token !== 'string' || !token.trim()) {
-      throw new ZAIClientError('authentication', 'The token provider returned an empty token.');
+      throw createAuthError('authentication', 'The token provider returned an empty token.');
     }
     if (signal?.aborted) throw aborted(signal);
     return token;
   } catch (cause) {
-    if (cause instanceof ZAIClientError) throw cause;
-    throw new ZAIClientError('authentication', 'Unable to obtain an authentication token.', {cause});
+    if (signal?.aborted) throw aborted(signal);
+    throw sanitizeAuthError(cause, 'Unable to obtain an authentication token.');
   } finally {
     if (signal && listener) signal.removeEventListener('abort', listener);
   }
@@ -267,8 +268,8 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
       const token = await waitForToken(getToken, context);
       try {
         headers.set('authorization', `Bearer ${token}`);
-      } catch (cause) {
-        throw new ZAIClientError('authentication', 'The token cannot be used as an authorization header.', {cause});
+      } catch {
+        throw createAuthError('authentication', 'The token cannot be used as an authorization header.');
       }
       let received: Response | undefined;
       try {
