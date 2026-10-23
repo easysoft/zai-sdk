@@ -311,7 +311,8 @@ const client = createZAIClient({
 });
 
 await client.agents.list(); // 调用 getToken(false)
-await client.settings.models.list(); // 调用 getToken(true)`, 'typescript', true)}
+await client.settings.models.list(); // 调用 getToken(false)，查询用户可调用目录。
+await client.settings.models.list({tokenType: 'admin'}); // 调用 getToken(true)，查询自有管理目录。`, 'typescript', true)}
 <p>无参回调和直接传入固定类型的 provider 仍兼容，但会忽略 admin，不会自动切换令牌类型；只返回 ek 的 provider 不能用于管理员接口。自定义缓存应分别管理 ak、ek，其缓存和续期由调用者负责。auth 自动模式与 getToken 仍然互斥。</p>`,
     },
     {
@@ -320,7 +321,7 @@ await client.settings.models.list(); // 调用 getToken(true)`, 'typescript', tr
 <div class="table-wrap"><table><thead><tr><th>CreateZAIClientOptions</th><th>类型</th><th>说明</th></tr></thead><tbody>
 <tr><td><code>baseUrl</code> <b class="required">必填</b></td><td>string</td><td>API 根地址，例如 https://zai.example.com/v1/zai。</td></tr>
 <tr><td><code>auth</code></td><td>ZAIAutoAuthOptions</td><td>服务端自动按接口权限选择令牌；与 getToken 二选一。</td></tr>
-<tr><td><code>getToken</code></td><td>(admin: boolean) =&gt; string | Promise&lt;string&gt;</td><td>每次请求前调用；true 需 ak，false 允许 ak/ek、推荐 ek。可用两个 provider 分别缓存并按标记选择。</td></tr>
+<tr><td><code>getToken</code></td><td>(admin: boolean) =&gt; string | Promise&lt;string&gt;</td><td>每次请求前调用；true 表示本次选择 ak，false 表示选择 ek（含仅用户接口）。实际允许的令牌类型见各接口权限；可用两个 provider 分别缓存。</td></tr>
 <tr><td><code>fetch</code></td><td>typeof globalThis.fetch</td><td>可选，自定义 Fetch；默认使用原生 Fetch。</td></tr>
 <tr><td><code>headers</code></td><td>HeadersInit</td><td>可选，所有请求的默认请求头。</td></tr>
 </tbody></table></div>
