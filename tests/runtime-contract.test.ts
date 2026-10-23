@@ -67,7 +67,7 @@ describe('token selection and user scope', () => {
   ] as const)('selects the requested permitted token for %s/%s', async (auth, tokenType, admin) => {
     const {transport, getToken, requests} = setup();
     await transport.request({...operation, auth, options: {tokenType}});
-    expect(getToken.mock.calls).toEqual([[admin]]);
+    expect(getToken.mock.calls).toEqual([[expect.objectContaining({purpose: admin ? 'admin' : 'user'})]]);
     expect(requests[0]!.headers.get('authorization')).toBe('Bearer opaque-token');
   });
 
@@ -97,7 +97,7 @@ describe('token selection and user scope', () => {
     await transport.request({...operation, validation: 'user-scope', query: {session_id: 'session'}});
     expect(Object.fromEntries(new URL(requests[0]!.url).searchParams)).toEqual({external_user_id: 'user+1', session_id: 'session'});
     expect(Object.fromEntries(new URL(requests[1]!.url).searchParams)).toEqual({session_id: 'session'});
-    expect(getToken.mock.calls).toEqual([[true], [false]]);
+    expect(getToken.mock.calls).toEqual([[expect.objectContaining({purpose: 'admin'})], [expect.objectContaining({purpose: 'user'})]]);
   });
 
   it.each([

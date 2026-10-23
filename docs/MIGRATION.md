@@ -2,6 +2,16 @@
 
 0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
 
+## 认证上下文
+
+`getToken(admin: boolean)` 已替换为 `getToken(context: ZAIAuthContext): string | Promise<string>`，不保留布尔参数兼容层。将 `admin ? ... : ...` 改为 `context.purpose === 'admin' ? ... : ...`；上下文对象始终为真，不能继续用旧布尔判断。返回值仍为不含 `Bearer` 的 Token。
+
+冻结的请求上下文包含 `purpose`（admin/user）、规范化后的绝对 `baseUrl`、大写 `method`、模板路由 `path`、可选业务请求 `signal` 和可选 `identity`。path 不含实际路径参数、查询、请求体或请求头；identity 只包含 appID、userID，不含密钥或昵称。自定义客户端可传顶层 `identity`，SDK 在创建时验证并保存冻结快照；自动认证只能从 `auth` 取得身份，不能另传顶层 identity。声明身份不验证返回的 Token，调用者仍需保证凭据与绑定身份一致。
+
+`fetchToken(signal)` 和 `getSigningSecret(signal)` 同时改为接收冻结的 `ZAITokenAcquisitionContext`。将回调改为 `fetchToken: async ({signal, reason}) => ...` 或 `getSigningSecret: async ({signal, reason}) => ...`，需要时从 reason 区分 initial、refresh、invalidated。首次获取为 initial；成功后的下一次续期为 refresh；invalidate 后为 invalidated；失败或超时后重试保留原原因。
+
+获取上下文的 signal 属于共享认证任务，业务请求上下文及其 signal 不会传入 provider。每个 provider 固定身份和用途，普通 ek 续期复用缓存密钥；getSigningSecret 只在初次或清除密钥缓存后调用。无参 provider 可直接作为 getToken，它会忽略请求上下文，不会按用途切换令牌。SDK 不因此增加 401/403 重放或权限升级。
+
 ## 限制客户端用途
 
 `createZAIClient()` 新增 `allowedTokenTypes?: readonly ('admin' | 'user')[]`，省略时允许两种用途。普通业务客户端可设为 `['user']`，管理任务可设为 `['admin']`。数组必须非空且只包含合法用途，允许重复成员；SDK 在创建时保存快照，后续修改原数组不改变限制。
@@ -23,7 +33,7 @@ const getUserToken = createZAITokenProvider({
 });
 ```
 
-直接密钥凭据必须显式指定 `tokenType: 'user'`，不接受 `baseUrl`、`fetch` 或 `headers`。也可将 `signingSecret` 替换为 `getSigningSecret: (signal: AbortSignal) => string | Promise<string>`，从集中凭据服务取回密钥；`appKey`、`signingSecret` 和 `getSigningSecret` 必须恰好提供一种。新增公开类型 `ZAIIdentity`、`ZAIUserCredentials` 和 `ZAIUserTokenOptions` 分别描述绑定身份、直接密钥凭据和同步签发参数。
+直接密钥凭据必须显式指定 `tokenType: 'user'`，不接受 `baseUrl`、`fetch` 或 `headers`。也可将 `signingSecret` 替换为 `getSigningSecret: (context: ZAITokenAcquisitionContext) => string | Promise<string>`，从集中凭据服务取回密钥；`appKey`、`signingSecret` 和 `getSigningSecret` 必须恰好提供一种。新增公开类型 `ZAIIdentity`、`ZAIUserCredentials` 和 `ZAIUserTokenOptions` 分别描述绑定身份、直接密钥凭据和同步签发参数。
 
 动态来源使用 `signingSecretTimeoutMs`（默认 30 秒）和共享认证任务的 signal。超时、失效或释放会中止任务，回调错误脱敏，迟到结果不会回写缓存。密钥只获取一次并缓存，普通续期仍在本地签名；`invalidate({signingSecret: true})` 后重新读取。静态 `signingSecret` 清缓存后仍复用创建时的值，更换它应重新创建 provider。
 
@@ -39,7 +49,7 @@ signing secret 可以签发该应用下不同用户的 ek，并非用户级秘�
 
 ## 外部 Token 获取超时
 
-`fetchToken` 的签名改为 `(signal: AbortSignal) => ZAIToken | Promise<ZAIToken>`。将 signal 传给业务后端 Fetch，使超时、`invalidate()` 和 `dispose()` 能中止外部请求。该 signal 属于共享的 Token 获取任务；取消单个业务请求不会中止它或影响其他等待者。
+`fetchToken` 的当前签名为 `(context: ZAITokenAcquisitionContext) => ZAIToken | Promise<ZAIToken>`。将 context.signal 传给业务后端 Fetch，使超时、`invalidate()` 和 `dispose()` 能中止外部请求。该 signal 属于共享的 Token 获取任务；取消单个业务请求不会中止它或影响其他等待者。
 
 `fetchToken` 模式新增 `acquireTimeoutMs`，默认 30,000 毫秒，必须为 1 至 2,147,483,647 的整数。超时抛出 `ZAIClientError`（`code: 'authentication'`，消息 `Token acquisition timed out.`），迟到结果不缓存，下一次调用可以重新获取。该超时只管理 Token 获取，后续业务请求使用自己的取消策略；本地签发 ek 时获取 signing secret 仍由 `signingSecretTimeoutMs` 控制。
 
@@ -70,7 +80,7 @@ signing secret 可以签发该应用下不同用户的 ek，并非用户级秘�
 
 ## 请求选项、权限与错误
 
-方法最后的 `ZAIRequestOptions` 新增 `idempotencyKey?: string` 和 `tokenType?: 'admin' | 'user'`。共享权限接口允许显式选择，固定权限接口拒绝冲突选项。`getToken(admin: boolean)` 签名不变，布尔值表示这次选择 ak 还是 ek；自定义回调应分别管理两类令牌。
+方法最后的 `ZAIRequestOptions` 新增 `idempotencyKey?: string` 和 `tokenType?: 'admin' | 'user'`。共享权限接口允许显式选择，固定权限接口拒绝冲突选项。当前 `getToken(context)` 使用 context.purpose 表示这次选择 ak 还是 ek；自定义回调应按身份和用途分别管理令牌，旧布尔参数迁移见上方“认证上下文”。
 
 `settings.models.list()` 改为默认 ek，返回应用可用目录。查询自有管理目录使用 `settings.models.list({tokenType: 'admin'})`；其他模型管理与测试仍需要 ak。通用 `agents` 保持默认选择，管理 runner 推荐使用 `coding.agents`，通过通用入口管理时显式选择 admin。
 
@@ -156,20 +166,21 @@ const client = createZAIClient({
 
 ak 继续用应用 API Key 本地签发；同步方法保留 `createZAIToken(appID, appKey, userID, expiredTime?, userName?)`。编码统一为 UTF-8 JSON/Base64，解除旧 Latin-1 限制；hash 使用小写 MD5，时间仍为 Unix 秒。可选昵称不参与 hash。
 
-应用 API Key 凭据的 `createZAITokenProvider({credentials})` 默认管理员令牌。要取得 ek，使用 `{credentials, tokenType:'user', baseUrl}`：SDK 先签 ak 读取 `/signing_secret`，校验响应后本地签 ek。也可直接提供签名密钥，见上方“直接签发用户令牌”。当前 `fetchToken` 模式新增 signal 与获取超时，见上方说明；浏览器应从业务后端获取 ek。
+应用 API Key 凭据的 `createZAITokenProvider({credentials})` 默认管理员令牌。要取得 ek，使用 `{credentials, tokenType:'user', baseUrl}`：SDK 先签 ak 读取 `/signing_secret`，校验响应后本地签 ek。也可直接提供签名密钥，见上方“直接签发用户令牌”。当前 `fetchToken` 模式提供获取上下文与超时，见上方说明；浏览器应从业务后端获取 ek。
 
-自定义客户端回调从无参扩展为 `getToken(admin: boolean): string | Promise<string>`。每次发送请求前，管理员专属接口传 `true`，共享接口传 `false`；分别返回 ak 和 ek（共享接口也允许 ak）。回调只有这个布尔参数，不接收其他接口信息，SDK 不解码返回令牌。这不是在 403 后升级令牌重试。
+自定义客户端使用 `getToken(context: ZAIAuthContext): string | Promise<string>`。每次发送请求前按 context.purpose 返回 ak 或 ek；SDK 不解码返回令牌，不在 401/403 后升级令牌重试。
 
 ```ts
 const getAdminToken = createZAITokenProvider({credentials});
 const getUserToken = createZAITokenProvider({credentials, tokenType: 'user', baseUrl});
 const client = createZAIClient({
   baseUrl,
-  getToken: admin => admin ? getAdminToken() : getUserToken(),
+  identity: {appID: credentials.appID, userID: credentials.userID},
+  getToken: context => context.purpose === 'admin' ? getAdminToken() : getUserToken(),
 });
 ```
 
-无参回调和固定类型 provider 仍可直接传入，但它们忽略 `admin`，不会自动切换令牌类型。需要两种令牌时按上例分开缓存和续期，或使用互斥的 `auth.mode: 'auto'`；不要把 ak 和 ek 存在同一个未区分类型的缓存值中。
+无参回调和固定类型 provider 可直接传入，但它们忽略上下文，不会自动切换令牌类型。需要两种令牌时按上例分开缓存和续期，或使用互斥的 `auth.mode: 'auto'`；不要把不同身份或用途的 Token 存在同一个未区分的缓存值中。
 
 Token 默认 1000 秒有效、提前 60 秒续期。signing secret 在当前实例缓存，并发共享首次获取，普通 ek 续期不发请求。密钥获取独立超时默认 30 秒，可设 `signingSecretTimeoutMs`；取消一个业务请求不取消共享获取，失败后可重试。
 

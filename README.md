@@ -68,7 +68,7 @@ pnpm build     # 同时生成原有 ESM、类型声明和 dist/zai.js
     allowedTokenTypes: ['user'],
     getToken: ZAI.createZAITokenProvider({
       acquireTimeoutMs: 30_000,
-      fetchToken: async signal => {
+      fetchToken: async ({signal}) => {
         const response = await fetch('/api/zai/token', {signal});
         if (!response.ok) throw new Error('获取令牌失败');
         return response.json(); // {token: 'ek-...', expiresAt: <整数 Unix 秒>}
@@ -144,7 +144,7 @@ const getUserToken = createZAITokenProvider({
   credentials: {
     appID: 'your-app-id',
     userID: 'user-123',
-    getSigningSecret: async signal => {
+    getSigningSecret: async ({signal}) => {
       const response = await fetch('https://secrets.example.com/zai/signing-secret', {signal});
       if (!response.ok) throw new Error('获取签名密钥失败');
       return response.text(); // 由可信后端的凭据服务返回密钥。
@@ -155,7 +155,7 @@ const getUserToken = createZAITokenProvider({
 });
 ```
 
-`getSigningSecret` 签名为 `(signal: AbortSignal) => string | Promise<string>`。它使用共享认证任务自己的 signal，超时、`invalidate()` 或 `dispose()` 会中止任务，迟到结果不写回缓存；回调错误会脱敏，不包含原始错误内容。signing secret 能签发该应用下不同用户的 ek，并非用户级秘密；只在可信后端使用，不能下发浏览器。
+`getSigningSecret` 签名为 `(context: ZAITokenAcquisitionContext) => string | Promise<string>`，通过 `context.signal` 使用共享认证任务自己的取消信号。超时、`invalidate()` 或 `dispose()` 会中止任务，迟到结果不写回缓存；回调错误会脱敏，不包含原始错误内容。signing secret 能签发该应用下不同用户的 ek，并非用户级秘密；只在可信后端使用，不能下发浏览器。
 
 Token 默认有效期 1000 秒，在下一次调用且剩余时间不超过 60 秒时续期。Token 和 signing secret 仅缓存于当前 provider／自动鉴权实例；并发首次获取共享一次密钥获取，后续 ek 续期仅本地签名。密钥获取默认独立超时 30 秒；单个业务请求取消不取消共享获取。失败不缓存，后续调用可重试。
 
@@ -182,7 +182,7 @@ const client = createZAIClient({
   allowedTokenTypes: ['user'],
   getToken: createZAITokenProvider({
     acquireTimeoutMs: 30_000,
-    fetchToken: async signal => {
+    fetchToken: async ({signal}) => {
       const response = await fetch('/api/zai/token', {credentials: 'same-origin', signal});
       if (!response.ok) throw new Error('获取令牌失败');
       return response.json(); // {token: 'ek-...', expiresAt: <整数 Unix 秒>}
@@ -191,11 +191,26 @@ const client = createZAIClient({
 });
 ```
 
-`fetchToken` 与 `credentials` 互斥，签名为 `(signal: AbortSignal) => ZAIToken | Promise<ZAIToken>`。将这个共享获取任务自己的 signal 传给后端 `fetch`：超时、`invalidate()` 和 `dispose()` 都会中止它。它与业务请求的 signal 分开；取消一个业务请求不会中止其他请求共享的 Token 获取。
+`fetchToken` 与 `credentials` 互斥，签名为 `(context: ZAITokenAcquisitionContext) => ZAIToken | Promise<ZAIToken>`。将 `context.signal` 传给后端 `fetch`：超时、`invalidate()` 和 `dispose()` 都会中止它。它与业务请求的 signal 分开；取消一个业务请求不会中止其他请求共享的 Token 获取。
 
 `acquireTimeoutMs` 仅用于 `fetchToken` 模式，默认 30,000，必须为 1 至 2,147,483,647 的整数。超时抛出 `ZAIClientError`（`code: 'authentication'`，消息 `Token acquisition timed out.`），丢弃迟到结果并允许后续调用重新获取。它只限制 Token 获取时间，不限制随后业务请求的时长；本地签发 ek 时读取密钥仍使用 `signingSecretTimeoutMs`。
 
-自定义客户端回调签名为 `getToken(admin: boolean): string | Promise<string>`。SDK 在每次发送请求前调用它：`true` 表示此次请求选择 ak；`false` 表示选择 ek（含仅用户接口）。共享权限接口允许通过请求选项 `tokenType` 显式选择；固定权限接口拒绝冲突选项。回调只接收这个布尔值，不接收路径等其他接口信息，SDK 不解码返回的令牌。
+`fetchToken` 和 `getSigningSecret` 收到的获取上下文被冻结，只含 `signal` 和 `reason`。首次获取的原因是 `'initial'`，成功获取后的下一次续期是 `'refresh'`，调用 `invalidate()` 后是 `'invalidated'`；失败或超时后的重试保留原原因。普通 ek 续期复用缓存密钥，不重新调用 `getSigningSecret`；初次获取或清除密钥缓存后才调用它。每个 provider 的身份和用途固定，业务请求的上下文及 signal 不会传入共享获取。
+
+### 认证上下文
+
+自定义客户端回调签名为 `getToken(context: ZAIAuthContext): string | Promise<string>`，返回不含 `Bearer` 的 Token。SDK 在每次发送请求前提供冻结的上下文：
+
+| 字段 | 内容 |
+| --- | --- |
+| `purpose` | 本次选择的 `'admin'` 或 `'user'` |
+| `baseUrl` | 规范化后的绝对 API 根地址 |
+| `method` | 大写 HTTP 方法：`GET`、`POST`、`PUT`、`PATCH`、`DELETE` |
+| `path` | 模板路由，例如 `/sessions/{session_id}/messages`，不含实际参数、查询、请求体或请求头 |
+| `signal` | 可选，原业务请求的 `AbortSignal` |
+| `identity` | 可选，冻结的 `{appID, userID}`；不含密钥或 `userName` |
+
+自定义客户端可通过顶层 `identity` 绑定身份，创建时会校验并保存冻结快照；后续修改原对象不影响客户端。自动认证从 `auth` 取得身份，不能另传顶层 `identity`。这项身份声明不会解码或验证回调返回的 Token，调用者应确保凭据与绑定身份一致，切换用户时创建新实例。
 
 服务端需要自主管理令牌来源时，用两个 provider 分别缓存和续期 ak、ek：
 
@@ -208,11 +223,12 @@ const getUserToken = createZAITokenProvider({
 });
 const client = createZAIClient({
   baseUrl: 'https://zai.example.com/v1/zai',
-  getToken: admin => admin ? getAdminToken() : getUserToken(),
+  identity: {appID: credentials.appID, userID: credentials.userID},
+  getToken: context => context.purpose === 'admin' ? getAdminToken() : getUserToken(),
 });
 ```
 
-这一选择在请求前完成，不是收到 403 后重试。无参回调和直接传入固定类型的 provider 仍兼容，但它们会忽略 `admin`，不会自动切换令牌类型；例如只返回 ek 的 provider 不能调用管理员接口。自定义缓存应分别管理 ak 和 ek，避免共用一个缓存值。`auth.mode: 'auto'` 与 `getToken` 仍然互斥。
+共享接口默认选择 user，也可通过请求选项 `tokenType` 显式选择；固定权限接口拒绝冲突选项。选择在请求前完成，不会在 401/403 后重放。旧 `getToken(admin: boolean)` 签名已移除，必须改用 `context.purpose`；不要把上下文对象当布尔值判断。无参回调和固定类型 provider 可以直接传入，它们忽略上下文，不会自动切换令牌类型。自定义缓存应按身份和用途分别管理，不能共用一个未区分的缓存值。`auth.mode: 'auto'` 与 `getToken` 仍然互斥。
 
 ### 限制客户端用途
 

@@ -3,7 +3,7 @@ import {createZAIClient} from '../src/client.js';
 import {createZAITokenProvider, type ZAIToken} from '../src/auth.js';
 import {ZAIClientError} from '../src/errors.js';
 import {createTransport} from '../src/transport.js';
-import type {CreateZAIClientOptions} from '../src/types.js';
+import type {CreateZAIClientOptions, ZAIAuthContext} from '../src/types.js';
 
 const baseUrl = 'https://zai.test/v1/zai';
 const defaults = {baseUrl, getToken: () => 'token'};
@@ -111,7 +111,7 @@ describe('explicit token permission callbacks', () => {
     const fetchUserToken = vi.fn(async () => ({token: 'ek-backend', expiresAt}));
     const adminProvider = createZAITokenProvider({fetchToken: fetchAdminToken});
     const userProvider = createZAITokenProvider({fetchToken: fetchUserToken});
-    const getToken = vi.fn(async (admin: boolean) => admin ? adminProvider() : userProvider());
+    const getToken = vi.fn(async ({purpose}: ZAIAuthContext) => purpose === 'admin' ? adminProvider() : userProvider());
     const requests: Request[] = [];
     const client = createZAIClient({baseUrl, getToken, fetch: async input => {
       const request = input as Request;
@@ -125,7 +125,7 @@ describe('explicit token permission callbacks', () => {
       client.agents.list(), client.memories.create({name: 'test'}),
       client.settings.models.list(), client.messages.send('session', {content: [{type: 'input_text', text: 'hello'}]}),
     ]);
-    expect(getToken.mock.calls).toEqual([[false], [true], [false], [false]]);
+    expect(getToken.mock.calls).toEqual(['user', 'admin', 'user', 'user'].map(purpose => [expect.objectContaining({purpose})]));
     expect(fetchAdminToken).toHaveBeenCalledTimes(1);
     expect(fetchUserToken).toHaveBeenCalledTimes(1);
     expect(requests).toHaveLength(4);
@@ -143,7 +143,7 @@ describe('explicit token permission callbacks', () => {
     });
     const client = createZAIClient({baseUrl, getToken, fetch: fetcher});
     await expect(admin ? client.settings.models.list({tokenType: 'admin'}) : client.agents.list()).rejects.toMatchObject({code: 'authentication', status});
-    expect(getToken.mock.calls).toEqual([[admin]]);
+    expect(getToken.mock.calls).toEqual([[expect.objectContaining({purpose: admin ? 'admin' : 'user'})]]);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
@@ -226,7 +226,7 @@ describe('upload and binary protocols', () => {
 
   it.each([undefined, 'user', 'admin'] as const)('downloads repository bytes with %s token selection', async tokenType => {
     const bytes = Uint8Array.of(0, 255, 128);
-    const getToken = vi.fn((admin: boolean) => admin ? 'ak-download' : 'ek-download');
+    const getToken = vi.fn(({purpose}: ZAIAuthContext) => purpose === 'admin' ? 'ak-download' : 'ek-download');
     const client = createZAIClient({...defaults, getToken, fetch: async input => {
       const request = input as Request;
       const url = new URL(request.url);
@@ -238,7 +238,7 @@ describe('upload and binary protocols', () => {
     }});
     const blob = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/a+b?c#d&%.bin'}, {tokenType});
     expect(new Uint8Array(await blob.arrayBuffer())).toEqual(bytes);
-    expect(getToken).toHaveBeenCalledWith(tokenType === 'admin');
+    expect(getToken).toHaveBeenCalledWith(expect.objectContaining({purpose: tokenType ?? 'user'}));
   });
 
   it('preserves empty repository files', async () => {

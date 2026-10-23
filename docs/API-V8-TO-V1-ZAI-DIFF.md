@@ -249,7 +249,9 @@
 
 不能按“所有写操作用 ak”分类。例如普通消息、Chat、QA、Coding turn 和 Git 操作都属于共享令牌操作；反过来，部分 GET 操作仅允许 ak。Chat 创建返回 403 也可能表示记忆集合不属于当前应用，并不代表该接口只允许管理员令牌。
 
-### SDK 签发能力的变化
+### SDK 签发能力的变化（0.2.0 历史对照）
+
+本表记录迁移到 SDK 0.2.0 时的行为，不作为当前开发版本的回调签名说明。当前认证上下文、用途限制和直接 ek 签发方式见 [MIGRATION.md](./MIGRATION.md)。
 
 | 能力 | 旧 SDK | 新 SDK 0.2.0 |
 | --- | --- | --- |
@@ -262,11 +264,11 @@
 
 Base64 一项描述的是 SDK 实现差异，不据此推断旧服务只接受 Latin-1。两种令牌均使用小写 MD5 和秒级过期时间，hash 输入为 `签名密钥 + appID + userID + expiredTime`：ak 的签名密钥是应用 API Key，ek 的签名密钥来自新接口。
 
-`getToken(admin)` 的 `true` 表示该接口仅允许 ak，`false` 表示允许 ak 或 ek、推荐返回 ek。回调只接收这个布尔值，没有路径等其他接口参数；SDK 不解码返回的 Token。该标记在每次请求发送前传入，不是遇到 403 后升级权限重试。
+0.2.0 的 `getToken(admin)` 使用布尔值表示当时的接口权限分类：`true` 表示仅允许 ak，`false` 表示允许 ak 或 ek、推荐返回 ek。回调没有路径等其他接口参数。这是历史 SDK 的调用约定，不是服务端 Token 格式的限制。
 
-无参回调和固定类型的 provider 保持兼容，但会忽略标记，不会自动切换令牌类型。需要同时使用两种令牌时，分别创建 ak/ek provider，使用 `getToken: admin => admin ? getAdminToken() : getUserToken()`，各自管理缓存和续期；也可交给 `auth.mode: 'auto'`。两种客户端配置仍互斥。
+当前 SDK 已移除布尔参数，改为冻结的 `getToken(context: ZAIAuthContext)`。需要两种令牌时，使用 `getToken: context => context.purpose === 'admin' ? getAdminToken() : getUserToken()`，按身份和用途分别管理缓存；无参 provider 可直接传入，但忽略上下文。当前上下文附带 API 根地址、HTTP 方法、模板路由、可选业务 signal 和绑定身份；SDK 不解码 Token，也不在 401/403 后升级权限重放。`getToken` 与 `auth.mode: 'auto'` 仍互斥。
 
-默认有效期仍为 1000 秒、提前 60 秒按需续期。ek 的 signing secret 仅在当前实例缓存，并发首次获取共享一个请求，后续续期本地完成；获取密钥默认独立超时 30 秒。SDK 不自动轮换密钥，不在 401/403 后改用 ak 重放。密钥轮换后需要重建 provider/client。
+默认有效期仍为 1000 秒、提前 60 秒按需续期。ek 的 signing secret 仅在当前实例缓存，并发首次获取共享一个任务，后续续期本地完成；获取密钥默认独立超时 30 秒。当前 fetchToken/getSigningSecret 接收独立的获取上下文，含共享 signal 和 initial/refresh/invalidated 原因，不继承业务请求的 signal。0.2.0 在密钥轮换后要求重建 provider/client；当前可通过 invalidate({signingSecret: true}) 重新读取动态密钥，静态密钥更换仍需新建 provider。
 
 ## 7. 普通消息、Chat 与 Coding 流的区别
 

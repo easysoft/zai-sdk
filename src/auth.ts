@@ -8,6 +8,13 @@ export interface ZAIIdentity {
   userID: string;
 }
 
+/** Shared provider acquisition metadata, independent of any one business request. */
+export interface ZAITokenAcquisitionContext {
+  readonly signal: AbortSignal;
+  /** initial until first success; refresh thereafter; invalidated after explicit invalidation until success. */
+  readonly reason: 'initial' | 'refresh' | 'invalidated';
+}
+
 export interface ZAICredentials extends ZAIIdentity {
   appKey: string;
   userName?: string;
@@ -18,7 +25,7 @@ export interface ZAICredentials extends ZAIIdentity {
 /** Trusted backend credentials that can sign user tokens without an application API key. */
 export type ZAIUserCredentials = ZAIIdentity & {userName?: string; appKey?: never} & (
   | {signingSecret: string; getSigningSecret?: never}
-  | {getSigningSecret: (signal: AbortSignal) => string | Promise<string>; signingSecret?: never}
+  | {getSigningSecret: (context: ZAITokenAcquisitionContext) => string | Promise<string>; signingSecret?: never}
 );
 
 export interface ZAIUserTokenOptions extends ZAIIdentity {
@@ -73,8 +80,8 @@ export type ZAITokenProviderOptions = {
     }
   )
   | {
-    /** The shared acquisition owns this signal; pass it to the backend fetch. */
-    fetchToken: (signal: AbortSignal) => ZAIToken | Promise<ZAIToken>;
+    /** The shared acquisition owns context.signal; pass it to the backend fetch. */
+    fetchToken: (context: ZAITokenAcquisitionContext) => ZAIToken | Promise<ZAIToken>;
     /** Independent timeout for shared external token acquisition. Default: 30000. */
     acquireTimeoutMs?: number;
     credentials?: never;
@@ -172,7 +179,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
     throw new ZAIClientError('invalid-input', 'Provide exactly one of credentials or fetchToken.');
   }
 
-  let acquire: (signal: AbortSignal) => ZAIToken | Promise<ZAIToken>;
+  let acquire: (context: ZAITokenAcquisitionContext) => ZAIToken | Promise<ZAIToken>;
   let clearSecret: (() => void) | undefined;
   let disposeSource: (() => void) | undefined;
   let timeoutMs: number | undefined;
@@ -205,7 +212,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       if (!validSeconds(timeoutMs, 1) || timeoutMs > 2_147_483_647) {
         throw new ZAIClientError('invalid-input', 'signingSecretTimeoutMs must be a positive integer no greater than 2147483647.');
       }
-      let loadSecret: (signal: AbortSignal) => string | Promise<string>;
+      let loadSecret: (context: ZAITokenAcquisitionContext) => string | Promise<string>;
       let invalidateSource: (() => void) | undefined;
       if (appKey !== undefined) {
         secretRequest = true;
@@ -218,7 +225,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
         const transport = createTransport({baseUrl: options.baseUrl!, getToken: adminProvider, fetch: options.fetch, headers});
         invalidateSource = () => adminProvider.invalidate();
         disposeSource = () => adminProvider.dispose();
-        loadSecret = async signal => {
+        loadSecret = async ({signal}) => {
           const result = await transport.request<unknown>({method: 'get', path: '/signing_secret', successStatuses: [200], options: {signal}});
           if (!result || typeof result !== 'object' || !('app_id' in result) || result.app_id !== appID
             || !('signing_secret' in result) || typeof result.signing_secret !== 'string' || !result.signing_secret.trim()
@@ -232,10 +239,11 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       }
       let signingSecret: string | undefined;
       clearSecret = () => {signingSecret = undefined; invalidateSource?.();};
-      acquire = async signal => {
+      acquire = async context => {
+        const {signal} = context;
         if (signingSecret === undefined) {
           try {
-            const result = await loadSecret(signal);
+            const result = await loadSecret(context);
             signal.throwIfAborted();
             if (typeof result !== 'string' || !result.trim()) {
               throw new ZAIClientError('authentication', 'The signing-secret source returned an invalid secret.');
@@ -279,6 +287,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   let cached: ZAIToken | undefined;
   let pending: {promise: Promise<string>; controller: AbortController} | undefined;
   let disposed = false;
+  let reason: ZAITokenAcquisitionContext['reason'] = 'initial';
   const getToken = () => {
     if (disposed) return Promise.reject(new ZAIClientError('aborted', 'The token provider has been disposed.'));
     if (pending) return pending.promise;
@@ -287,6 +296,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
     }
     const controller = new AbortController();
     const {signal} = controller;
+    const context: ZAITokenAcquisitionContext = Object.freeze({signal, reason});
     let cancel!: () => void;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const interrupted = new Promise<never>((_, reject) => {
@@ -297,7 +307,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       signal.throwIfAborted();
       let result: ZAIToken;
       try {
-        result = await acquire(signal);
+        result = await acquire(context);
       } catch (cause) {
         if (signal.aborted) throw signal.reason;
         if (cause instanceof ZAIClientError && (hasCredentials || cause.code === 'invalid-input')) throw cause;
@@ -310,6 +320,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       }
       // Snapshot the result: later mutation by the fetcher cannot alter our cache.
       cached = {token: result.token, expiresAt: result.expiresAt};
+      reason = 'refresh';
       return cached.token;
     });
     const promise = Promise.race([acquisition, interrupted]).finally(() => {
@@ -332,6 +343,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       throw new ZAIClientError('invalid-input', 'signingSecret must be a boolean when provided.');
     }
     cached = undefined;
+    reason = 'invalidated';
     const previous = pending;
     pending = undefined;
     if (options?.signingSecret) clearSecret?.();

@@ -226,7 +226,7 @@ const client = createZAIClient({
   baseUrl: '/v1/zai', // 同源代理；跨域时填写完整 API 根地址
   allowedTokenTypes: ['user'],
   getToken: createZAITokenProvider({
-    fetchToken: async signal => {
+    fetchToken: async ({signal}) => {
       const response = await fetch('/api/zai/token', {
         credentials: 'same-origin',
         headers: {accept: 'application/json'},
@@ -242,7 +242,7 @@ const client = createZAIClient({
 
 const {agents} = await client.agents.list();
 console.log(agents);`, 'typescript', true)}
-<p>将 <code>fetchToken</code> 收到的 signal 传给后端 Fetch。它属于共享的 Token 获取任务，与业务请求的 signal 分开；默认 30 秒超时只限制 Token 获取，详见“Token 与自动续期”。</p>
+<p>将 <code>fetchToken</code> 上下文中的 signal 传给后端 Fetch。它属于共享的 Token 获取任务，与业务请求的 signal 分开；默认 30 秒超时只限制 Token 获取，详见“Token 与自动续期”。</p>
 <h3>普通 script 引入 UMD 单文件</h3>
 <p><code>pnpm build:umd</code> 生成自包含的 <code>dist/zai.js</code>；<code>pnpm build</code> 同时生成 ESM、类型声明和该 UMD 文件。复制到静态资源目录后，使用 <code>&lt;script src="/assets/zai.js"&gt;&lt;/script&gt;</code> 加载，在后续普通脚本中通过 <code>ZAI.createZAIClient</code>、<code>ZAI.createZAITokenProvider</code> 使用上述 API，无需额外 JS、CSS 或模块加载器。UMD 与 ESM 的运行时导出相同，仍要求支持原生 Fetch、Streams 等 API 的现代浏览器。</p>
 <p>UMD 随 npm 包分发，可通过 <code>zai-sdk/zai.js</code> 子路径定位为静态资源。不要将它当作 ESM 入口导入。<code>OUT=/path/to/public/zai pnpm build:umd</code> 可指定目标目录，只写入 <code>zai.js</code>，不会清空目录。封装 <code>@zentao/zai</code> 时，由 <code>LibLoader</code> 加载该文件并检查全局 <code>ZAI</code>。</p>
@@ -287,7 +287,7 @@ ${code(`import {createZAITokenProvider} from 'zai-sdk';
 const getUserToken = createZAITokenProvider({
   credentials: {
     appID: 'your-app-id', userID: 'user-123',
-    getSigningSecret: async signal => {
+    getSigningSecret: async ({signal}) => {
       const response = await fetch('https://secrets.example.com/zai/signing-secret', {signal});
       if (!response.ok) throw new Error('获取签名密钥失败');
       return response.text();
@@ -296,7 +296,7 @@ const getUserToken = createZAITokenProvider({
   tokenType: 'user',
   signingSecretTimeoutMs: 30_000,
 });`, 'typescript', true)}
-<p><code>getSigningSecret: (signal: AbortSignal) =&gt; string | Promise&lt;string&gt;</code> 允许从可信后端的集中凭据服务取得密钥。将共享认证任务的 signal 传给 Fetch；超时、invalidate 和 dispose 会中止任务，迟到结果不写回缓存。回调错误会脱敏，不包含原始错误内容。</p>
+<p><code>getSigningSecret: (context: ZAITokenAcquisitionContext) =&gt; string | Promise&lt;string&gt;</code> 允许从可信后端的集中凭据服务取得密钥。将 context.signal 传给 Fetch；超时、invalidate 和 dispose 会中止共享认证任务，迟到结果不写回缓存。回调错误会脱敏，不包含原始错误内容。</p>
 ${note('signing secret 能签发该应用下不同用户的 ek，并非用户级秘密。它和应用 API Key 都必须留在可信后端；浏览器只接收签好的短期 ek。')}
 <div class="table-wrap"><table><thead><tr><th>配置</th><th>默认值</th><th>行为</th></tr></thead><tbody>
 <tr><td>tokenType</td><td>admin</td><td>appKey 凭据可选 user，此时必须提供 baseUrl；直接密钥凭据必须显式选择 user。</td></tr>
@@ -325,10 +325,20 @@ client.auth?.dispose();`, 'typescript', true)}
 <p>自动鉴权客户端的 <code>client.auth</code> 提供相同的 <code>invalidate()</code>、<code>dispose()</code> 方法；自定义 <code>getToken</code> 客户端的 <code>client.auth</code> 为 <code>undefined</code>，由调用者持有并管理原 provider。这些方法只管理认证获取；已发出的业务请求或 SSE 使用该请求自己的 <code>AbortSignal</code> 取消。</p>
 ${note('轮换 signing secret 成功后清除相关实例的 Token 和密钥缓存，动态来源会重新读取。静态 signingSecret 清缓存后仍复用创建时的值，更换它、切换用户或更换应用 API Key 时应释放旧实例并重新创建。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
 <h3>外部 Token 获取与超时</h3>
-<p>浏览器使用 <code>fetchToken: (signal: AbortSignal) =&gt; ZAIToken | Promise&lt;ZAIToken&gt;</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。将回调收到的 signal 传给后端 Fetch；超时、<code>invalidate()</code> 和 <code>dispose()</code> 都会中止它。</p>
+<p>浏览器使用 <code>fetchToken: (context: ZAITokenAcquisitionContext) =&gt; ZAIToken | Promise&lt;ZAIToken&gt;</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。将 context.signal 传给后端 Fetch；超时、<code>invalidate()</code> 和 <code>dispose()</code> 都会中止它。</p>
 <p><code>acquireTimeoutMs</code> 默认 30 秒。超时抛出 <code>ZAIClientError</code>（<code>code: 'authentication'</code>，消息 <code>Token acquisition timed out.</code>），迟到结果不会写回缓存，后续调用可重新获取。这是共享获取任务自己的 signal，取消单个业务请求不影响其他等待者；超时也只限制 Token 获取，不限制随后的业务请求。</p>
-<h3>自定义 getToken 按接口权限选择令牌</h3>
-<p>回调签名为 <code>(admin: boolean) =&gt; string | Promise&lt;string&gt;</code>。SDK 在每次发送请求前传入权限标记：true 表示此次请求选择 ak；false 表示选择 ek（含仅用户接口）。回调只收到该布尔值，不接收路径等其他接口参数。选择发生在请求前，不是收到 403 后重试；SDK 不解码返回的令牌。</p>
+<p>fetchToken 和 getSigningSecret 收到冻结的 <code>ZAITokenAcquisitionContext</code>，只包含 signal 和 reason。首次获取为 initial，成功后的下一次续期为 refresh，invalidate 后为 invalidated；失败或超时后重试保留原原因。普通 ek 续期复用缓存密钥，不调用 getSigningSecret；初次或清除密钥缓存后才调用。每个 provider 绑定固定身份和用途，业务请求上下文及其 signal 不会传入共享获取。</p>
+<h3>自定义 getToken 与认证上下文</h3>
+<p>回调签名为 <code>(context: ZAIAuthContext) =&gt; string | Promise&lt;string&gt;</code>，返回不含 Bearer 的 Token。SDK 在每次请求前传入冻结的上下文，不在 401/403 后重放，也不解码返回的 Token。</p>
+<div class="table-wrap"><table><thead><tr><th>上下文字段</th><th>内容</th></tr></thead><tbody>
+<tr><td>purpose</td><td>本次选择的 admin 或 user。</td></tr>
+<tr><td>baseUrl</td><td>规范化后的绝对 API 根地址。</td></tr>
+<tr><td>method</td><td>大写 GET、POST、PUT、PATCH 或 DELETE。</td></tr>
+<tr><td>path</td><td>模板路由，例如 /sessions/{session_id}/messages；不含实际参数、查询、请求体或请求头。</td></tr>
+<tr><td>signal</td><td>可选，原业务请求的 AbortSignal。</td></tr>
+<tr><td>identity</td><td>可选，冻结的 {appID, userID}，不含密钥或 userName。</td></tr>
+</tbody></table></div>
+<p>自定义客户端的顶层 identity 在创建时校验并保存冻结快照；后续修改原对象不影响客户端。自动认证从 auth 取得身份，不能另传顶层 identity。身份声明不验证 Token，调用者应确保凭据一致，并在切换用户时创建新实例。</p>
 ${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
 
 const baseUrl = 'https://zai.example.com/v1/zai';
@@ -338,13 +348,14 @@ const getAdminToken = createZAITokenProvider({credentials});
 const getUserToken = createZAITokenProvider({credentials, tokenType: 'user', baseUrl});
 const client = createZAIClient({
   baseUrl,
-  getToken: admin => admin ? getAdminToken() : getUserToken(),
+  identity: {appID: credentials.appID, userID: credentials.userID},
+  getToken: context => context.purpose === 'admin' ? getAdminToken() : getUserToken(),
 });
 
-await client.agents.list(); // 调用 getToken(false)
-await client.settings.models.list(); // 调用 getToken(false)，查询用户可调用目录。
-await client.settings.models.list({tokenType: 'admin'}); // 调用 getToken(true)，查询自有管理目录。`, 'typescript', true)}
-<p>无参回调和直接传入固定类型的 provider 仍兼容，但会忽略 admin，不会自动切换令牌类型；只返回 ek 的 provider 不能用于管理员接口。自定义缓存应分别管理 ak、ek，其缓存和续期由调用者负责。auth 自动模式与 getToken 仍然互斥。</p>
+await client.agents.list(); // context.purpose 为 user。
+await client.settings.models.list(); // user，查询用户可调用目录。
+await client.settings.models.list({tokenType: 'admin'}); // admin，查询自有管理目录。`, 'typescript', true)}
+<p>旧 getToken(admin: boolean) 签名已移除，必须改用 context.purpose，不要把上下文对象当布尔值判断。无参回调和固定类型 provider 可直接传入，它们忽略上下文，不会自动切换令牌类型。自定义缓存应按身份和用途分别管理，不能共用一个未区分的缓存值。auth 自动模式与 getToken 仍然互斥。</p>
 <h3>限制客户端用途</h3>
 <p><code>allowedTokenTypes</code> 限制这个客户端的业务请求可选择哪些令牌用途，适用于自动认证和自定义 getToken。默认允许 admin、user；普通业务可限制为 user，管理任务可限制为 admin。不允许的用途在调用 getToken 或发出任何认证、业务请求前，抛出 <code>ZAIClientError</code>（<code>code: 'invalid-input'</code>）。</p>
 ${code(`import {createZAIClient} from 'zai-sdk';
@@ -375,7 +386,8 @@ ${note('该限制不解码或验证自定义回调返回的 Token，也不代替
 <div class="table-wrap"><table><thead><tr><th>CreateZAIClientOptions</th><th>类型</th><th>说明</th></tr></thead><tbody>
 <tr><td><code>baseUrl</code> <b class="required">必填</b></td><td>string</td><td>API 根地址，例如 https://zai.example.com/v1/zai。</td></tr>
 <tr><td><code>auth</code></td><td>ZAIAutoAuthOptions</td><td>服务端自动按接口权限选择令牌；与 getToken 二选一。</td></tr>
-<tr><td><code>getToken</code></td><td>(admin: boolean) =&gt; string | Promise&lt;string&gt;</td><td>每次请求前调用；true 表示本次选择 ak，false 表示选择 ek（含仅用户接口）。实际允许的令牌类型见各接口权限；可用两个 provider 分别缓存。</td></tr>
+<tr><td><code>getToken</code></td><td>(context: ZAIAuthContext) =&gt; string | Promise&lt;string&gt;</td><td>每次请求前调用，返回不含 Bearer 的 Token；context.purpose 表示本次用途，并附带路由、方法、API 根地址、业务 signal 和可选身份。</td></tr>
+<tr><td><code>identity</code></td><td>ZAIIdentity</td><td>仅自定义 getToken 客户端可提供；包含 appID、userID，创建时校验并保存冻结快照。自动认证从 auth 取得身份。</td></tr>
 <tr><td><code>allowedTokenTypes</code></td><td>readonly ('admin' | 'user')[]</td><td>默认允许两种用途；必须非空，创建时保存快照。不允许的用途在回调和网络前拒绝；不改变共享接口默认选择 user 的规则。</td></tr>
 <tr><td><code>fetch</code></td><td>typeof globalThis.fetch</td><td>可选，自定义 Fetch；默认使用原生 Fetch。</td></tr>
 <tr><td><code>headers</code></td><td>HeadersInit</td><td>可选，所有请求的默认请求头。</td></tr>

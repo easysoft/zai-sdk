@@ -1,7 +1,7 @@
 import createClient from 'openapi-fetch';
 import {ZAIClientError} from './errors.js';
 import {createZAITokenProvider} from './auth.js';
-import type {CreateZAIClientOptions, ZAIOperationRequest, ZAITransport, ZAIUploadFile} from './types.js';
+import type {CreateZAIClientOptions, ZAIAuthContext, ZAIOperationRequest, ZAITransport, ZAIUploadFile} from './types.js';
 
 interface DynamicOpenAPIClient {
   request(method: ZAIOperationRequest['method'], path: string, init: {
@@ -22,9 +22,13 @@ function aborted(signal: AbortSignal): ZAIClientError {
 }
 
 /** Cancelling a waiter must not cancel a shared token renewal. */
-async function waitForToken(getToken: (admin: boolean) => string | Promise<string>, admin: boolean, signal?: AbortSignal): Promise<string> {
+async function waitForToken(getToken: (context: ZAIAuthContext) => string | Promise<string>, context: ZAIAuthContext): Promise<string> {
+  const {signal} = context;
   if (signal?.aborted) throw aborted(signal);
-  const pending = Promise.resolve().then(() => getToken(admin));
+  const pending = Promise.resolve().then(() => {
+    if (signal?.aborted) throw aborted(signal);
+    return getToken(context);
+  });
   let listener: (() => void) | undefined;
   try {
     const token = await (signal ? Promise.race([
@@ -191,6 +195,14 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
     throw new ZAIClientError('invalid-input', 'allowedTokenTypes must be a non-empty array containing only admin or user.');
   }
   const allowedTokenTypes = new Set(allowed ?? ['admin', 'user']);
+  const configuredIdentity = options.auth ?? options.identity;
+  if ((options.auth !== undefined && options.identity !== undefined)
+    || (configuredIdentity !== undefined && (!configuredIdentity || typeof configuredIdentity !== 'object'
+      || [configuredIdentity.appID, configuredIdentity.userID].some(value => typeof value !== 'string' || !value.length)))) {
+    throw new ZAIClientError('invalid-input', 'Provide a non-empty appID and userID as identity only with custom getToken.');
+  }
+  const identity = configuredIdentity === undefined ? undefined
+    : Object.freeze({appID: configuredIdentity.appID, userID: configuredIdentity.userID});
   // Generated resource signatures carry the schema types. This internal dynamic
   // adapter only handles the already-typed HTTP operation and raw response body.
   const client = createClient({baseUrl}) as unknown as DynamicOpenAPIClient;
@@ -248,7 +260,11 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
         throw new ZAIClientError('invalid-input', 'Unable to construct the request.', {cause});
       }
       const getToken = providers ? providers[tokenType] : fixedToken!;
-      const token = await waitForToken(getToken, tokenType === 'admin', signal);
+      const context: ZAIAuthContext = Object.freeze({
+        purpose: tokenType, baseUrl, method: input.method.toUpperCase() as ZAIAuthContext['method'], path: input.path,
+        ...(identity ? {identity} : {}), ...(signal ? {signal} : {}),
+      });
+      const token = await waitForToken(getToken, context);
       try {
         headers.set('authorization', `Bearer ${token}`);
       } catch (cause) {

@@ -7,7 +7,18 @@ export interface ZAIRequestOptions {
   idempotencyKey?: string;
 }
 
-import type {ZAICredentials, ZAITokenProvider} from './auth.js';
+import type {ZAICredentials, ZAIIdentity, ZAITokenProvider} from './auth.js';
+
+/** Immutable metadata for one business request; never includes credentials or request payloads. */
+export interface ZAIAuthContext {
+  readonly purpose: 'admin' | 'user';
+  readonly identity?: Readonly<ZAIIdentity>;
+  readonly baseUrl: string;
+  readonly method: Uppercase<ZAIOperationRequest['method']>;
+  /** Route template, without path parameter values or query strings. */
+  readonly path: string;
+  readonly signal?: AbortSignal;
+}
 
 /** Server-side credentials used to select ak/ek before each operation. */
 export interface ZAIAutoAuthOptions extends ZAICredentials {
@@ -26,11 +37,13 @@ export type CreateZAIClientOptions = {
   allowedTokenTypes?: readonly ('admin' | 'user')[];
 } & (
   | {
-    /** Called before each request: true selects ak; false selects ek. Return the token without Bearer. */
-    getToken: (admin: boolean) => string | Promise<string>;
+    /** Called before each request with its authentication context. Return the token without Bearer. */
+    getToken: (context: ZAIAuthContext) => string | Promise<string>;
+    /** Fixed identity metadata for this client; it does not verify the returned token. */
+    identity?: ZAIIdentity;
     auth?: never;
   }
-  | {auth: ZAIAutoAuthOptions; getToken?: never}
+  | {auth: ZAIAutoAuthOptions; getToken?: never; identity?: never}
 );
 
 /** user permits either token; user-only requires ek. Both default to ek. */

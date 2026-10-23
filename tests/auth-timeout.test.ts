@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {createZAITokenProvider} from '../src/auth.js';
-import type {ZAIToken, ZAITokenProviderOptions} from '../src/auth.js';
+import type {ZAIToken, ZAITokenAcquisitionContext, ZAITokenProviderOptions} from '../src/auth.js';
 import {createZAIClient} from '../src/client.js';
 import {ZAIClientError} from '../src/errors.js';
 
@@ -21,7 +21,7 @@ describe('external token acquisition timeout', () => {
   it.each([undefined, 25])('uses the default or configured timeout (%s) and aborts the shared source', async acquireTimeoutMs => {
     const source = deferred<ZAIToken>();
     let sourceSignal: AbortSignal | undefined;
-    const provider = createZAITokenProvider({fetchToken: signal => {sourceSignal = signal; return source.promise;}, acquireTimeoutMs});
+    const provider = createZAITokenProvider({fetchToken: ({signal}) => {sourceSignal = signal; return source.promise;}, acquireTimeoutMs});
     const pending = provider();
     const rejected = expect(pending).rejects.toMatchObject({code: 'authentication', message: 'Token acquisition timed out.'});
     let settled = false;
@@ -41,7 +41,7 @@ describe('external token acquisition timeout', () => {
   it('shares one timeout across concurrent waiters and retries with a new signal', async () => {
     const signals: AbortSignal[] = [];
     const source = deferred<ZAIToken>();
-    const fetchToken = vi.fn((signal: AbortSignal) => {
+    const fetchToken = vi.fn(({signal}: ZAITokenAcquisitionContext) => {
       signals.push(signal);
       return signals.length === 1 ? source.promise : token('recovered');
     });
@@ -87,7 +87,7 @@ describe('external token acquisition timeout', () => {
   it('preserves the timeout error when an abort-aware source rejects during cancellation', async () => {
     const provider = createZAITokenProvider({
       acquireTimeoutMs: 10,
-      fetchToken: signal => new Promise<ZAIToken>((_, reject) => {
+      fetchToken: ({signal}) => new Promise<ZAIToken>((_, reject) => {
         signal.addEventListener('abort', () => reject(new DOMException('backend cancelled', 'AbortError')), {once: true});
       }),
     });
@@ -102,7 +102,7 @@ describe('external token acquisition timeout', () => {
     let sourceSignal: AbortSignal | undefined;
     const provider = createZAITokenProvider({
       acquireTimeoutMs: 10,
-      fetchToken: signal => {
+      fetchToken: ({signal}) => {
         sourceSignal = signal;
         if (result === 'failure') return Promise.reject(new Error('backend unavailable'));
         return result === 'invalid' ? {...token(), token: ''} : token();
@@ -118,7 +118,7 @@ describe('external token acquisition timeout', () => {
   it.each(['invalidate', 'dispose'] as const)('aborts the source signal and releases its timer on %s', async method => {
     const source = deferred<ZAIToken>();
     let sourceSignal: AbortSignal | undefined;
-    const provider = createZAITokenProvider({fetchToken: signal => {sourceSignal = signal; return source.promise;}, acquireTimeoutMs: 10});
+    const provider = createZAITokenProvider({fetchToken: ({signal}) => {sourceSignal = signal; return source.promise;}, acquireTimeoutMs: 10});
     const pending = provider();
     const rejected = expect(pending).rejects.toMatchObject({code: 'aborted'});
     await vi.advanceTimersByTimeAsync(0);
@@ -132,7 +132,7 @@ describe('external token acquisition timeout', () => {
   it('cancels a business waiter independently while another request completes with the shared token', async () => {
     const source = deferred<ZAIToken>();
     let sourceSignal: AbortSignal | undefined;
-    const fetchToken = vi.fn((signal: AbortSignal) => {sourceSignal = signal; return source.promise;});
+    const fetchToken = vi.fn(({signal}: ZAITokenAcquisitionContext) => {sourceSignal = signal; return source.promise;});
     const provider = createZAITokenProvider({fetchToken, acquireTimeoutMs: 100});
     const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({ok: true}));
     const client = createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: provider, fetch});

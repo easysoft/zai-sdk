@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {createZAITokenProvider, createZAIUserToken} from '../src/auth.js';
-import type {ZAITokenProviderOptions, ZAIUserTokenOptions} from '../src/auth.js';
+import type {ZAITokenAcquisitionContext, ZAITokenProviderOptions, ZAIUserTokenOptions} from '../src/auth.js';
 import {ZAIClientError} from '../src/errors.js';
 
 const identity = {appID: '应用🚀', userID: '用户😊', userName: '张三🌟'};
@@ -76,14 +76,14 @@ describe('user-token providers with supplied signing secrets', () => {
 
   it('shares dynamic secret retrieval, signs after retrieval and refreshes only on secret invalidation', async () => {
     const source = deferred<string>();
-    const getSigningSecret = vi.fn<(signal: AbortSignal) => string | Promise<string>>()
+    const getSigningSecret = vi.fn<(context: ZAITokenAcquisitionContext) => string | Promise<string>>()
       .mockReturnValueOnce(source.promise).mockReturnValue('rotated-secret');
     const provider = createZAITokenProvider({credentials: {...identity, getSigningSecret}, tokenType: 'user'});
     const first = provider();
     expect(provider()).toBe(first);
     await vi.advanceTimersByTimeAsync(0);
     expect(getSigningSecret).toHaveBeenCalledTimes(1);
-    expect(getSigningSecret.mock.calls[0]![0]).toBeInstanceOf(AbortSignal);
+    expect(getSigningSecret.mock.calls[0]![0].signal).toBeInstanceOf(AbortSignal);
     vi.setSystemTime((epoch + 20) * 1000);
     source.resolve(signingSecret);
     expect(await first).toBe(expectedToken(signingSecret, epoch + 1020));
@@ -101,13 +101,13 @@ describe('user-token providers with supplied signing secrets', () => {
 
   it.each([undefined, 50])('times out a stalled dynamic source and ignores its late secret (%s)', async signingSecretTimeoutMs => {
     const old = deferred<string>();
-    const getSigningSecret = vi.fn<(signal: AbortSignal) => string | Promise<string>>()
+    const getSigningSecret = vi.fn<(context: ZAITokenAcquisitionContext) => string | Promise<string>>()
       .mockReturnValueOnce(old.promise).mockReturnValue('fresh-secret');
     const provider = createZAITokenProvider({credentials: {...identity, getSigningSecret}, tokenType: 'user', signingSecretTimeoutMs});
     const pending = provider();
     const rejected = expect(pending).rejects.toMatchObject({code: 'authentication', cause: undefined});
     await vi.advanceTimersByTimeAsync((signingSecretTimeoutMs ?? 30_000) - 1);
-    const signal = getSigningSecret.mock.calls[0]![0];
+    const {signal} = getSigningSecret.mock.calls[0]![0];
     expect(signal.aborted).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     await rejected;
@@ -124,7 +124,7 @@ describe('user-token providers with supplied signing secrets', () => {
 
   it.each(['invalidate', 'dispose'] as const)('aborts dynamic secret acquisition on %s and discards its result', async method => {
     const old = deferred<string>();
-    const getSigningSecret = vi.fn<(signal: AbortSignal) => string | Promise<string>>()
+    const getSigningSecret = vi.fn<(context: ZAITokenAcquisitionContext) => string | Promise<string>>()
       .mockReturnValueOnce(old.promise).mockReturnValue('fresh-secret');
     const provider = createZAITokenProvider({credentials: {...identity, getSigningSecret}, tokenType: 'user'});
     const pending = provider();
@@ -132,7 +132,7 @@ describe('user-token providers with supplied signing secrets', () => {
     await vi.advanceTimersByTimeAsync(0);
     provider[method]();
     await rejected;
-    expect(getSigningSecret.mock.calls[0]![0].aborted).toBe(true);
+    expect(getSigningSecret.mock.calls[0]![0].signal.aborted).toBe(true);
     old.resolve('stale-secret');
     await vi.advanceTimersByTimeAsync(0);
     if (method === 'invalidate') {
@@ -149,7 +149,7 @@ describe('user-token providers with supplied signing secrets', () => {
     const cause = Object.assign(new ZAIClientError('network', `Cannot load ${signingSecret}`, {cause: new Error(signingSecret), body: {signingSecret}}), {
       code: signingSecret, status: signingSecret,
     });
-    const getSigningSecret = vi.fn<(signal: AbortSignal) => string | Promise<string>>()
+    const getSigningSecret = vi.fn<(context: ZAITokenAcquisitionContext) => string | Promise<string>>()
       .mockImplementationOnce(() => {if (asynchronous) return Promise.reject(cause); throw cause;})
       .mockReturnValue(signingSecret);
     const provider = createZAITokenProvider({credentials: {...identity, getSigningSecret}, tokenType: 'user'});

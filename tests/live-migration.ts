@@ -107,7 +107,7 @@ function live(name: string, run: (t: TestContext, cleanup: Cleanup) => Promise<v
 
 after(saveResults);
 
-live('live read-only ak/ek permissions and getToken(admin)', async t => {
+live('live read-only ak/ek permissions and getToken(context)', async t => {
   const shared: [string, (c: ZAIClient) => Promise<unknown>][] = [
     ['agents', c => c.agents.list(options())],
     ['sessions', c => c.sessions.list({page_size: 1}, options())],
@@ -156,16 +156,16 @@ live('live read-only ak/ek permissions and getToken(admin)', async t => {
   } else {
     t.diagnostic('No active Coding Agent available; read-only detail permission check not covered.');
   }
-  const flags: boolean[] = [];
-  const explicit = createZAIClient({baseUrl, fetch: tracedFetch, getToken: admin => {
-    flags.push(admin);
-    return admin ? getAdmin() : getUser();
+  const purposes: ('admin' | 'user')[] = [];
+  const explicit = createZAIClient({baseUrl, fetch: tracedFetch, getToken: ({purpose}) => {
+    purposes.push(purpose);
+    return purpose === 'admin' ? getAdmin() : getUser();
   }});
   await explicit.agents.list(options());
   await explicit.settings.models.list(options());
   await explicit.settings.models.list({...options(), tokenType: 'admin'});
   await explicit.coding.runners.list(options());
-  assert.deepEqual(flags, [false, false, true, true]);
+  assert.deepEqual(purposes, ['user', 'user', 'admin', 'admin']);
   const diagnosis = await client.doctor();
   assert.ok(diagnosis.details.filter(detail => detail.type !== 'agents').every(detail => detail.pass), 'Read-only connectivity checks must pass.');
   t.diagnostic(`Read-only doctor: ${diagnosis.pass ? 'all checks passed' : 'no active custom Chat Agent; Coding validation is independent'}.`);

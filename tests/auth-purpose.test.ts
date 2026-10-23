@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from 'vitest';
 import {createZAIClient} from '../src/client.js';
 import type {ZAIClient} from '../src/client.js';
-import type {CreateZAIClientOptions, ZAIRequestOptions} from '../src/types.js';
+import type {CreateZAIClientOptions, ZAIAuthContext, ZAIRequestOptions} from '../src/types.js';
 
 const baseUrl = 'https://zai.test/v1/zai';
 const auth = {mode: 'auto' as const, appID: 'app', appKey: 'key', userID: 'user'};
@@ -12,7 +12,7 @@ const operations = {
   userOnly: (client: ZAIClient, options?: ZAIRequestOptions) => client.coding.keys.getPublic('agent', options),
 };
 const createFixture = (automatic: boolean, allowedTokenTypes?: readonly TokenType[]) => {
-  const getToken = vi.fn((admin: boolean) => admin ? 'ak-external' : 'ek-external');
+  const getToken = vi.fn(({purpose}: ZAIAuthContext) => purpose === 'admin' ? 'ak-external' : 'ek-external');
   const fetch = vi.fn<typeof globalThis.fetch>(async input => {
     const request = input as Request;
     return Response.json(new URL(request.url).pathname.endsWith('/signing_secret')
@@ -55,7 +55,7 @@ describe.each([false, true])('client token-purpose restrictions (automatic: %s)'
       await expect(operations[operation](client, {tokenType})).resolves.toEqual({ok: true});
       const request = fetch.mock.calls.at(-1)![0] as Request;
       expect(request.headers.get('authorization')).toMatch(expected === 'admin' ? /^Bearer ak-/ : /^Bearer ek-/);
-      if (!automatic) expect(getToken).toHaveBeenCalledWith(expected === 'admin');
+      if (!automatic) expect(getToken).toHaveBeenCalledWith(expect.objectContaining({purpose: expected}));
       expect(fetch).toHaveBeenCalledTimes(automatic && expected === 'user' ? 2 : 1);
     },
   );
@@ -127,5 +127,5 @@ it.each(['admin', 'user'] as const)('enforces requested purpose without interpre
   const client = createZAIClient({baseUrl, getToken, fetch, allowedTokenTypes: [tokenType]});
   await client.settings.models.list({tokenType});
   expect((fetch.mock.calls[0]![0] as Request).headers.get('authorization')).toBe(`Bearer ${opaqueToken}`);
-  expect(getToken).toHaveBeenCalledWith(tokenType === 'admin');
+  expect(getToken).toHaveBeenCalledWith(expect.objectContaining({purpose: tokenType}));
 });

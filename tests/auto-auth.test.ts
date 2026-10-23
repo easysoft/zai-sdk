@@ -41,7 +41,7 @@ describe('automatic authentication configuration', () => {
     const client = createZAIClient({baseUrl, getToken, fetch});
     await client.settings.models.list();
     await client.agents.list();
-    expect(getToken.mock.calls).toEqual([[false], [false]]);
+    expect(getToken.mock.calls).toEqual([[expect.objectContaining({purpose: 'user'})], [expect.objectContaining({purpose: 'user'})]]);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 

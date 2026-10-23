@@ -1,6 +1,7 @@
 import {describe, expect, it, vi} from 'vitest';
 import {createZAIClient} from '../src/client.js';
 import {ZAI_OPERATIONS} from '../src/operations.js';
+import type {ZAIAuthContext} from '../src/types.js';
 import {loadSpecification, resolveSchema, type Schema} from '../scripts/openapi.js';
 
 const specification = await loadSpecification();
@@ -94,7 +95,7 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
       : {seq: 2, type: 'turn.completed', turn_id: 'turn', payload: {future: 'kept'}, created_at: '2026-09-29T00:00:00Z'};
     const result = binary ? 'binary result' : fixture(responseMediaTypes['application/json']?.schema);
     const requiresAdmin = adminOperations.has(`${method} ${path}`);
-    const getToken = vi.fn((admin: boolean) => admin ? 'ak-contract-token' : 'ek-contract-token');
+    const getToken = vi.fn(({purpose}: ZAIAuthContext) => purpose === 'admin' ? 'ak-contract-token' : 'ek-contract-token');
     let secretFetched = false;
     const fetcher = vi.fn<typeof fetch>(async requestInput => {
       const request = requestInput as Request;
@@ -160,7 +161,7 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
       expect(events).toEqual([{type: 'data', id: '2', event: eventName, rawData: JSON.stringify(event), data: event}]);
     } else expect(actual).toEqual(result);
     expect(fetcher).toHaveBeenCalledTimes(mode === 'auto' && !requiresAdmin ? 2 : 1);
-    expect(getToken.mock.calls).toEqual(mode === 'explicit' ? [[requiresAdmin]] : []);
+    expect(getToken.mock.calls).toEqual(mode === 'explicit' ? [[expect.objectContaining({purpose: requiresAdmin ? 'admin' : 'user'})]] : []);
     expect(operation.pathParams).toEqual(pathNames);
     expect(operation.query).toEqual(queryParameters.map(value => value.name));
     expect(operation.hasBody).toBe(!!mediaTypes);
@@ -217,6 +218,6 @@ describe('resource-specific behavior', () => {
     for await (const event of stream) events.push(event);
     expect(events).toEqual([{type: 'data', event: 'chunk', rawData: JSON.stringify(chunk), data: chunk}, {type: 'done'}]);
     expect(fetcher).toHaveBeenCalledTimes(2);
-    expect(getToken.mock.calls).toEqual([[false], [false]]);
+    expect(getToken.mock.calls).toEqual([[expect.objectContaining({purpose: 'user'})], [expect.objectContaining({purpose: 'user'})]]);
   });
 });

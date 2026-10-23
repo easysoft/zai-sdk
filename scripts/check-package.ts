@@ -54,8 +54,8 @@ try {
   }
   for (const exports of [esm, globals]) {
     const createClient = exports.createZAIClient as typeof import('../src/index.js').createZAIClient;
-    const permissions: boolean[] = [];
-    const client = createClient({baseUrl: 'https://example.test/v1/zai', getToken: admin => { permissions.push(admin); return admin ? 'ak-fixture' : 'ek-fixture'; }, fetch: async input => {
+    const purposes: ('admin' | 'user')[] = [];
+    const client = createClient({baseUrl: 'https://example.test/v1/zai', getToken: ({purpose}) => { purposes.push(purpose); return purpose === 'admin' ? 'ak-fixture' : 'ek-fixture'; }, fetch: async input => {
       const request = input as Request;
       const url = new URL(request.url);
       if (url.pathname.endsWith('/status/stream')) return new Response('event: runner.status\nid: 1\ndata: {"status":"ready"}\n\n', {headers: {'content-type': 'text/event-stream'}});
@@ -82,7 +82,7 @@ try {
     await client.coding.agents.ensureRunnerInstance('agent', {}, {idempotencyKey: 'package-instance', tokenType: 'user'});
     const download = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/file.bin'});
     assert.deepEqual(new Uint8Array(await download.arrayBuffer()), Uint8Array.of(0, 255, 128));
-    assert.deepEqual(permissions, [false, false, false, false]);
+    assert.deepEqual(purposes, ['user', 'user', 'user', 'user']);
   }
 
   // A standalone UMD build emits one file and preserves its destination's contents.
@@ -104,8 +104,8 @@ assert.ok(import.meta.resolve('zai-sdk/zai.js').endsWith('/dist/zai.js'));
 assert.equal(Object.keys(spec.paths).length,100);
 assert.equal(Object.keys(supplement.paths).length,0);
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
-const permissions = [];
-const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:admin=>{permissions.push(admin);return getToken();},fetch:async request => {
+const purposes = [];
+const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:({purpose})=>{purposes.push(purpose);return getToken();},fetch:async request => {
   assert.ok(request.headers.get('authorization').startsWith('Bearer ak-'));
   if (new URL(request.url).pathname.endsWith('/models')) return Response.json({models:[]});
   return Response.json({agents:[]});
@@ -113,7 +113,7 @@ const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:a
 assert.deepEqual(await client.agents.list(), {agents:[]});
 assert.deepEqual(await client.settings.models.list(), {models:[]});
 assert.deepEqual(await client.settings.models.list({tokenType:'admin'}), {models:[]});
-assert.deepEqual(permissions, [false,false,true]);
+assert.deepEqual(purposes, ['user','user','admin']);
 const diagnosis = await client.doctor();
 assert.equal(diagnosis.pass, false);
 assert.equal(diagnosis.details.find(detail => detail.type === 'server').pass, true);
@@ -125,7 +125,7 @@ import {createZAIClient, type CodingSessionsCreateInput, type ChatMessagesSendIn
 const coding: CodingSessionsCreateInput = {workspace_id:'workspace',plan_mode:true};
 const message: ChatMessagesSendInput = {content:'hello'};
 const event: ZAIStreamEvent = {type:'done'};
-const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:admin=> admin ? 'ak-token' : 'ek-token'});
+const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:({purpose})=> purpose === 'admin' ? 'ak-token' : 'ek-token'});
 const diagnosis: Promise<ZAIDoctorResult> = client.doctor({chat:false});
 void client.settings.models.list();
 void client.settings.models.list({tokenType:'admin'});

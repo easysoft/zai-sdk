@@ -24,7 +24,7 @@ test('downloads repository bytes with shared ak/ek permissions and encoded paths
     await route.fulfill({body: Buffer.from([0, 255, 128]), contentType: 'application/octet-stream'});
   });
   const bytes = await page.evaluate(async () => {
-    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: admin => admin ? 'ak-browser' : 'ek-browser'});
+    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: ({purpose}) => purpose === 'admin' ? 'ak-browser' : 'ek-browser'});
     const result = [];
     for (const tokenType of [undefined, 'admin'] as const) {
       const blob = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/a+b?c#d&%.bin'}, {tokenType});
@@ -261,10 +261,10 @@ test('passes the required permission to an async getToken before each native req
     await route.fulfill({status: path.endsWith('/memories') ? 403 : 200, json: {}});
   });
   const result = await page.evaluate(async () => {
-    const permissions: boolean[] = [];
-    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: async admin => {
-      permissions.push(admin);
-      return admin ? 'ak-backend' : 'ek-backend';
+    const purposes: ('admin' | 'user')[] = [];
+    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: async ({purpose}) => {
+      purposes.push(purpose);
+      return purpose === 'admin' ? 'ak-backend' : 'ek-backend';
     }});
     await client.agents.list();
     await client.settings.models.list();
@@ -275,10 +275,10 @@ test('passes the required permission to an async getToken before each native req
       throw new Error('Expected permission denial');
     } catch (error) {
       if (!(error instanceof window.zai.ZAIClientError)) throw error;
-      return {permissions, code: error.code, status: error.status};
+      return {purposes, code: error.code, status: error.status};
     }
   });
-  expect(result).toEqual({permissions: [false, false, true, false, true], code: 'authentication', status: 403});
+  expect(result).toEqual({purposes: ['user', 'user', 'admin', 'user', 'admin'], code: 'authentication', status: 403});
   expect(received).toEqual([
     {path: '/v1/zai/agents', token: 'Bearer ek-backend'},
     {path: '/v1/zai/models', token: 'Bearer ek-backend'},
@@ -286,6 +286,57 @@ test('passes the required permission to an async getToken before each native req
     {path: '/v1/zai/sessions/session/messages', token: 'Bearer ek-backend'},
     {path: '/v1/zai/memories', token: 'Bearer ak-backend'},
   ]);
+});
+
+test('binds a frozen request context to a user-only client with a directly signed EK', async ({page}) => {
+  const received: {path: string; token: string | null}[] = [];
+  await page.route('**/v1/zai/**', async route => {
+    const request = route.request();
+    received.push({path: new URL(request.url()).pathname, token: await request.headerValue('authorization')});
+    await route.fulfill({json: {}});
+  });
+  const result = await page.evaluate(async () => {
+    const identity = {appID: 'browser-app', userID: '用户😀'};
+    // This fixture secret exercises native signing; production secrets stay on the backend.
+    const provider = window.zai.createZAITokenProvider({credentials: {...identity, signingSecret: 'browser-fixture-secret'}, tokenType: 'user'});
+    const controller = new AbortController();
+    let context: import('../../src/index.js').ZAIAuthContext | undefined;
+    let tokenCalls = 0;
+    const client = window.zai.createZAIClient({
+      baseUrl: '/v1/zai///', identity, allowedTokenTypes: ['user'],
+      getToken: value => {context = value; tokenCalls++; return provider();},
+    });
+    identity.appID = 'changed-app';
+    identity.userID = 'changed-user';
+    await client.agents.get('agent', {signal: controller.signal});
+    let denied: string | undefined;
+    try {
+      await client.coding.runners.list();
+    } catch (error) {
+      if (!(error instanceof window.zai.ZAIClientError)) throw error;
+      denied = error.code;
+    }
+    provider.dispose();
+    return {
+      tokenCalls, denied,
+      context: {purpose: context?.purpose, baseUrl: context?.baseUrl, method: context?.method, path: context?.path, identity: context?.identity},
+      sameSignal: context?.signal === controller.signal,
+      frozen: Object.isFrozen(context), identityFrozen: Object.isFrozen(context?.identity),
+      separateIdentity: context?.identity !== identity,
+    };
+  });
+  expect(result).toEqual({
+    tokenCalls: 1, denied: 'invalid-input',
+    context: {purpose: 'user', baseUrl: new URL('/v1/zai', page.url()).href, method: 'GET', path: '/agents/{agent_id}', identity: {appID: 'browser-app', userID: '用户😀'}},
+    sameSignal: true, frozen: true, identityFrozen: true, separateIdentity: true,
+  });
+  expect(received).toHaveLength(1);
+  expect(received[0]!.path).toBe('/v1/zai/agents/agent');
+  expect(received[0]!.token).toMatch(/^Bearer ek-/);
+  const payload = JSON.parse(Buffer.from(received[0]!.token!.slice('Bearer ek-'.length), 'base64').toString('utf8')) as {app_id: string; user_id: string; hash: string; expired_time: number};
+  expect(payload.app_id).toBe('browser-app');
+  expect(payload.user_id).toBe('用户😀');
+  expect(payload.hash).toBe(createHash('md5').update('browser-fixture-secret' + 'browser-app' + '用户😀' + payload.expired_time).digest('hex'));
 });
 
 test('extracts a file without a path through real multipart HTTP', async ({page}) => {
@@ -342,7 +393,7 @@ test('generates and reuses idempotency keys and downloads Coding attachments wit
     await route.fulfill({contentType: 'application/octet-stream', body: Buffer.from([0, 128, 255])});
   });
   const bytes = await page.evaluate(async () => {
-    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: admin => admin ? 'ak-browser' : 'ek-browser'});
+    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: ({purpose}) => purpose === 'admin' ? 'ak-browser' : 'ek-browser'});
     await client.coding.workspaces.create('agent', {name: 'first'});
     await client.coding.workspaces.create('agent', {name: 'second'});
     await client.coding.workspaces.create('agent', {name: 'retry'}, {idempotencyKey: 'workspace-retry', headers: {'Idempotency-Key': 'ignored'}});

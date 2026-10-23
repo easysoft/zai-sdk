@@ -10,6 +10,7 @@ import {
   type ChatMessagesSendResponse, type ChatSendResponse, type FilesExtractInput,
   type ZAITokenProvider, type ZAIUploadFile, type ZAIDoctorResult, type ZAIDoctorDetail,
   type ZAIIdentity, type ZAIUserCredentials, type ZAIUserTokenOptions,
+  type ZAIAuthContext, type ZAITokenAcquisitionContext,
 } from '../src/index.js';
 
 /** Compiled by tsc but never invoked: invalid calls must remain type errors. */
@@ -81,14 +82,23 @@ function assertPublicAPI(client: ZAIClient) {
   const userCredentials = {...identity, userName: '用户😀', signingSecret: 'secret'} satisfies ZAIUserCredentials;
   createZAIUserToken({...identity, signingSecret: 'secret', expiresAt: 1_893_457_000} satisfies ZAIUserTokenOptions);
   createZAITokenProvider({credentials: userCredentials, tokenType: 'user', expiresInSeconds: 1000});
-  createZAITokenProvider({credentials: {...identity, getSigningSecret: signal => {
-    expectTypeOf(signal).toEqualTypeOf<AbortSignal>();
+  createZAITokenProvider({credentials: {...identity, getSigningSecret: context => {
+    expectTypeOf(context).toEqualTypeOf<ZAITokenAcquisitionContext>();
+    expectTypeOf(context.signal).toEqualTypeOf<AbortSignal>();
     return 'secret';
   }}, tokenType: 'user', signingSecretTimeoutMs: 5_000});
   createZAITokenProvider({credentials: {...identity, getSigningSecret: async () => 'secret'}, tokenType: 'user'});
   createZAITokenProvider({fetchToken: async () => ({token: 'token', expiresAt: 1000}), refreshBeforeSeconds: 10});
-  createZAITokenProvider({fetchToken: signal => {
-    expectTypeOf(signal).toEqualTypeOf<AbortSignal>();
+  createZAITokenProvider({fetchToken: context => {
+    expectTypeOf(context).toEqualTypeOf<ZAITokenAcquisitionContext>();
+    expectTypeOf(context.signal).toEqualTypeOf<AbortSignal>();
+    expectTypeOf(context.reason).toEqualTypeOf<'initial' | 'refresh' | 'invalidated'>();
+    // @ts-expect-error An acquisition reason is an immutable snapshot.
+    context.reason = 'initial';
+    // @ts-expect-error Shared acquisition cancellation belongs to the provider.
+    context.signal = new AbortController().signal;
+    // @ts-expect-error Shared acquisition does not belong to one business request.
+    void context.purpose;
     return {token: 'token', expiresAt: 1000};
   }, acquireTimeoutMs: 5_000});
   const tokenProvider = createZAITokenProvider({fetchToken: () => ({token: 'token', expiresAt: 1000})});
@@ -100,12 +110,26 @@ function assertPublicAPI(client: ZAIClient) {
   client.auth?.invalidate({signingSecret: true});
   client.auth?.dispose();
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', auth: {mode: 'auto', appID: 'app', appKey: 'key', userID: 'user', userName: '用户😀'}});
-  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: admin => {
-    expectTypeOf(admin).toEqualTypeOf<boolean>();
-    return admin ? 'ak-token' : 'ek-token';
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', identity, getToken: context => {
+    expectTypeOf(context).toEqualTypeOf<ZAIAuthContext>();
+    expectTypeOf(context.purpose).toEqualTypeOf<'admin' | 'user'>();
+    expectTypeOf(context.identity).toEqualTypeOf<Readonly<ZAIIdentity> | undefined>();
+    expectTypeOf(context.baseUrl).toEqualTypeOf<string>();
+    expectTypeOf(context.method).toEqualTypeOf<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>();
+    expectTypeOf(context.path).toEqualTypeOf<string>();
+    expectTypeOf(context.signal).toEqualTypeOf<AbortSignal | undefined>();
+    // @ts-expect-error Request purpose cannot be escalated by mutating its context.
+    context.purpose = 'admin';
+    // @ts-expect-error Bound identity metadata is immutable.
+    context.identity!.userID = 'other';
+    // @ts-expect-error Request URL metadata is immutable.
+    context.baseUrl = 'https://other.test';
+    // @ts-expect-error Token callbacks do not receive credential material.
+    void context.appKey;
+    return context.purpose === 'admin' ? 'ak-token' : 'ek-token';
   }});
-  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: async admin => admin ? 'ak-token' : 'ek-token'});
-  // Existing no-argument callbacks and fixed-type providers remain compatible.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: async context => context.purpose === 'admin' ? 'ak-token' : 'ek-token'});
+  // No-argument sources can ignore request metadata.
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'ek-token'});
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'ek-token', allowedTokenTypes: ['user']});
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', allowedTokenTypes: ['admin', 'user'] as const});
@@ -250,6 +274,16 @@ function assertPublicAPI(client: ZAIClient) {
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', allowedTokenTypes: ['administrator']});
   // @ts-expect-error Permissions are not boolean administrator selectors.
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', auth: {mode: 'auto', ...identity, appKey: 'key'}, allowedTokenTypes: [true]});
+  // @ts-expect-error Token callbacks receive structured context instead of a boolean.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: (admin: boolean) => admin ? 'ak-token' : 'ek-token'});
+  // @ts-expect-error Identity metadata requires both application and user identifiers.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', identity: {userID: 'user'}, getToken: () => 'token'});
+  // @ts-expect-error Automatic authentication already owns its bound identity.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', identity, auth: {mode: 'auto', ...identity, appKey: 'key'}});
+  // @ts-expect-error External token acquisition receives a context, not a bare AbortSignal.
+  createZAITokenProvider({fetchToken: (_signal: AbortSignal) => ({token: 'token', expiresAt: 1000})});
+  // @ts-expect-error Dynamic signing-secret acquisition also receives structured context.
+  createZAITokenProvider({credentials: {...identity, getSigningSecret: (_signal: AbortSignal) => 'secret'}, tokenType: 'user'});
 }
 
 it('exports precise nested request, response, upload, and asynchronous stream types', () => {
