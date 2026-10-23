@@ -1,4 +1,23 @@
-# ZAI SDK 0.3.0 真实环境验证
+# 仓库下载权限核对（2026-10-22）
+
+通过已登录的文档页面核对 [Coding API](https://zai-dev.sh.oop.cc/docs/zai/coding/api#h-4aihmi) 的鉴权说明及仓库文件端点清单：`.../repos/{repository_id}/files/download` 使用共享 ak/ek 鉴权。文档对 `.../sessions/{session_id}/files/download` 另有仅 ek 的明确限制，SDK 分别映射为 `user` 和 `user-only`；共享接口默认选择 ek，允许显式选择 ak。
+
+随后使用项目 `.env.local` 的测试凭据，对 `https://zai-dev.sh.oop.cc/v1/zai` 做 4 次只读请求：
+
+| 检查 | 令牌 | HTTP 状态 |
+| --- | --- | --- |
+| 列出既有 Coding Agent | ak | 200 |
+| 列出该 Agent 下当前用户的工作区 | ek | 200，空列表 |
+| 仓库下载，使用不存在的工作区与仓库 ID | ak | 404 |
+| 同一缺失资源的仓库下载 | ek | 404 |
+
+两次下载探针的请求 ID 分别为 `03777641-3f26-4496-834c-18719e06911a` 和 `24c40665-262c-4d45-9cfc-c556c036ea01`。404 结果不能证明对真实仓库文件的读取权限；本次权限分类依据官方文档，没有把缺失资源探针标记为成功下载验收。测试用户没有现成工作区，因此未继续下载真实文件。
+
+未创建或修改资源，未运行模型 Turn，也未执行完整 live 套件。上述状态与请求 ID 为本次脱敏记录；离线完整检查见 [VALIDATION.md](./VALIDATION.md)。
+
+---
+
+# ZAI SDK 0.3.0 真实环境验证（2026-10-16 历史记录）
 
 验证日期：2026-10-16。使用项目 `.env.local` 的测试凭据，连接 `https://zai-dev.sh.oop.cc/v1/zai`；主流程与权限测试使用当前源码中的 SDK，最新镜像策略独立诊断使用原生 `fetch`。重点覆盖新版 Coding 主流程和 ak / ek 权限。日志只记录脱敏请求信息，不保存令牌、应用密钥、签名密钥、Git 身份、单次下载链接或模型响应正文。
 

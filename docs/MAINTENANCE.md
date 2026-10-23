@@ -13,10 +13,10 @@ pnpm docs:check
 - `styles.css`：静态文档的视觉样式与唯一运行时 token 定义。
 - `interactions.ts`：本地搜索、锚点展开、复制反馈、窄屏目录和打印增强。
 - `theme.ts`：首次绘制前恢复配色偏好，绑定主题选择并同步同源页面的偏好。
-- `../scripts/generate-docs.ts`：通过 `scripts/openapi.ts` 读取原始规范与 Coding SSE 补充规范，再读取真实 SDK 导出，生成 HTML；校验 HTTP 操作与资源方法全覆盖、全部公开导出、示例的 TypeScript 类型和锚点。
+- `../scripts/generate-docs.ts`：通过 `scripts/openapi.ts` 读取原始规范与 add-only 补充规范，再读取真实 SDK 导出，生成 HTML；校验 HTTP 操作与资源方法全覆盖、全部公开导出、示例的 TypeScript 类型和锚点。Coding SSE 已纳入原始规范，当前补充规范的 paths 为空。
 - `index.html`：生成产物，不单独手改。源码或 OpenAPI 更新后重新生成并提交该文件。
 
-接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。共享本地 `$ref` 解析用于字段展开和调用示例。上传类型、消息流开关、持续 Coding SSE 等 SDK 行为另作说明。原始 151 个操作加上独立 Coding SSE，共 99 条路径、152 个 HTTP 操作、155 个资源方法；三个消息发送端点各有 send/stream 两种方法。每个操作展示仅 ak、共享 ak/ek 或仅 ek 权限、自动模式选择、幂等键要求和来源；消息 SSE、Coding 会话 SSE 与 Runner 状态 SSE 分别生成协议说明和示例，原始二进制上传使用 Blob 示例。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
+接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。共享本地 `$ref` 解析用于字段展开和调用示例。上传类型、消息流开关、持续 Coding SSE 等 SDK 行为另作说明。当前原始规范含 Coding SSE，共 100 条路径、153 个 HTTP 操作、156 个资源方法；三个消息发送端点各有 send/stream 两种方法。每个操作展示仅 ak、共享 ak/ek 或仅 ek 权限、自动模式选择、幂等键要求和来源；消息 SSE、Coding 会话 SSE 与 Runner 状态 SSE 分别生成协议说明和示例，原始二进制上传使用 Blob 示例。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
 
 嵌套资源以完整点路径标识，例如 `coding.sessions.create`；类型按每段首字母大写，锚点将全部点替换为连字符。资源分组、操作名称及公开导出均要覆盖，不能只处理两层路径。补充规范只允许新增路径，原始规范保持不变。
 

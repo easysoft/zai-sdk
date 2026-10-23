@@ -14,6 +14,28 @@ test.beforeEach(async ({page}) => {
   await page.waitForFunction(() => Boolean(window.zai));
 });
 
+test('downloads repository bytes with shared ak/ek permissions and encoded paths', async ({page}) => {
+  const tokens: string[] = [];
+  await page.route('**/v1/zai/coding/agents/agent/workspaces/workspace/repos/repo/files/download*', async route => {
+    const request = route.request();
+    tokens.push(request.headers()['authorization']!);
+    expect(new URL(request.url()).searchParams.get('path')).toBe('目录/a+b?c#d&%.bin');
+    expect(request.headers()['accept']).toBe('application/octet-stream');
+    await route.fulfill({body: Buffer.from([0, 255, 128]), contentType: 'application/octet-stream'});
+  });
+  const bytes = await page.evaluate(async () => {
+    const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: admin => admin ? 'ak-browser' : 'ek-browser'});
+    const result = [];
+    for (const tokenType of [undefined, 'admin'] as const) {
+      const blob = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/a+b?c#d&%.bin'}, {tokenType});
+      result.push(Array.from(new Uint8Array(await blob.arrayBuffer())));
+    }
+    return result;
+  });
+  expect(tokens).toEqual(['Bearer ek-browser', 'Bearer ak-browser']);
+  expect(bytes).toEqual([[0, 255, 128], [0, 255, 128]]);
+});
+
 test('imports the ESM build and sends a signed authenticated GET with query parameters', async ({page}) => {
   let request: Request | undefined;
   await page.route('**/v1/zai/sessions*', async route => {

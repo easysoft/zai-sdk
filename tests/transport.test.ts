@@ -223,6 +223,63 @@ describe('upload and binary protocols', () => {
     const client = createZAIClient({...defaults, fetch: async () => new Response(null)});
     await expect(client.sessions.downloadFile('s', {path: 'file'})).rejects.toMatchObject({code: 'invalid-response'});
   });
+
+  it.each([undefined, 'user', 'admin'] as const)('downloads repository bytes with %s token selection', async tokenType => {
+    const bytes = Uint8Array.of(0, 255, 128);
+    const getToken = vi.fn((admin: boolean) => admin ? 'ak-download' : 'ek-download');
+    const client = createZAIClient({...defaults, getToken, fetch: async input => {
+      const request = input as Request;
+      const url = new URL(request.url);
+      expect(url.pathname).toBe('/v1/zai/coding/agents/agent/workspaces/workspace/repos/repo/files/download');
+      expect(url.searchParams.get('path')).toBe('目录/a+b?c#d&%.bin');
+      expect(request.headers.get('authorization')).toBe(`Bearer ${tokenType === 'admin' ? 'ak' : 'ek'}-download`);
+      expect(request.headers.get('accept')).toBe('application/octet-stream');
+      return new Response(bytes, {headers: {'content-type': 'application/octet-stream'}});
+    }});
+    const blob = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/a+b?c#d&%.bin'}, {tokenType});
+    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(bytes);
+    expect(getToken).toHaveBeenCalledWith(tokenType === 'admin');
+  });
+
+  it('preserves empty repository files', async () => {
+    const client = createZAIClient({...defaults, fetch: async () => new Response(new Uint8Array())});
+    expect((await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: 'empty'})).size).toBe(0);
+  });
+
+  it.each([
+    [undefined, 404], ['', 404], ['missing', 404], ['offline', 503],
+  ] as const)('preserves repository download HTTP %s/%s errors', async (path, status) => {
+    const body = {error: status === 404 ? 'not_found' : 'runner_offline'};
+    const client = createZAIClient({...defaults, fetch: async input => {
+      const params = new URL((input as Request).url).searchParams;
+      expect(params.get('path')).toBe(path ?? null);
+      return Response.json(body, {status});
+    }});
+    await expect(client.coding.repositories.downloadFile('agent', 'workspace', 'repo', path === undefined ? undefined : {path}))
+      .rejects.toMatchObject({code: 'http', status, body});
+  });
+
+  it('resumes Coding SSE with Last-Event-ID and preserves actual plan mode updates', async () => {
+    const data = {seq: 13, type: 'session.updated', turn_id: 'turn', payload: {turn_id: 'turn', plan_mode: false}, created_at: '2026-10-22'};
+    const client = createZAIClient({...defaults, fetch: async input => {
+      const request = input as Request;
+      expect(request.headers.get('last-event-id')).toBe('12');
+      expect(new URL(request.url).search).toBe('');
+      return new Response(`: keep-alive\n\nid: 13\nevent: session.updated\ndata: ${JSON.stringify(data)}\n\n`, {headers: {'content-type': 'text/event-stream'}});
+    }});
+    const events = [];
+    for await (const event of await client.coding.events.stream('session', undefined, {headers: {'Last-Event-ID': '12'}})) events.push(event);
+    expect(events).toMatchObject([{type: 'data', id: '13', event: 'session.updated', data}]);
+  });
+
+  it('sends session instructions beyond the former 16000-character schema limit intact', async () => {
+    const systemPrompt = 'x'.repeat(16001);
+    const client = createZAIClient({...defaults, fetch: async input => {
+      expect((await (input as Request).json()).system_prompt).toBe(systemPrompt);
+      return Response.json({id: 'session'}, {status: 201});
+    }});
+    await client.coding.sessions.create('agent', {workspace_id: 'workspace', system_prompt: systemPrompt});
+  });
 });
 
 describe('token errors and request cancellation', () => {

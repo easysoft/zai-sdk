@@ -17,7 +17,7 @@ export async function chatExample(client: ZAIClient) {
 }
 
 /** Requires an existing test workspace and a ready user Runner configured by the application. */
-export async function codingExample(client: ZAIClient, agentId: string, workspaceId: string, signal?: AbortSignal) {
+export async function codingExample(client: ZAIClient, agentId: string, workspaceId: string, signal: AbortSignal = AbortSignal.timeout(300_000)) {
   const status = await client.coding.agents.getStatus(agentId, undefined, {signal});
   if (status.status !== 'ready') throw new Error('Runner is not ready. Query its status before starting a turn.');
   const idempotencyKey = crypto.randomUUID(); // Persist and reuse this value if session creation is retried.
@@ -28,13 +28,19 @@ export async function codingExample(client: ZAIClient, agentId: string, workspac
     turn = await client.coding.turns.start(session.id, {content: '简要描述项目结构，不修改任何文件。'}, {signal});
     let lastSeq = '0';
     const events: ZAICodingEvent[] = [];
-    for await (const event of await client.coding.events.stream(session.id, {after_seq: lastSeq}, {signal})) {
-      lastSeq = String(event.data.seq); // Advance for empty-text and nonterminal error events too.
-      events.push(event.data);
-      if (event.data.turn_id === turn.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
-        terminal = true;
-        break; // Ends this subscription; the session stream itself has no DONE.
+    while (!terminal) {
+      signal.throwIfAborted();
+      for await (const event of await client.coding.events.stream(session.id, {after_seq: lastSeq}, {signal})) {
+        if (event.data.seq <= Number(lastSeq)) continue;
+        events.push(event.data);
+        lastSeq = String(event.data.seq); // Advance for empty-text and nonterminal error events too.
+        if (event.data.turn_id === turn.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
+          terminal = true;
+          break; // Ends this subscription; the session stream itself has no DONE.
+        }
       }
+      // Normal EOF rotates the connection; a short pause also bounds empty reconnects.
+      if (!terminal) await new Promise(resolve => setTimeout(resolve, 1000));
     }
     return {turn: await client.coding.turns.get(session.id, turn.id, {signal}), events, lastSeq};
   } finally {

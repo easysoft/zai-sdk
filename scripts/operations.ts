@@ -14,7 +14,6 @@ const turn = `${codingSession}/turns/{turn_id}`;
 const conversation = '/chat/conversations/{id}';
 const authSource = 'https://zai-dev.sh.oop.cc/docs/authentication/app-api';
 const specificationSource = (method: string, path: string) => `../zai-openapi.json#/paths/${path.replace(/~/g, '~0').replace(/\//g, '~1')}/${method}`;
-const codingEventsSource = 'https://zai-dev.sh.oop.cc/docs/zai/coding/events';
 const codingAPISource = 'https://zai-dev.sh.oop.cc/docs/zai/coding/api';
 
 export type OperationMapping = readonly [group: string, name: string, method: string, path: string, auth: 'admin' | 'user' | 'user-only', source: string, streamName?: string, streamKind?: 'coding' | 'status'];
@@ -42,6 +41,7 @@ export const operations = [
   ['coding.repositories', 'delete', 'delete', repo, 'user', authSource],
   ['coding.repositories', 'listFiles', 'get', `${repo}/files`, 'user', authSource],
   ['coding.repositories', 'readFile', 'get', `${repo}/files/content`, 'user', authSource],
+  ['coding.repositories', 'downloadFile', 'get', `${repo}/files/download`, 'user', codingAPISource],
   ['sessions', 'list', 'get', '/sessions', 'user', authSource],
   ['sessions', 'listForAgent', 'get', `${agent}/sessions`, 'user', authSource],
   ['sessions', 'create', 'post', `${agent}/sessions`, 'user', authSource],
@@ -129,7 +129,7 @@ export const operations = [
   ['coding.turns', 'cancel', 'post', `${turn}/cancel`, 'user', authSource],
   ['coding.turns', 'steer', 'post', `${turn}/steer`, 'user', authSource],
   ['coding.events', 'list', 'get', `${codingSession}/events`, 'user', authSource],
-  ['coding.events', 'stream', 'get', `${codingSession}/stream`, 'user', codingEventsSource, undefined, 'coding'],
+  ['coding.events', 'stream', 'get', `${codingSession}/stream`, 'user', specificationSource('get', `${codingSession}/stream`), undefined, 'coding'],
   ['coding.interactions', 'list', 'get', `${codingSession}/interactions`, 'user', authSource],
   ['coding.interactions', 'resolve', 'post', `${codingSession}/interactions/{interaction_id}/resolve`, 'user', authSource],
   ['coding.git', 'diff', 'get', `${codingSession}/diff`, 'user', authSource],

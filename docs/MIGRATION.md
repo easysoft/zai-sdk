@@ -1,6 +1,15 @@
 # 从 0.2.x 升级到 0.3.0
 
-0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。覆盖原始规范的 98 条路径、151 个操作、55 个公共 Schema；加上现有 Coding SSE 补充规范，共 **99 条路径、152 个 HTTP 操作、155 个资源方法**。
+0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
+
+## 2026-10-22 契约增量
+
+- 新增 `coding.repositories.downloadFile(agentId, workspaceId, repositoryId, {path})`，返回 `Blob`，允许 ak/ek、默认 ek。`path` 相对仓库根目录，规范中可省略，但缺失或为空时服务返回 404；Runner 离线返回 503。会话附件的 `coding.sessions.downloadFile` 仍仅允许 ek，且保留 `file_id/path` 恰好一个的约束。
+- 仓库列表、创建、详情和更新响应新增必填 `relative_path: string`。它相对工作区根目录，当前为 `repo_key`，在物化前也可用。构造这些响应类型的 mock、测试夹具或手写对象需要补齐字段；旧服务可能缺少此字段。
+- `coding.events.stream` 已进入原始规范，公开方法与事件类型不变。删除 supplement 中的重复路径，保留空 `paths`、包导出和重复路径报错规则。使用方不要再假设 supplement 必定包含一个接口。
+- SSE 约每 20 秒发送心跳，连接约 60 秒关闭。用处理完的 seq 通过 `after_seq` 或 `options.headers: {'Last-Event-ID': '...'}` 续接，并按 seq 去重；EOF 不能作为任务成功或取消任务的依据。示例在同一个截止时间内续接，SDK 本身仍不自动重连。
+- 审批 `resolve` 成功表示决策已接收并排队；从 `session.updated.payload` 的 `turn_id/plan_mode` 获取实际模式变化，等待对应 Turn 的 `turn.completed` 确认完成。
+- 创建 Coding 会话的 `system_prompt` 已移除规范中的 `maxLength: 16000`；SDK 原本没有本地长度截断，不据此保证模型上下文或实际服务容量无限制。
 
 ## Runner 与 Coding 会话
 
@@ -58,7 +67,7 @@ Coding 上传发送原始 `Blob`，不是 multipart；input 按规范可省略�
 
 三种流均支持取消、提前退出和资源清理，不自动重连。模型测试、标题生成和记忆重建可能消耗额度，保持显式调用；`doctor()` 默认不接入这些操作。新增记忆同步状态、失败内容查询和重建入口便于跟踪处理结果。
 
-字段及路径以本地原始 OpenAPI 为准；权限和协议补充依据 [Coding API](https://zai-dev.sh.oop.cc/docs/zai/coding/api)、[快速开始](https://zai-dev.sh.oop.cc/docs/zai/coding/getting-started) 和 [事件流说明](https://zai-dev.sh.oop.cc/docs/zai/coding/events)。原始规范不变，supplement 只允许新增路径；离线测试不等于真实服务权限与运行流程验收。
+字段及路径以本地原始 OpenAPI 为准；权限和协议补充依据 [Coding API](https://zai-dev.sh.oop.cc/docs/zai/coding/api)、[快速开始](https://zai-dev.sh.oop.cc/docs/zai/coding/getting-started) 和 [事件流说明](https://zai-dev.sh.oop.cc/docs/zai/coding/events)。supplement 只允许增补原始规范缺失的路径，当前为空；离线测试不等于真实服务权限与运行流程验收。
 
 ---
 

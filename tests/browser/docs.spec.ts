@@ -11,7 +11,7 @@ test('documentation links, resource methods and exported APIs are complete', asy
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/docs/index.html');
   await expect(page).toHaveTitle('ZAI SDK · 使用指南与接口参考');
-  await expect(page.locator('.operation')).toHaveCount(155);
+  await expect(page.locator('.operation')).toHaveCount(156);
   expect(await page.locator('.type-entry').count()).toBeGreaterThan(126);
   const broken = await page.locator('a[href^="#"]').evaluateAll(links => links
     .map(link => link.getAttribute('href')!.slice(1))

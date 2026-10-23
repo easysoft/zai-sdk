@@ -59,6 +59,11 @@ try {
       const request = input as Request;
       const url = new URL(request.url);
       if (url.pathname.endsWith('/status/stream')) return new Response('event: runner.status\nid: 1\ndata: {"status":"ready"}\n\n', {headers: {'content-type': 'text/event-stream'}});
+      if (url.pathname.endsWith('/repos/repo/files/download')) {
+        assert.equal(url.searchParams.get('path'), '目录/file.bin');
+        assert.equal(request.headers.get('accept'), 'application/octet-stream');
+        return new Response(Uint8Array.of(0, 255, 128));
+      }
       if (url.pathname.endsWith('/files')) {
         assert.equal(url.searchParams.get('name'), 'text.txt');
         assert.equal(request.headers.get('content-type'), 'application/octet-stream');
@@ -75,7 +80,9 @@ try {
     assert.equal(statuses[0]!.event, 'runner.status');
     assert.equal(JSON.stringify(statuses[0]!.data), '{"status":"ready"}');
     await client.coding.agents.ensureRunnerInstance('agent', {}, {idempotencyKey: 'package-instance', tokenType: 'user'});
-    assert.deepEqual(permissions, [false, false, false]);
+    const download = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/file.bin'});
+    assert.deepEqual(new Uint8Array(await download.arrayBuffer()), Uint8Array.of(0, 255, 128));
+    assert.deepEqual(permissions, [false, false, false, false]);
   }
 
   // A standalone UMD build emits one file and preserves its destination's contents.
@@ -94,8 +101,8 @@ import {createZAITokenProvider, createZAIClient, ZAIClientError} from 'zai-sdk';
 import spec from 'zai-sdk/openapi.json' with {type:'json'};
 import supplement from 'zai-sdk/openapi-supplement.json' with {type:'json'};
 assert.ok(import.meta.resolve('zai-sdk/zai.js').endsWith('/dist/zai.js'));
-assert.equal(Object.keys(spec.paths).length,98);
-assert.equal(Object.keys(supplement.paths).length,1);
+assert.equal(Object.keys(spec.paths).length,100);
+assert.equal(Object.keys(supplement.paths).length,0);
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
 const permissions = [];
 const client = createZAIClient({baseUrl:'https://example.test/v1/zai',getToken:admin=>{permissions.push(admin);return getToken();},fetch:async request => {
@@ -125,13 +132,14 @@ void client.settings.models.list({tokenType:'admin'});
 void client.coding.sessions.create('agent',coding,{idempotencyKey:'package-create'});
 void client.coding.sessions.uploadFile('session',{name:'file.txt'},new Blob(['text']));
 void client.coding.sessions.downloadFile('session',{file_id:'file'});
+const repositoryFile: Promise<Blob> = client.coding.repositories.downloadFile('agent','workspace','repo',{path:'file.bin'});
 void client.coding.sessions.createDownloadLink('session',{path:'file.txt'});
 void client.coding.toolCalls.resolve('session','tool',{output:null});
 const statuses: Promise<AsyncIterableIterator<ZAIRunnerStatusStreamEvent>> = client.coding.agents.streamStatus('agent');
 void client.chat.messages.send('conversation',message);
 void client.files.extract({file:new Blob(['text'])});
 void client.coding.events.stream('session',{after_seq:'0'});
-void event; void diagnosis; void statuses;
+void event; void diagnosis; void statuses; void repositoryFile;
 `);
   await run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--lib', 'ES2022,DOM,DOM.Iterable', 'consumer.ts'], {cwd: temporary});
   await writeFile(join(temporary, 'index.html'), '<script type="module" src="/consumer.ts"></script>');

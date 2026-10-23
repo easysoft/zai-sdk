@@ -426,13 +426,20 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   });
   const events = [];
   let message = '';
-  for await (const event of await client.coding.events.stream(session.id, {after_seq: '0'}, options(90_000))) {
-    events.push(event);
-    if (event.data.turn_id === turn.id && event.data.type === 'message.delta' && typeof event.data.payload.text === 'string') message += event.data.payload.text;
-    if (event.data.turn_id === turn.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
-      terminal = true;
-      break;
+  let afterSeq = '0';
+  const streamOptions = options(90_000);
+  while (!terminal) {
+    for await (const event of await client.coding.events.stream(session.id, {after_seq: afterSeq}, streamOptions)) {
+      if (event.data.seq <= Number(afterSeq)) continue;
+      events.push(event);
+      if (event.data.turn_id === turn.id && event.data.type === 'message.delta' && typeof event.data.payload.text === 'string') message += event.data.payload.text;
+      afterSeq = String(event.data.seq);
+      if (event.data.turn_id === turn.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
+        terminal = true;
+        break;
+      }
     }
+    if (!terminal) await delay(1000, undefined, {signal: streamOptions.signal});
   }
   assert.ok(terminal, 'Coding must produce a terminal turn event.');
   const final = await client.coding.turns.get(session.id, turn.id, options());

@@ -22,6 +22,12 @@ describe('OpenAPI generation safeguards', () => {
     expect(() => mergeSpecifications(spec, {paths: {'/agents': {}}})).toThrow('Supplement duplicates existing paths');
   });
 
+  it('accepts an empty supplement after upstream adopts its operations', () => {
+    expect(mergeSpecifications(spec, {paths: {}})).toEqual(spec);
+    expect(() => mergeSpecifications(spec, {paths: {'/coding/sessions/{session_id}/stream': {}}}))
+      .toThrow('Supplement duplicates existing paths');
+  });
+
   it('expands attachment requirements on a type-generation copy without changing the contract', () => {
     const normalized = specificationForTypes(spec);
     const items = (input: Specification) => input.paths['/sessions/{session_id}/messages']!.post!.requestBody!.content['application/json']!.schema.properties!.content!.items!.oneOf!;

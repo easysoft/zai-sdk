@@ -5,6 +5,8 @@ import {
   type SettingsModelsListResponse, type SessionsDownloadFileResponse, type ZAIStreamEvent,
   type CodingSessionsCreateInput, type CodingEventsStreamResponse, type ZAICodingStreamEvent, type ZAIRunnerStatusStreamEvent,
   type CodingAgentsStreamStatusResponse, type CodingSessionsUploadFileInput, type MessagesSendInput,
+  type CodingRepositoriesDownloadFileResponse, type CodingRepositoriesListResponse, type CodingRepositoriesCreateResponse,
+  type CodingRepositoriesGetResponse, type CodingRepositoriesUpdateResponse,
   type ChatMessagesSendResponse, type ChatSendResponse, type FilesExtractInput,
   type ZAITokenProvider, type ZAIUploadFile, type ZAIDoctorResult, type ZAIDoctorDetail,
 } from '../src/index.js';
@@ -29,6 +31,7 @@ function assertPublicAPI(client: ZAIClient) {
   void client.coding.sessions.create('agent', {workspace_id: 'workspace', mode: 'default', plan_mode: true} satisfies CodingSessionsCreateInput, {idempotencyKey: 'session-create'});
   void client.coding.sessions.archive('session');
   void client.coding.events.stream('session', {after_seq: '12'}, {signal: new AbortController().signal});
+  void client.coding.events.stream('session', undefined, {headers: {'Last-Event-ID': '12'}});
   void client.coding.agents.streamStatus('agent');
   void client.coding.agents.getStatus('agent', {external_user_id: 'user'}, {tokenType: 'admin'});
   void client.coding.agents.ensureRunnerInstance('agent', {}, {idempotencyKey: 'ensure-runner'});
@@ -51,6 +54,9 @@ function assertPublicAPI(client: ZAIClient) {
   void client.chat.stream({content: 'hi'});
   void client.sessions.downloadFile('session', {path: 'file.txt'});
   void client.sessions.downloadFile('session', {file_id: 'file'});
+  void client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: 'file.txt'});
+  void client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: 'file.txt'}, {tokenType: 'admin'});
+  void client.coding.repositories.downloadFile('agent', 'workspace', 'repo');
   void client.coding.sessions.uploadFile('session', {name: 'file.txt'}, new Blob(['text']));
   void client.coding.sessions.uploadFile('session', {name: 'empty.txt'});
   void client.coding.sessions.downloadFile('session', {path: 'file.txt'});
@@ -137,8 +143,10 @@ function assertPublicAPI(client: ZAIClient) {
   void client.workspaces.list('agent');
   // @ts-expect-error Legacy top-level repositories are removed.
   void client.repositories.list('agent', 'workspace');
-  // @ts-expect-error Repository download has no replacement endpoint.
-  void client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: 'x'});
+  // @ts-expect-error Repository downloads use repository-relative paths, not attachment IDs.
+  void client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {file_id: 'file'});
+  // @ts-expect-error Repository download paths must be strings.
+  void client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: 42});
   // @ts-expect-error Model management has no historical all query.
   void client.settings.models.list({all: 'true'});
   // @ts-expect-error A model filter must identify a model, not carry a model object.
@@ -204,6 +212,12 @@ it('exports precise nested request, response, upload, and asynchronous stream ty
   expectTypeOf<CodingSessionsUploadFileInput>().toEqualTypeOf<Blob>();
   expectTypeOf<NonNullable<MessagesSendInput['content']>[number]>().not.toBeUnknown();
   expectTypeOf<SessionsDownloadFileResponse>().toEqualTypeOf<Blob>();
+  expectTypeOf<CodingRepositoriesDownloadFileResponse>().toEqualTypeOf<Blob>();
+  expectTypeOf<ReturnType<ZAIClient['coding']['repositories']['downloadFile']>>().toEqualTypeOf<Promise<Blob>>();
+  expectTypeOf<CodingRepositoriesListResponse['repositories'][number]['relative_path']>().toEqualTypeOf<string>();
+  expectTypeOf<CodingRepositoriesCreateResponse['repository']['relative_path']>().toEqualTypeOf<string>();
+  expectTypeOf<CodingRepositoriesGetResponse['repository']['relative_path']>().toEqualTypeOf<string>();
+  expectTypeOf<CodingRepositoriesUpdateResponse['repository']['relative_path']>().toEqualTypeOf<string>();
   expectTypeOf<ReturnType<typeof createZAITokenProvider>>().toEqualTypeOf<ZAITokenProvider>();
   expectTypeOf<ZAIUploadFile>().toEqualTypeOf<Blob | {blob: Blob; filename: string}>();
 });

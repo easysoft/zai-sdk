@@ -18,7 +18,7 @@ export const groups: Record<string, {title: string; description: string}> = {
   'chat.messages': {title: 'Chat 消息', description: '在已有 Chat 会话中发送文本及 attachments，读取或删除历史。'},
   chat: {title: 'Chat 便捷发送', description: '创建或续接 Chat 会话并发送 JSON/SSE 消息。'},
   'coding.workspaces': {title: 'Coding 工作区', description: '管理开发工作区和 AGENTS.md。'},
-  'coding.repositories': {title: 'Coding 仓库', description: '管理仓库、列出文件树及读取内容；没有下载端点。'},
+  'coding.repositories': {title: 'Coding 仓库', description: '管理仓库、列出文件树、读取内容及下载原始文件。响应中的 relative_path 相对工作区根目录，当前为 repo_key，在仓库物化前也可用。'},
   'coding.keys': {title: 'Coding 密钥', description: '使用 ek 确保、读取或轮换当前用户的 SSH 公钥。'},
   'coding.runners': {title: 'Runner 配置', description: '应用管理员查询 Runner Profile 与镜像策略；Profile 写接口用于旧客户端兼容。'},
   'coding.runners.instances': {title: 'Runner 实例', description: '应用管理员管理用户 Runner 实例；接受请求不等于实例已就绪。'},
@@ -52,6 +52,7 @@ export const operationTitles: Record<string, string> = {
   'coding.repositories.list': '列出仓库', 'coding.repositories.create': '创建仓库', 'coding.repositories.get': '获取仓库',
   'coding.repositories.update': '更新仓库', 'coding.repositories.delete': '删除仓库',
   'coding.repositories.listFiles': '列出仓库文件', 'coding.repositories.readFile': '读取仓库文件',
+  'coding.repositories.downloadFile': '下载仓库文件',
   'sessions.list': '列出会话', 'sessions.listForAgent': '列出 Agent 的会话', 'sessions.create': '创建会话',
   'sessions.get': '获取会话', 'sessions.update': '更新会话', 'sessions.delete': '删除会话',
   'sessions.resetContext': '重置会话上下文', 'sessions.generateTitle': '生成会话标题',
@@ -129,12 +130,13 @@ export const operationNotes: Record<string, string> = {
   'skills.publishRevision': '支持 JSON 文件列表或 ZIP 包；版本号由服务端返回。二进制文件使用 ZIP。',
   'settings.models.list': '默认使用 ek 获取应用可用目录；传 {tokenType: "admin"} 使用 ak 获取自有管理目录。调用模型使用 model_id，不使用数字记录 id。',
   'settings.models.test': '此操作会实际调用模型并消耗额度，仅在明确需要验证时调用；doctor() 默认不调用它。',
-  'coding.events.stream': '此端点来自在线 Coding 文档的补充规范。合法 error 事件不是终态，后续仍可收到 turn.failed。turn 完成、失败或取消不结束会话流。EOF 只代表断流；使用 after_seq 手动恢复。',
+  'coding.events.stream': '此端点已纳入正式 OpenAPI。约每 20 秒发送心跳，连接约 60 秒关闭；EOF 不表示任务完成，使用 after_seq 或 options.headers 中的 Last-Event-ID 手动恢复。合法 error 事件不是终态，后续仍可收到 turn.failed；turn 终态不主动结束会话流。',
+  'coding.interactions.resolve': '成功只表示决策已接收并排队。session.updated 的 payload 包含 turn_id 和 plan_mode，表示实际计划模式变化；对应 Turn 的 turn.completed 才表示任务完成。',
   'coding.agents.create': '先在应用控制台配置 Coding 环境，再提供 name 创建 Agent；无需传 runner_profile_id。',
   'coding.agents.getStatus': '默认以 ek 查询当前用户；使用 {tokenType: "admin"} 时必须提供 external_user_id。用户令牌不能覆盖用户范围。',
   'coding.agents.streamStatus': '权限与 getStatus 相同。状态 SSE 返回 ZAIRunnerStatusStreamEvent，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。',
   'coding.agents.ensureRunnerInstance': '仅使用 ek 确保当前用户实例；202 表示已接受，仍需查询状态确认就绪。',
-  'coding.sessions.create': '不再接受 provider 或 runner_id；通过 mode、plan_mode、system_prompt 和 primary_repo_key 配置会话行为。',
+  'coding.sessions.create': '不再接受 provider 或 runner_id；通过 mode、plan_mode、system_prompt 和 primary_repo_key 配置会话行为。system_prompt 已移除规范中的 16,000 字符限制，不代表模型上下文或服务资源无限制。',
   'coding.sessions.generateTitle': '生成标题可能调用模型并消耗额度，保持显式调用。',
   'coding.sessions.uploadFile': 'input 接受 Blob（包含 File），文件名通过 name 查询参数传递；按 application/octet-stream 发送原始内容，允许零字节。返回 id 用于 attachment_ids。',
   'coding.sessions.downloadFile': '原件下载只允许 ek；file_id 与 path 必须恰好提供一个，返回 Blob。',
@@ -144,6 +146,7 @@ export const operationNotes: Record<string, string> = {
   'coding.runners.update': '旧客户端兼容接口；新应用通过控制台更新应用级 Coding 配置。',
   'coding.runners.delete': '旧客户端兼容接口；删除前确认没有依赖该 Profile 的实例。',
   'coding.repositories.update': 'HTTP 202 表示已接受更新，不代表仓库已就绪。',
+  'coding.repositories.downloadFile': '允许 ak/ek，默认 ek，返回 Blob。path 相对仓库根目录，缺失或为空返回 404，Runner 离线返回 503。此接口与仅允许 ek 的会话附件原件下载分别处理。',
   'memories.rebuild': '重建嵌入可能消耗模型额度，显式调用后通过状态和失败内容查询跟踪结果。',
   'chat.send': '输入 content 是文本，返回值未声明 conversation ID。需要继续对话时优先显式创建并保存会话 ID。',
   'chat.stream': '便捷发送的 SSE 变体；SDK 固定 stream: true。',
@@ -405,27 +408,36 @@ if (status.status !== 'ready') throw new Error('Runner 尚未就绪，请稍后�
 const accepted = await client.coding.turns.start(session.id, {content: '分析当前测试失败原因'});
 console.log(accepted); // HTTP 202 表示已接受，不代表任务完成。
 
-const controller = new AbortController();
+const signal = AbortSignal.timeout(300_000);
 let afterSeq = 0;
+let terminal = false;
 const textByTurn = new Map<string, string>();
-const stream = await client.coding.events.stream(session.id, {after_seq: String(afterSeq)}, {
-  signal: controller.signal,
-});
-for await (const event of stream) {
-  // 只拼接文本增量；空文本事件也必须推进游标。
-  if (event.data.type === 'message.delta' && event.data.turn_id && typeof event.data.payload.text === 'string') {
-    const turnId = event.data.turn_id;
-    textByTurn.set(turnId, (textByTurn.get(turnId) ?? '') + event.data.payload.text);
+while (!terminal) {
+  signal.throwIfAborted();
+  const stream = await client.coding.events.stream(session.id, {after_seq: String(afterSeq)}, {signal});
+  for await (const event of stream) {
+    if (event.data.seq <= afterSeq) continue;
+    // 只拼接文本增量；空文本事件也必须推进游标。
+    if (event.data.type === 'message.delta' && event.data.turn_id && typeof event.data.payload.text === 'string') {
+      const turnId = event.data.turn_id;
+      textByTurn.set(turnId, (textByTurn.get(turnId) ?? '') + event.data.payload.text);
+    }
+    afterSeq = event.data.seq;
+    console.log(event.id, event.event, event.data);
+    // 审批接受或 session.updated 都不是任务完成。
+    if (event.data.turn_id === accepted.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
+      terminal = true;
+      break;
+    }
   }
-  afterSeq = event.data.seq;
-  console.log(event.id, event.event, event.data);
-  // 合法 error 不是终态，继续读取 turn.failed；按业务目标决定何时 break。
+  if (!terminal) await new Promise(resolve => setTimeout(resolve, 1000));
 }
 console.log(textByTurn, afterSeq);
-// EOF 仅表示连接结束。如需继续，使用 afterSeq 再调用 stream。
+// 正常 EOF 用 afterSeq 续接；异常交给调用方处理。
 // 不再需要会话时调用 client.coding.sessions.archive(session.id)。`, 'typescript', true)}
 <p>会话不接受 provider 或 runner_id 覆盖；响应记录 runner_profile_id、runner_instance_id 和 runner_profile_version。通过 mode、plan_mode、system_prompt、primary_repo_key 配置会话；首次读取事件使用 after_seq: "0"，恢复时使用最后处理完的事件游标，也可通过 events.list 回放历史。仓库更新的 202 同样仅表示已接受。SDK 不自动轮询、重连、执行交互审批或 Git 写操作。</p>
-<p>Coding SSE 来自 <a href="https://zai-dev.sh.oop.cc/docs/zai/coding/events">在线事件流文档</a>，独立于消息 SSE。数据帧保留 id、event、rawData 和完整事件对象；心跳注释忽略，合法 error、完成、失败和取消均不关闭会话流。无需 [DONE]；EOF 不是 turn 成功。非事件信封的通道错误和畸形事件抛错，取消或提前退出释放连接。</p>
+<p>Coding SSE 已纳入正式 OpenAPI，协议详见 <a href="https://zai-dev.sh.oop.cc/docs/zai/coding/events">在线事件流文档</a>。数据帧保留 id、event、rawData 和完整事件对象；忽略约每 20 秒一次的心跳，连接约 60 秒关闭，EOF 不代表 turn 成功。合法 error、完成、失败和取消均作为数据事件传递，无需 [DONE]。可用 after_seq 或 options.headers 中的 Last-Event-ID 续接；同一个截止时间覆盖全部连接，按 seq 去重。非事件信封的通道错误和畸形事件抛错，取消或提前退出释放连接。</p>
+<p>交互审批成功只表示决策已接收并排队。session.updated 的 payload.turn_id、payload.plan_mode 表示实际模式变化；等待对应 Turn 的 turn.completed 确认任务完成。创建会话的 system_prompt 不再声明 16,000 字符上限，模型和服务的实际容量仍需分别考虑。</p>
 <h3>用户 Runner 状态流</h3>
 ${code(`const statusStream = await client.coding.agents.streamStatus('your-agent-id');
 for await (const snapshot of statusStream) {
@@ -463,14 +475,14 @@ console.log(models, channels);`, 'typescript', true)}
 <p>模型测试、标题生成和记忆重建可能消耗额度，均保持显式调用；doctor 默认不增加这些行为。完整迁移说明和 0.1→0.2 历史保留在随包提供的 MIGRATION.md。</p>
 <h3>从 0.1.x 升级的历史变化</h3><p>根地址从 /v8 改为 /v1/zai；旧顶层 executor、workspaces、repositories、models 已移除。工作区、仓库和公钥进入 coding；models 改为 settings.models。实体字段 integration_id 改为 app_id，Agent 类型 executor 改为 runner；普通会话不再使用 executor_provider。</p>
 <p>工作区和仓库更新使用 PUT；仓库文件列表返回 entries，内容可能是 base64 或被截断，旧仓库下载无替代端点。模型管理不支持 all，也不再归一化旧模型数组。同步管理员签发保留位置参数并改用 UTF-8；用户令牌通过应用 API Key 获取签名密钥后生成。</p>
-<p>0.3.0 覆盖原始规范 151 个 HTTP 操作，加上 Coding SSE 共 99 条路径、152 个 HTTP 操作、155 个资源方法。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
+<p>当前原始规范已包含 Coding SSE，共 100 条路径、153 个 HTTP 操作、156 个资源方法。新增 coding.repositories.downloadFile 返回 Blob；仓库响应新增必填 relative_path，构造响应对象时需补齐。supplement 当前为空并保留包导出。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
 <h3>保留的规范缺口</h3><ul>
 <li>Memories、QA、文件提取的部分描述写“必填”，但 Schema 未设置 required；类型遵循正式 Schema，示例仍提供业务必需值。</li>
 <li>SettingsModel.model_type 的 nullable 类型与 enum 不一致；不推测性扩充生成类型。</li>
 <li>单条 ChatMessage 的 allOf 写法没有表达预期 nullable，按正式类型处理。</li>
 <li>Chat 工具默认执行模式描述互相矛盾，示例显式指定执行模式。</li>
 <li>Conversation settings 描述支持默认值合并，但引用 Schema 要求完整字段；传 settings 时提供完整对象。</li>
-</ul><p>原始 OpenAPI 保留原样；仅把有文档依据的 Coding SSE 放入独立补充规范。权限要求来自规范和鉴权文档，离线测试不等于服务端逐接口权限验收。</p>`,
+</ul><p>原始 OpenAPI 保留原样；补充规范只增补有文档依据且原始规范缺失的路径，当前 paths 为空。权限要求来自规范和鉴权文档，离线测试不等于服务端逐接口权限验收。</p>`,
     },
     {
       id: 'streaming', title: '流式响应 SSE', description: '消费异步事件、识别完成状态，并正确释放流。',
@@ -518,7 +530,12 @@ const blob = await client.sessions.downloadFile('your-session-id', {
 });
 console.log(await blob.text());`, 'typescript', true)}
 <p><code>ZAIUploadFile</code> 为 <code>Blob | {blob: Blob; filename: string}</code>。浏览器的 <code>File</code> 继承 Blob，可直接传入；裸 Blob 默认文件名为 <code>blob</code>。SDK 自动构造 FormData，上传时无需设置 Content-Type。</p>
-<p>普通会话上传的 path 可省略：省略时返回不可变附件 id，消息通过 file_id 引用；返回 id 为可选字段，使用前先检查。传入非空 path 仍可上传到旧工作区。<code>readFile()</code> 返回 JSON，<code>downloadFile()</code> 返回 Blob。仓库使用 <code>coding.repositories.readFile()</code>，根据 encoding 解码 base64，并检查 truncated；没有仓库下载接口。</p>
+<p>普通会话上传的 path 可省略：省略时返回不可变附件 id，消息通过 file_id 引用；返回 id 为可选字段，使用前先检查。传入非空 path 仍可上传到旧工作区。<code>readFile()</code> 返回 JSON，<code>downloadFile()</code> 返回 Blob。仓库内容读取需根据 encoding 解码 base64 并检查 truncated；获取原始二进制使用 <code>coding.repositories.downloadFile()</code>，path 相对仓库根目录。</p>
+${code(`const repositoryFile = await client.coding.repositories.downloadFile(
+  'your-agent-id', 'your-workspace-id', 'your-repository-id',
+  {path: 'docs/report.pdf'},
+);
+console.log(repositoryFile.size);`, 'typescript', true)}
 <h3>直接提取文件文本</h3>
 ${code(`const extracted = await client.files.extract({
   file: {blob: new Blob(['报告正文'], {type: 'text/plain'}), filename: 'report.txt'},

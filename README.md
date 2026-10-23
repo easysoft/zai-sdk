@@ -1,6 +1,6 @@
 # ZAI SDK
 
-面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.3.0 使用 `/v1/zai`，覆盖原始 OpenAPI 的 151 个操作，并按官方文档补充 Coding SSE：共 **99 条路径、152 个 HTTP 操作、155 个资源方法**。
+面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.3.0 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **100 条路径、153 个 HTTP 操作、156 个资源方法**。
 
 中文完整文档在 [`docs/index.html`](./docs/index.html)，包含每个接口的权限、来源、字段、调用签名和可复制示例。页面可离线打开，无需启动服务。升级旧项目请先阅读 [`docs/MIGRATION.md`](./docs/MIGRATION.md)。
 
@@ -166,7 +166,7 @@ const client = createZAIClient({
 | `memories`、`qa`、`files.extract` | 记忆、问答、检索、过滤及文件文本提取 |
 | `settings.models/channels/signingSecret` | 可用模型目录、应用管理员配置与模型测试 |
 
-模型管理的数字 `id` 标识记录，调用模型使用 `model_id`。新版不提供旧顶层 `executor/workspaces/repositories/models`，仓库下载端点已删除。列表仅请求一页，保留相应接口原始返回结构，不再归一化旧模型数组。
+模型管理的数字 `id` 标识记录，调用模型使用 `model_id`。新版不提供旧顶层 `executor/workspaces/repositories/models`。仓库文件下载使用 `coding.repositories.downloadFile(agentId, workspaceId, repositoryId, {path})`，返回 `Blob`；支持 ak/ek，默认 ek，`path` 相对仓库根目录，缺失或为空返回 404。仓库响应的必填 `relative_path` 相对工作区根目录，当前为 `repo_key`，在物化前也可用。列表仅请求一页，保留相应接口原始返回结构，不再归一化旧模型数组。
 
 ```ts
 // Chat content 是文本；普通 messages content 是数组。
@@ -195,7 +195,9 @@ for await (const event of stream) {
 
 先在应用控制台保存 Coding 环境，使用 ak 创建 Coding Agent（只需 `name`），再用 ek 确保 SSH 密钥、配置 Git 身份、创建工作区和会话。查询状态就绪后启动 Turn。Profile 写接口保留供旧客户端兼容，不作为新应用配置入口。
 
-Coding turn 启动及仓库更新返回 HTTP 202，只表示接受请求。`coding.events.stream()` 是独立持续会话流：保留 `id/event/rawData` 及完整事件对象，忽略心跳。合法 `error` 事件仍需继续读取后续 `turn.failed`；turn 完成、失败或取消仍是数据事件，不结束流；不要求 `[DONE]`，EOF 只表示连接结束。调用者保存事件游标，再通过 `after_seq` 手动恢复。[Coding 事件协议](https://zai-dev.sh.oop.cc/docs/zai/coding/events)
+Coding turn 启动及仓库更新返回 HTTP 202，只表示接受请求。`coding.events.stream()` 已纳入正式 OpenAPI：保留 `id/event/rawData` 及完整事件对象，忽略约每 20 秒一次的心跳；连接约 60 秒关闭。合法 `error` 事件仍需继续读取后续 `turn.failed`；turn 完成、失败或取消仍是数据事件，不结束流；不要求 `[DONE]`，EOF 只表示连接结束。调用者保存处理完的事件游标，通过 `after_seq` 或 `options.headers` 中的 `Last-Event-ID` 手动恢复，并按 seq 去重。[Coding 事件协议](https://zai-dev.sh.oop.cc/docs/zai/coding/events)
+
+`coding.interactions.resolve()` 成功只表示决策已接收并排队。实际计划模式以 `session.updated` 的 `payload.plan_mode` 为准，最终完成等待对应 Turn 的 `turn.completed`。创建会话时 `system_prompt` 的规范已移除 16,000 字符限制；这不表示模型上下文或服务资源没有上限。
 
 ```ts
 const idempotencyKey = crypto.randomUUID(); // 保存到业务请求，重试创建会话时复用。
@@ -204,12 +206,23 @@ const codingSession = await client.coding.sessions.create('runner-agent-id', {
 }, {idempotencyKey});
 const status = await client.coding.agents.getStatus('runner-agent-id', {session_id: codingSession.id});
 if (status.status !== 'ready') throw new Error('Runner 尚未就绪');
-await client.coding.turns.start(codingSession.id, {content: '分析测试失败原因'});
-const events = await client.coding.events.stream(codingSession.id, {after_seq: '0'});
+const turn = await client.coding.turns.start(codingSession.id, {content: '分析测试失败原因'});
+const signal = AbortSignal.timeout(300_000); // 整个观察过程共用截止时间。
 let afterSeq = 0;
-for await (const event of events) {
-  console.log(event.id, event.event, event.data);
-  afterSeq = event.data.seq; // 空文本事件也推进游标，只拼接 message.delta。
+let terminal = false;
+while (!terminal) {
+  signal.throwIfAborted();
+  const events = await client.coding.events.stream(codingSession.id, {after_seq: String(afterSeq)}, {signal});
+  for await (const event of events) {
+    if (event.data.seq <= afterSeq) continue;
+    console.log(event.id, event.event, event.data);
+    afterSeq = event.data.seq; // 空文本事件也推进游标，只拼接 message.delta。
+    if (event.data.turn_id === turn.id && ['turn.completed', 'turn.failed', 'turn.canceled'].includes(event.data.type)) {
+      terminal = true;
+      break;
+    }
+  }
+  if (!terminal) await new Promise(resolve => setTimeout(resolve, 1000));
 }
 console.log(afterSeq);
 ```
@@ -250,7 +263,7 @@ await client.coding.toolCalls.resolve('coding-session-id', 'tool-call-id', {outp
 
 ## OpenAPI 规范
 
-原始 [`zai-openapi.json`](./zai-openapi.json) 和 Coding SSE 补充 [`zai-openapi.supplement.json`](./zai-openapi.supplement.json) 随安装包提供，分别通过 `zai-sdk/openapi.json`、`zai-sdk/openapi-supplement.json` 导出。
+原始 [`zai-openapi.json`](./zai-openapi.json) 和只增补缺失路径的 [`zai-openapi.supplement.json`](./zai-openapi.supplement.json) 随安装包提供，分别通过 `zai-sdk/openapi.json`、`zai-sdk/openapi-supplement.json` 导出。Coding SSE 已进入原始规范，当前 supplement 的 `paths` 为空；导出保留，重复路径仍会使生成失败。
 
 ## 开发与验证
 

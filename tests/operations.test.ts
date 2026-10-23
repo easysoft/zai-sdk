@@ -53,15 +53,15 @@ function methodAt(client: unknown, group: string, name: string): (...args: unkno
   return (resource as Record<string, (...args: unknown[]) => Promise<unknown>>)[name]!;
 }
 
-it('covers exactly 99 paths, 152 operations, 155 public methods and every explicit permission', () => {
-  expect(Object.keys(specification.paths)).toHaveLength(99);
-  expect(operations).toHaveLength(152);
-  expect(ZAI_OPERATIONS).toHaveLength(152);
+it('covers exactly 100 paths, 153 operations, 156 public methods and every explicit permission', () => {
+  expect(Object.keys(specification.paths)).toHaveLength(100);
+  expect(operations).toHaveLength(153);
+  expect(ZAI_OPERATIONS).toHaveLength(153);
   const methods = ZAI_OPERATIONS.flatMap(operation => [`${operation.group}.${operation.name}`, ...(operation.streamName ? [`${operation.group}.${operation.streamName}`] : [])]);
-  expect(new Set(methods).size).toBe(155);
+  expect(new Set(methods).size).toBe(156);
   expect(ZAI_OPERATIONS.map(operation => `${operation.method} ${operation.path}`).sort()).toEqual(operations.map(operation => `${operation.method} ${operation.path}`).sort());
   expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'admin')).toHaveLength(36);
-  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(108);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(109);
   expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user-only')).toHaveLength(8);
   expect(ZAI_OPERATIONS.filter(operation => operation.idempotencyRequired)).toHaveLength(11);
   for (const operation of ZAI_OPERATIONS) {

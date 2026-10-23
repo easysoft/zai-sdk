@@ -3138,6 +3138,7 @@ export interface paths {
                         "application/json": {
                             events: {
                                 seq: number;
+                                /** @description Event name; session.updated carries {turn_id, plan_mode} for actual Codex plan-mode changes. turn.completed is final task completion. */
                                 type: string;
                                 turn_id: string | null;
                                 payload: {
@@ -3238,6 +3239,107 @@ export interface paths {
                 };
                 /** @description Runner offline */
                 503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream session events as server-sent events
+         * @description Replays persisted events after after_seq (or the Last-Event-ID header), then follows live events. Each SSE message carries the event sequence as its id; `: keep-alive` comments are sent every 20 seconds and the stream closes after about 60 seconds, so reconnect with the last received ID.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    after_seq?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Server-sent event stream */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Invalid event sequence */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Session not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4444,7 +4546,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve an interaction
-         * @description Answer a pending interaction. The body is the paseo permission response: { behavior: allow | deny, selectedActionId?, updatedInput?, message? }.
+         * @description Answer a pending interaction. The body is the paseo permission response: { behavior: allow | deny, selectedActionId?, updatedInput?, message? }. Success means the decision was accepted and queued, not that implementation finished. Observe session.updated for actual plan mode and turn.completed for completion.
          */
         post: {
             parameters: {
@@ -5145,6 +5247,11 @@ export interface paths {
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
+                                /**
+                                 * @description Repository directory relative to the workspace root (currently repo_key). Available before materialization; not an absolute host path.
+                                 * @example project-a
+                                 */
+                                relative_path: string;
                                 name: string;
                                 description: string | null;
                                 default_branch: string;
@@ -5233,6 +5340,11 @@ export interface paths {
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
+                                /**
+                                 * @description Repository directory relative to the workspace root (currently repo_key). Available before materialization; not an absolute host path.
+                                 * @example project-a
+                                 */
+                                relative_path: string;
                                 name: string;
                                 description: string | null;
                                 default_branch: string;
@@ -5259,6 +5371,11 @@ export interface paths {
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
+                                /**
+                                 * @description Repository directory relative to the workspace root (currently repo_key). Available before materialization; not an absolute host path.
+                                 * @example project-a
+                                 */
+                                relative_path: string;
                                 name: string;
                                 description: string | null;
                                 default_branch: string;
@@ -5371,6 +5488,11 @@ export interface paths {
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
+                                /**
+                                 * @description Repository directory relative to the workspace root (currently repo_key). Available before materialization; not an absolute host path.
+                                 * @example project-a
+                                 */
+                                relative_path: string;
                                 name: string;
                                 description: string | null;
                                 default_branch: string;
@@ -5456,6 +5578,11 @@ export interface paths {
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
+                                /**
+                                 * @description Repository directory relative to the workspace root (currently repo_key). Available before materialization; not an absolute host path.
+                                 * @example project-a
+                                 */
+                                relative_path: string;
                                 name: string;
                                 description: string | null;
                                 default_branch: string;
@@ -5712,6 +5839,106 @@ export interface paths {
                             size: number;
                             truncated?: boolean;
                         };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a repository file as a binary stream */
+        get: {
+            parameters: {
+                query?: {
+                    path?: string;
+                };
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                    repository_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Raw file bytes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/octet-stream": string;
                     };
                 };
                 /** @description Not found */
@@ -15476,50 +15703,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/coding/sessions/{session_id}/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Stream persisted coding session events
-         * @description Persistent session SSE stream. Resume with after_seq; terminal turn events do not close the session stream. Valid persisted error events are non-terminal data, followed by turn.failed; only malformed envelopes or channel failures interrupt parsing. Heartbeat comments are ignored. Source: https://zai-dev.sh.oop.cc/docs/zai/coding/events
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Replay events after this sequence, then follow new events. */
-                    after_seq?: string;
-                };
-                header?: never;
-                path: {
-                    session_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description SSE frames contain full persisted events with seq, type, turn_id, payload and created_at. EOF ends this connection and does not imply turn success; no [DONE] sentinel is required. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/event-stream": string;
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;

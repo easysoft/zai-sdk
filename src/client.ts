@@ -39,6 +39,8 @@ export type CodingRepositoriesListFilesResponse = paths["/coding/agents/{agent_i
 export type CodingRepositoriesListFilesQuery = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files"]["get"]['parameters']['query']>;
 export type CodingRepositoriesReadFileResponse = paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content"]["get"]['responses'][200]['content']['application/json'];
 export type CodingRepositoriesReadFileQuery = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content"]["get"]['parameters']['query']>;
+export type CodingRepositoriesDownloadFileResponse = Blob;
+export type CodingRepositoriesDownloadFileQuery = NonNullable<paths["/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/download"]["get"]['parameters']['query']>;
 export type SessionsListResponse = paths["/sessions"]["get"]['responses'][200]['content']['application/json'];
 export type SessionsListQuery = NonNullable<paths["/sessions"]["get"]['parameters']['query']>;
 export type SessionsListForAgentResponse = paths["/agents/{agent_id}/sessions"]["get"]['responses'][200]['content']['application/json'];
@@ -367,7 +369,12 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        readFile(agentId: string, workspaceId: string, repositoryId: string, query: CodingRepositoriesReadFileQuery, options?: ZAIRequestOptions): Promise<CodingRepositoriesReadFileResponse> { return transport.request<CodingRepositoriesReadFileResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, query, options}); }
+        readFile(agentId: string, workspaceId: string, repositoryId: string, query: CodingRepositoriesReadFileQuery, options?: ZAIRequestOptions): Promise<CodingRepositoriesReadFileResponse> { return transport.request<CodingRepositoriesReadFileResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, query, options}); },
+        /** Download a repository file as a binary stream
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        downloadFile(agentId: string, workspaceId: string, repositoryId: string, query?: CodingRepositoriesDownloadFileQuery, options?: ZAIRequestOptions): Promise<CodingRepositoriesDownloadFileResponse> { return transport.request<CodingRepositoriesDownloadFileResponse>({method: "get", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/download", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, query, responseType: 'blob', options}); }
       },
       runners: {
         /** List application runner profiles
@@ -567,9 +574,9 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
         list(sessionId: string, query?: CodingEventsListQuery, options?: ZAIRequestOptions): Promise<CodingEventsListResponse> { return transport.request<CodingEventsListResponse>({method: "get", path: "/coding/sessions/{session_id}/events", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
-        /** Stream persisted coding session events
+        /** Stream session events as server-sent events
          * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/events
+         * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1stream/get
          */
         async stream(sessionId: string, query?: CodingEventsStreamQuery, options?: ZAIRequestOptions): Promise<CodingEventsStreamResponse> { return parseZAICodingStream(await transport.request<Response>({method: "get", path: "/coding/sessions/{session_id}/stream", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, responseType: 'stream', options}), options?.signal); }
       },

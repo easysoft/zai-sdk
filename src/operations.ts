@@ -504,6 +504,32 @@ export const ZAI_OPERATIONS = [
     ]
   },
   {
+    "group": "coding.repositories",
+    "name": "downloadFile",
+    "method": "get",
+    "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/files/download",
+    "auth": "user",
+    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id",
+      "workspace_id",
+      "repository_id"
+    ],
+    "query": [
+      "path"
+    ],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "blob",
+    "statuses": [
+      200
+    ]
+  },
+  {
     "group": "sessions",
     "name": "list",
     "method": "get",
@@ -2502,7 +2528,7 @@ export const ZAI_OPERATIONS = [
     "method": "get",
     "path": "/coding/sessions/{session_id}/stream",
     "auth": "user",
-    "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/events",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1stream/get",
     "streamName": null,
     "streamKind": "coding",
     "pathParams": [
