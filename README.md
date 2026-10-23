@@ -66,8 +66,9 @@ pnpm build     # 同时生成原有 ESM、类型声明和 dist/zai.js
   const client = ZAI.createZAIClient({
     baseUrl: '/v1/zai',
     getToken: ZAI.createZAITokenProvider({
-      fetchToken: async () => {
-        const response = await fetch('/api/zai/token');
+      acquireTimeoutMs: 30_000,
+      fetchToken: async signal => {
+        const response = await fetch('/api/zai/token', {signal});
         if (!response.ok) throw new Error('获取令牌失败');
         return response.json(); // {token: 'ek-...', expiresAt: <整数 Unix 秒>}
       },
@@ -137,8 +138,9 @@ SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因
 const client = createZAIClient({
   baseUrl: '/v1/zai',
   getToken: createZAITokenProvider({
-    fetchToken: async () => {
-      const response = await fetch('/api/zai/token', {credentials: 'same-origin'});
+    acquireTimeoutMs: 30_000,
+    fetchToken: async signal => {
+      const response = await fetch('/api/zai/token', {credentials: 'same-origin', signal});
       if (!response.ok) throw new Error('获取令牌失败');
       return response.json(); // {token: 'ek-...', expiresAt: <整数 Unix 秒>}
     },
@@ -146,7 +148,11 @@ const client = createZAIClient({
 });
 ```
 
-`fetchToken` 与 `credentials` 互斥。自定义回调签名为 `getToken(admin: boolean): string | Promise<string>`。SDK 在每次发送请求前调用它：`true` 表示此次请求选择 ak；`false` 表示选择 ek（含仅用户接口）。共享权限接口允许通过请求选项 `tokenType` 显式选择；固定权限接口拒绝冲突选项。回调只接收这个布尔值，不接收路径等其他接口信息，SDK 不解码返回的令牌。
+`fetchToken` 与 `credentials` 互斥，签名为 `(signal: AbortSignal) => ZAIToken | Promise<ZAIToken>`。将这个共享获取任务自己的 signal 传给后端 `fetch`：超时、`invalidate()` 和 `dispose()` 都会中止它。它与业务请求的 signal 分开；取消一个业务请求不会中止其他请求共享的 Token 获取。
+
+`acquireTimeoutMs` 仅用于 `fetchToken` 模式，默认 30,000，必须为 1 至 2,147,483,647 的整数。超时抛出 `ZAIClientError`（`code: 'authentication'`，消息 `Token acquisition timed out.`），丢弃迟到结果并允许后续调用重新获取。它只限制 Token 获取时间，不限制随后业务请求的时长；本地签发 ek 时读取密钥仍使用 `signingSecretTimeoutMs`。
+
+自定义客户端回调签名为 `getToken(admin: boolean): string | Promise<string>`。SDK 在每次发送请求前调用它：`true` 表示此次请求选择 ak；`false` 表示选择 ek（含仅用户接口）。共享权限接口允许通过请求选项 `tokenType` 显式选择；固定权限接口拒绝冲突选项。回调只接收这个布尔值，不接收路径等其他接口信息，SDK 不解码返回的令牌。
 
 服务端需要自主管理令牌来源时，用两个 provider 分别缓存和续期 ak、ek：
 

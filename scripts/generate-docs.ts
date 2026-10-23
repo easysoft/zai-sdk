@@ -230,7 +230,7 @@ const coreDescriptions: Record<string, string> = {
   ZAICredentials: '服务端签名凭据：appID、appKey、userID 及可选 userName。',
   ZAIToken: 'Token 与有效期；expiresAt 使用整数 Unix 秒。',
   ZAITokenProvider: '异步 Token 获取函数，附带 invalidate 清除缓存与 dispose 永久释放方法。',
-  ZAITokenProviderOptions: 'credentials 与 fetchToken 二选一，支持提前续期窗口。',
+  ZAITokenProviderOptions: 'credentials 与 fetchToken 二选一，支持提前续期窗口；fetchToken 接收共享获取信号并有独立超时。',
   ZAIErrorCode: '六个稳定错误类别：authentication、http、network、aborted、invalid-input、invalid-response。',
   ZAIErrorOptions: '构造 SDK 错误时使用的可选上下文。',
   ZAIErrorInfo: '服务端结构化诊断：code、message、reason_code、user_message、details 和可选 retryable。',

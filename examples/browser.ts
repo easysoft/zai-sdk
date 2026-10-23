@@ -6,8 +6,9 @@ export function createBrowserZAIClient(baseUrl = '/v1/zai', tokenEndpoint = '/ap
   return createZAIClient({
     baseUrl,
     getToken: createZAITokenProvider({
-      fetchToken: async () => {
-        const response = await fetch(tokenEndpoint, {credentials: 'same-origin', headers: {accept: 'application/json'}});
+      acquireTimeoutMs: 30_000, // 只限制 Token 获取，业务请求可另设 signal。
+      fetchToken: async signal => {
+        const response = await fetch(tokenEndpoint, {credentials: 'same-origin', headers: {accept: 'application/json'}, signal});
         if (!response.ok) throw new Error('Unable to obtain a ZAI token from the application backend.');
         return response.json();
       },

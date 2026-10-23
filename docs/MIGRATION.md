@@ -10,6 +10,12 @@
 
 自动鉴权客户端新增 `client.auth`，以相同方法管理内部 ak、ek provider。自定义 `getToken` 客户端的 `client.auth` 为 `undefined`，由调用者持有并管理原 provider。退出登录时释放旧实例；切换用户或更换应用 API Key 时重新创建。已发出的业务请求和 SSE 使用各自的 `AbortSignal` 取消，认证生命周期方法不负责取消这些请求。
 
+## 外部 Token 获取超时
+
+`fetchToken` 的签名改为 `(signal: AbortSignal) => ZAIToken | Promise<ZAIToken>`。将 signal 传给业务后端 Fetch，使超时、`invalidate()` 和 `dispose()` 能中止外部请求。该 signal 属于共享的 Token 获取任务；取消单个业务请求不会中止它或影响其他等待者。
+
+`fetchToken` 模式新增 `acquireTimeoutMs`，默认 30,000 毫秒，必须为 1 至 2,147,483,647 的整数。超时抛出 `ZAIClientError`（`code: 'authentication'`，消息 `Token acquisition timed out.`），迟到结果不缓存，下一次调用可以重新获取。该超时只管理 Token 获取，后续业务请求使用自己的取消策略；本地签发 ek 时获取 signing secret 仍由 `signingSecretTimeoutMs` 控制。
+
 ## 2026-10-22 契约增量
 
 - 新增 `coding.repositories.downloadFile(agentId, workspaceId, repositoryId, {path})`，返回 `Blob`，允许 ak/ek、默认 ek。`path` 相对仓库根目录，规范中可省略，但缺失或为空时服务返回 404；Runner 离线返回 503。会话附件的 `coding.sessions.downloadFile` 仍仅允许 ek，且保留 `file_id/path` 恰好一个的约束。
@@ -133,7 +139,7 @@ const client = createZAIClient({
 
 ak 继续用应用 API Key 本地签发；同步方法保留 `createZAIToken(appID, appKey, userID, expiredTime?, userName?)`。编码统一为 UTF-8 JSON/Base64，解除旧 Latin-1 限制；hash 使用小写 MD5，时间仍为 Unix 秒。可选昵称不参与 hash。
 
-`createZAITokenProvider({credentials})` 仍默认管理员令牌。要取得 ek，使用 `{credentials, tokenType:'user', baseUrl}`：SDK 先签 ak 读取 `/signing_secret`，校验响应后本地签 ek。`fetchToken` 模式保持不变，浏览器应从业务后端获取 ek。
+`createZAITokenProvider({credentials})` 仍默认管理员令牌。要取得 ek，使用 `{credentials, tokenType:'user', baseUrl}`：SDK 先签 ak 读取 `/signing_secret`，校验响应后本地签 ek。0.2.0 的 `fetchToken` 模式保持不变，当前版本新增 signal 与获取超时，见上方说明；浏览器应从业务后端获取 ek。
 
 自定义客户端回调从无参扩展为 `getToken(admin: boolean): string | Promise<string>`。每次发送请求前，管理员专属接口传 `true`，共享接口传 `false`；分别返回 ak 和 ek（共享接口也允许 ak）。回调只有这个布尔参数，不接收其他接口信息，SDK 不解码返回令牌。这不是在 403 后升级令牌重试。
 

@@ -33,6 +33,7 @@ export type ZAITokenProviderOptions = {
     /** Lifetime of a locally signed token in seconds. Default: 1000. */
     expiresInSeconds?: number;
     fetchToken?: never;
+    acquireTimeoutMs?: never;
   } & (
     | {tokenType?: 'admin'; baseUrl?: never; fetch?: never; headers?: never; signingSecretTimeoutMs?: never}
     | {
@@ -46,7 +47,10 @@ export type ZAITokenProviderOptions = {
     }
   )
   | {
-    fetchToken: () => ZAIToken | Promise<ZAIToken>;
+    /** The shared acquisition owns this signal; pass it to the backend fetch. */
+    fetchToken: (signal: AbortSignal) => ZAIToken | Promise<ZAIToken>;
+    /** Independent timeout for shared external token acquisition. Default: 30000. */
+    acquireTimeoutMs?: number;
     credentials?: never;
     expiresInSeconds?: never;
     tokenType?: never;
@@ -131,6 +135,9 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   let disposeSource: (() => void) | undefined;
   let timeoutMs: number | undefined;
   if (hasCredentials) {
+    if (options.acquireTimeoutMs !== undefined) {
+      throw new ZAIClientError('invalid-input', 'acquireTimeoutMs applies only to fetchToken.');
+    }
     const credentials = options.credentials as ZAICredentials;
     validateCredentials(credentials);
     const {appID, appKey, userID, userName} = credentials;
@@ -200,6 +207,10 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       throw new ZAIClientError('invalid-input', 'fetchToken must be a function and cannot be combined with local signing options.');
     }
     acquire = options.fetchToken;
+    timeoutMs = options.acquireTimeoutMs ?? 30_000;
+    if (!validSeconds(timeoutMs, 1) || timeoutMs > 2_147_483_647) {
+      throw new ZAIClientError('invalid-input', 'acquireTimeoutMs must be a positive integer no greater than 2147483647.');
+    }
   }
 
   let cached: ZAIToken | undefined;
@@ -245,8 +256,9 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
     });
     pending = {promise, controller};
     if (timeoutMs !== undefined) {
-      timer = setTimeout(() => controller.abort(new ZAIClientError('authentication', 'Signing-secret request timed out.',
-        {method: 'GET', path: '/signing_secret'})), timeoutMs);
+      timer = setTimeout(() => controller.abort(hasCredentials
+        ? new ZAIClientError('authentication', 'Signing-secret request timed out.', {method: 'GET', path: '/signing_secret'})
+        : new ZAIClientError('authentication', 'Token acquisition timed out.')), timeoutMs);
     }
     return promise;
   };

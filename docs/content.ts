@@ -225,20 +225,23 @@ ${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
 const client = createZAIClient({
   baseUrl: '/v1/zai', // 同源代理；跨域时填写完整 API 根地址
   getToken: createZAITokenProvider({
-    fetchToken: async () => {
+    fetchToken: async signal => {
       const response = await fetch('/api/zai/token', {
         credentials: 'same-origin',
         headers: {accept: 'application/json'},
+        signal,
       });
       if (!response.ok) throw new Error('获取 ZAI Token 失败');
       return response.json();
     },
     refreshBeforeSeconds: 60,
+    acquireTimeoutMs: 30_000,
   }),
 });
 
 const {agents} = await client.agents.list();
 console.log(agents);`, 'typescript', true)}
+<p>将 <code>fetchToken</code> 收到的 signal 传给后端 Fetch。它属于共享的 Token 获取任务，与业务请求的 signal 分开；默认 30 秒超时只限制 Token 获取，详见“Token 与自动续期”。</p>
 <h3>普通 script 引入 UMD 单文件</h3>
 <p><code>pnpm build:umd</code> 生成自包含的 <code>dist/zai.js</code>；<code>pnpm build</code> 同时生成 ESM、类型声明和该 UMD 文件。复制到静态资源目录后，使用 <code>&lt;script src="/assets/zai.js"&gt;&lt;/script&gt;</code> 加载，在后续普通脚本中通过 <code>ZAI.createZAIClient</code>、<code>ZAI.createZAITokenProvider</code> 使用上述 API，无需额外 JS、CSS 或模块加载器。UMD 与 ESM 的运行时导出相同，仍要求支持原生 Fetch、Streams 等 API 的现代浏览器。</p>
 <p>UMD 随 npm 包分发，可通过 <code>zai-sdk/zai.js</code> 子路径定位为静态资源。不要将它当作 ESM 入口导入。<code>OUT=/path/to/public/zai pnpm build:umd</code> 可指定目标目录，只写入 <code>zai.js</code>，不会清空目录。封装 <code>@zentao/zai</code> 时，由 <code>LibLoader</code> 加载该文件并检查全局 <code>ZAI</code>。</p>
@@ -268,7 +271,8 @@ const ek = await getUserToken();`, 'typescript', true)}
 <tr><td>tokenType</td><td>admin</td><td>credentials 模式可选 user；user 必须提供 baseUrl。</td></tr>
 <tr><td>expiresInSeconds</td><td>1000</td><td>本地签发的有效期，必须为正整数。</td></tr>
 <tr><td>refreshBeforeSeconds</td><td>60</td><td>剩余秒数不超过窗口时，在下次请求前刷新。</td></tr>
-<tr><td>signingSecretTimeoutMs</td><td>30000</td><td>获取签名密钥的独立超时。</td></tr>
+<tr><td>signingSecretTimeoutMs</td><td>30000</td><td>本地签发 ek 时获取签名密钥的独立超时，单位为毫秒。</td></tr>
+<tr><td>acquireTimeoutMs</td><td>30000</td><td>仅 fetchToken 模式可用，共享 Token 获取超时；1 至 2,147,483,647 的整数，单位为毫秒。</td></tr>
 </tbody></table></div>
 <p>Token 和 signing secret 仅缓存在当前 provider／自动鉴权实例内。并发首次获取共享一次网络请求，普通 ek 续期只重新本地签名；失败不缓存，下次可重试。取消单个业务请求不会取消其他请求共享的密钥获取。没有后台刷新定时器。</p>
 <h3>清除缓存与释放实例</h3>
@@ -289,7 +293,9 @@ client.auth?.dispose();`, 'typescript', true)}
 <p><code>invalidate()</code> 本身不发请求。它与 <code>dispose()</code> 都会中止进行中的认证获取，等待者收到 <code>ZAIClientError</code>（<code>code: 'aborted'</code>）；旧任务迟到的结果不会写回缓存。<code>dispose()</code> 后获取始终失败，调用 <code>invalidate()</code> 也不能恢复实例。</p>
 <p>自动鉴权客户端的 <code>client.auth</code> 提供相同的 <code>invalidate()</code>、<code>dispose()</code> 方法；自定义 <code>getToken</code> 客户端的 <code>client.auth</code> 为 <code>undefined</code>，由调用者持有并管理原 provider。这些方法只管理认证获取；已发出的业务请求或 SSE 使用该请求自己的 <code>AbortSignal</code> 取消。</p>
 ${note('轮换 signing secret 成功后清除相关实例的 Token 和密钥缓存；切换用户或更换应用 API Key 时释放旧实例并重新创建。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
-<p>浏览器继续使用 <code>fetchToken</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。</p>
+<h3>外部 Token 获取与超时</h3>
+<p>浏览器使用 <code>fetchToken: (signal: AbortSignal) =&gt; ZAIToken | Promise&lt;ZAIToken&gt;</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。将回调收到的 signal 传给后端 Fetch；超时、<code>invalidate()</code> 和 <code>dispose()</code> 都会中止它。</p>
+<p><code>acquireTimeoutMs</code> 默认 30 秒。超时抛出 <code>ZAIClientError</code>（<code>code: 'authentication'</code>，消息 <code>Token acquisition timed out.</code>），迟到结果不会写回缓存，后续调用可重新获取。这是共享获取任务自己的 signal，取消单个业务请求不影响其他等待者；超时也只限制 Token 获取，不限制随后的业务请求。</p>
 <h3>自定义 getToken 按接口权限选择令牌</h3>
 <p>回调签名为 <code>(admin: boolean) =&gt; string | Promise&lt;string&gt;</code>。SDK 在每次发送请求前传入权限标记：true 表示此次请求选择 ak；false 表示选择 ek（含仅用户接口）。回调只收到该布尔值，不接收路径等其他接口参数。选择发生在请求前，不是收到 403 后重试；SDK 不解码返回的令牌。</p>
 ${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';

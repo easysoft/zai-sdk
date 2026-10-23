@@ -77,6 +77,10 @@ function assertPublicAPI(client: ZAIClient) {
   createZAITokenProvider({credentials: {appID: 'app', appKey: 'key', userID: 'user'}, expiresInSeconds: 1000});
   createZAITokenProvider({credentials: {appID: 'app', appKey: 'key', userID: 'user'}, tokenType: 'user', baseUrl: 'https://zai.test/v1/zai'});
   createZAITokenProvider({fetchToken: async () => ({token: 'token', expiresAt: 1000}), refreshBeforeSeconds: 10});
+  createZAITokenProvider({fetchToken: signal => {
+    expectTypeOf(signal).toEqualTypeOf<AbortSignal>();
+    return {token: 'token', expiresAt: 1000};
+  }, acquireTimeoutMs: 5_000});
   const tokenProvider = createZAITokenProvider({fetchToken: () => ({token: 'token', expiresAt: 1000})});
   void tokenProvider();
   tokenProvider.invalidate();
@@ -193,6 +197,12 @@ function assertPublicAPI(client: ZAIClient) {
   createZAITokenProvider({fetchToken: () => ({token: 't', expiresAt: 1000}), expiresInSeconds: 1000});
   // @ts-expect-error External token acquisition must include the expiration timestamp.
   createZAITokenProvider({fetchToken: () => 'token'});
+  // @ts-expect-error External acquisition timeout does not apply to local signing.
+  createZAITokenProvider({credentials: {appID: 'a', appKey: 'k', userID: 'u'}, acquireTimeoutMs: 1000});
+  // @ts-expect-error Signing-secret requests have their own timeout option.
+  createZAITokenProvider({credentials: {appID: 'a', appKey: 'k', userID: 'u'}, tokenType: 'user', baseUrl: 'https://zai.test/v1/zai', acquireTimeoutMs: 1000});
+  // @ts-expect-error Acquisition timeout is expressed as a number of milliseconds.
+  createZAITokenProvider({fetchToken: () => ({token: 'token', expiresAt: 1000}), acquireTimeoutMs: '1000'});
   // @ts-expect-error Secret invalidation must be an explicit boolean.
   tokenProvider.invalidate({signingSecret: 'true'});
   // @ts-expect-error Disposal does not accept selective invalidation options.
