@@ -150,7 +150,7 @@ export const operationNotes: Record<string, string> = {
   'memories.rebuild': '重建嵌入可能消耗模型额度，显式调用后通过状态和失败内容查询跟踪结果。',
   'chat.send': '输入 content 是文本，返回值未声明 conversation ID。需要继续对话时优先显式创建并保存会话 ID。',
   'chat.stream': '便捷发送的 SSE 变体；SDK 固定 stream: true。',
-  'settings.signingSecret.regenerate': '密钥轮换会使旧 ek 签名失效。成功后重新创建持有缓存的 provider/client；SDK 不自动轮换或重试请求。',
+  'settings.signingSecret.regenerate': '密钥轮换会使旧 ek 签名失效。成功后对相关 provider 或自动客户端的 client.auth 调用 invalidate({signingSecret: true})；SDK 不自动轮换或重试请求。',
   'files.extract': 'file 接受 File、Blob 或 {blob, filename}。规范描述必填但没有 required，类型按正式 Schema 保留可选；实际调用应提供文件。',
 };
 
@@ -245,7 +245,7 @@ console.log(agents);`, 'typescript', true)}
 <p><code>/api/zai/token</code> 是需要由你的应用实现的业务接口，并非 SDK 内置接口。跨域部署时，服务端需允许应用来源、相应 HTTP 方法和 <code>Authorization</code> 等请求头；也可通过业务后端同源代理访问。</p>`,
     },
     {
-      id: 'authentication', title: 'Token 与自动续期', description: '选择 Token 来源，理解有效期和并发刷新。',
+      id: 'authentication', title: 'Token 与自动续期', description: '选择 Token 来源，管理有效期、缓存失效和实例释放。',
       body: `<p>服务端推荐 <code>auth: {mode: 'auto', appID, appKey, userID}</code>。每个接口区分仅 ak、共享 ak/ek 和仅 ek 权限；自动模式为管理员接口选择 ak，其余默认选择 ek。共享接口可在请求选项中通过 tokenType 显式选择，固定权限接口拒绝冲突选项。<code>auth</code> 与 <code>getToken</code> 互斥。完整权限及来源列在每个接口中。令牌类型正确后，服务端仍检查应用与用户归属。</p>
 <h3>独立获取管理员或用户令牌</h3>
 ${code(`import {createZAIToken, createZAITokenProvider} from 'zai-sdk';
@@ -271,7 +271,24 @@ const ek = await getUserToken();`, 'typescript', true)}
 <tr><td>signingSecretTimeoutMs</td><td>30000</td><td>获取签名密钥的独立超时。</td></tr>
 </tbody></table></div>
 <p>Token 和 signing secret 仅缓存在当前 provider／自动鉴权实例内。并发首次获取共享一次网络请求，普通 ek 续期只重新本地签名；失败不缓存，下次可重试。取消单个业务请求不会取消其他请求共享的密钥获取。没有后台刷新定时器。</p>
-${note('切换用户或轮换 signing secret 后，重新创建 provider/client 以清除旧密钥与 Token 缓存。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
+<h3>清除缓存与释放实例</h3>
+${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
+
+const baseUrl = 'https://zai.example.com/v1/zai';
+const credentials = {appID: 'your-app-id', appKey: 'server-side-app-key', userID: 'user-123'};
+const getUserToken = createZAITokenProvider({credentials, tokenType: 'user', baseUrl});
+
+getUserToken.invalidate(); // 清除 Token，保留已经缓存的 signing secret。
+getUserToken.invalidate({signingSecret: true}); // 轮换密钥后，同时清除 Token 和密钥。
+const renewedEK = await getUserToken(); // 在这里重新读取密钥和签发 ek。
+getUserToken.dispose(); // 退出登录时永久禁用，可重复调用。
+
+const client = createZAIClient({baseUrl, auth: {mode: 'auto', ...credentials}});
+client.auth?.invalidate({signingSecret: true}); // 同时管理内部 ak、ek provider。
+client.auth?.dispose();`, 'typescript', true)}
+<p><code>invalidate()</code> 本身不发请求。它与 <code>dispose()</code> 都会中止进行中的认证获取，等待者收到 <code>ZAIClientError</code>（<code>code: 'aborted'</code>）；旧任务迟到的结果不会写回缓存。<code>dispose()</code> 后获取始终失败，调用 <code>invalidate()</code> 也不能恢复实例。</p>
+<p>自动鉴权客户端的 <code>client.auth</code> 提供相同的 <code>invalidate()</code>、<code>dispose()</code> 方法；自定义 <code>getToken</code> 客户端的 <code>client.auth</code> 为 <code>undefined</code>，由调用者持有并管理原 provider。这些方法只管理认证获取；已发出的业务请求或 SSE 使用该请求自己的 <code>AbortSignal</code> 取消。</p>
+${note('轮换 signing secret 成功后清除相关实例的 Token 和密钥缓存；切换用户或更换应用 API Key 时释放旧实例并重新创建。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
 <p>浏览器继续使用 <code>fetchToken</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。</p>
 <h3>自定义 getToken 按接口权限选择令牌</h3>
 <p>回调签名为 <code>(admin: boolean) =&gt; string | Promise&lt;string&gt;</code>。SDK 在每次发送请求前传入权限标记：true 表示此次请求选择 ak；false 表示选择 ek（含仅用户接口）。回调只收到该布尔值，不接收路径等其他接口参数。选择发生在请求前，不是收到 403 后重试；SDK 不解码返回的令牌。</p>
@@ -466,7 +483,7 @@ const models = await client.settings.models.list({tokenType: 'admin'});
 const channels = await client.settings.channels.list();
 console.log(models, channels);`, 'typescript', true)}
 <p>模型记录的数字 id 用于管理接口，模型调用使用字符串 model_id。settings.models.list 默认使用 ek 查询应用可用目录，显式选择 admin 才返回自有管理目录。其他 settings、Runner 配置/实例管理、Coding Agent 管理和部分 Memories 操作需要 ak；各接口会显示具体要求。不要将应用 API Key 或 signing secret 交给浏览器。</p>
-<p><code>settings.signingSecret.get()</code> 读取 ek 签名密钥。仅在主动安排轮换时调用 <code>regenerate()</code>；轮换后重新创建服务端 provider/client。SDK 不自动轮换，也不在鉴权失败后改用更高权限重放。</p>`,
+<p><code>settings.signingSecret.get()</code> 读取 ek 签名密钥。仅在主动安排轮换时调用 <code>regenerate()</code>；成功后对相关 provider 或自动客户端的 <code>client.auth</code> 调用 <code>invalidate({signingSecret: true})</code>，让下次获取重新读取密钥。SDK 不自动轮换，也不在鉴权失败后改用更高权限重放。</p>`,
     },
     {
       id: 'migration', title: '升级到 0.3.0', description: 'Runner 配置、附件、幂等键、权限和事件协议的变化。',

@@ -16,7 +16,13 @@ export interface ZAIToken {
   expiresAt: number;
 }
 
-export type ZAITokenProvider = () => Promise<string>;
+export interface ZAITokenProvider {
+  (): Promise<string>;
+  /** Clear the token and cancel pending acquisition; optionally also clear the signing secret. */
+  invalidate(options?: {signingSecret?: boolean}): void;
+  /** Clear cached tokens and signing secrets and permanently stop token acquisition. */
+  dispose(): void;
+}
 
 export type ZAITokenProviderOptions = {
   /** Renew before a request when this many seconds (or less) remain. Default: 60. */
@@ -120,7 +126,10 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
     throw new ZAIClientError('invalid-input', 'Provide exactly one of credentials or fetchToken.');
   }
 
-  let acquire: () => ZAIToken | Promise<ZAIToken>;
+  let acquire: (signal: AbortSignal) => ZAIToken | Promise<ZAIToken>;
+  let clearSecret: (() => void) | undefined;
+  let disposeSource: (() => void) | undefined;
+  let timeoutMs: number | undefined;
   if (hasCredentials) {
     const credentials = options.credentials as ZAICredentials;
     validateCredentials(credentials);
@@ -133,7 +142,7 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       throw new ZAIClientError('invalid-input', 'tokenType must be admin or user.');
     }
     if (options.tokenType === 'user') {
-      const timeoutMs = options.signingSecretTimeoutMs ?? 30_000;
+      timeoutMs = options.signingSecretTimeoutMs ?? 30_000;
       if (!validSeconds(timeoutMs, 1) || timeoutMs > 2_147_483_647) {
         throw new ZAIClientError('invalid-input', 'signingSecretTimeoutMs must be a positive integer no greater than 2147483647.');
       }
@@ -142,27 +151,21 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
         throw new ZAIClientError('invalid-input', 'Invalid signing-secret request headers.');
       }
       // A fixed administrator provider prevents auto-auth recursion in the transport.
+      const adminProvider = createZAITokenProvider({credentials: {appID, appKey, userID, userName}, expiresInSeconds, refreshBeforeSeconds});
       const transport = createTransport({
         baseUrl: options.baseUrl,
-        getToken: createZAITokenProvider({credentials: {appID, appKey, userID, userName}, expiresInSeconds, refreshBeforeSeconds}),
+        getToken: adminProvider,
         fetch: options.fetch,
         headers,
       });
       let signingSecret: string | undefined;
-      acquire = async () => {
+      clearSecret = () => {signingSecret = undefined; adminProvider.invalidate();};
+      disposeSource = () => adminProvider.dispose();
+      acquire = async signal => {
         if (signingSecret === undefined) {
-          const controller = new AbortController();
-          let timer: ReturnType<typeof setTimeout> | undefined;
           try {
-            const result = await Promise.race([
-              transport.request<unknown>({method: 'get', path: '/signing_secret', successStatuses: [200], options: {signal: controller.signal}}),
-              new Promise<never>((_, reject) => {
-                timer = setTimeout(() => {
-                  reject(new ZAIClientError('authentication', 'Signing-secret request timed out.'));
-                  controller.abort();
-                }, timeoutMs);
-              }),
-            ]);
+            const result = await transport.request<unknown>({method: 'get', path: '/signing_secret', successStatuses: [200], options: {signal}});
+            signal.throwIfAborted();
             if (!result || typeof result !== 'object' || !('app_id' in result) || result.app_id !== appID
               || !('signing_secret' in result) || typeof result.signing_secret !== 'string' || !result.signing_secret.trim()
               || !('token_prefix' in result) || result.token_prefix !== 'ek-') {
@@ -170,13 +173,12 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
             }
             signingSecret = result.signing_secret;
           } catch (cause) {
+            if (signal.aborted) throw signal.reason;
             // The response and custom fetch errors can contain key material. Keep
             // only safe transport metadata, never the original body or cause.
             throw new ZAIClientError(cause instanceof ZAIClientError ? cause.code : 'authentication',
-              controller.signal.aborted ? 'Signing-secret request timed out.' : 'Unable to obtain the app signing secret.',
+              'Unable to obtain the app signing secret.',
               {status: cause instanceof ZAIClientError ? cause.status : undefined, method: 'GET', path: '/signing_secret'});
-          } finally {
-            clearTimeout(timer);
           }
         }
         // Slow secret retrieval must not consume the new user token's lifetime.
@@ -201,20 +203,33 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
   }
 
   let cached: ZAIToken | undefined;
-  let pending: Promise<string> | undefined;
-  return () => {
-    if (pending) return pending;
+  let pending: {promise: Promise<string>; controller: AbortController} | undefined;
+  let disposed = false;
+  const getToken = () => {
+    if (disposed) return Promise.reject(new ZAIClientError('aborted', 'The token provider has been disposed.'));
+    if (pending) return pending.promise;
     if (cached && cached.expiresAt - nowSeconds() > refreshBeforeSeconds) {
       return Promise.resolve(cached.token);
     }
-    pending = Promise.resolve().then(async () => {
+    const controller = new AbortController();
+    const {signal} = controller;
+    let cancel!: () => void;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const interrupted = new Promise<never>((_, reject) => {
+      cancel = () => reject(signal.reason);
+      signal.addEventListener('abort', cancel, {once: true});
+    });
+    const acquisition = Promise.resolve().then(async () => {
+      signal.throwIfAborted();
       let result: ZAIToken;
       try {
-        result = await acquire();
+        result = await acquire(signal);
       } catch (cause) {
+        if (signal.aborted) throw signal.reason;
         if (cause instanceof ZAIClientError && (hasCredentials || cause.code === 'invalid-input')) throw cause;
         throw new ZAIClientError('authentication', 'Failed to acquire a ZAI token.', {cause});
       }
+      signal.throwIfAborted();
       if (!result || typeof result.token !== 'string' || result.token.trim().length === 0
         || !validSeconds(result.expiresAt, 0) || result.expiresAt <= nowSeconds()) {
         throw new ZAIClientError('authentication', 'Token source must return a non-empty token with a future integer expiresAt in Unix seconds.');
@@ -222,9 +237,35 @@ export function createZAITokenProvider(options: ZAITokenProviderOptions): ZAITok
       // Snapshot the result: later mutation by the fetcher cannot alter our cache.
       cached = {token: result.token, expiresAt: result.expiresAt};
       return cached.token;
-    }).finally(() => {
-      pending = undefined;
     });
-    return pending;
+    const promise = Promise.race([acquisition, interrupted]).finally(() => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', cancel);
+      if (pending?.controller === controller) pending = undefined;
+    });
+    pending = {promise, controller};
+    if (timeoutMs !== undefined) {
+      timer = setTimeout(() => controller.abort(new ZAIClientError('authentication', 'Signing-secret request timed out.',
+        {method: 'GET', path: '/signing_secret'})), timeoutMs);
+    }
+    return promise;
   };
+
+  const invalidate = (options?: {signingSecret?: boolean}): void => {
+    if (options !== undefined && (!options || typeof options !== 'object'
+      || (options.signingSecret !== undefined && typeof options.signingSecret !== 'boolean'))) {
+      throw new ZAIClientError('invalid-input', 'signingSecret must be a boolean when provided.');
+    }
+    cached = undefined;
+    const previous = pending;
+    pending = undefined;
+    if (options?.signingSecret) clearSecret?.();
+    previous?.controller.abort(new ZAIClientError('aborted', disposed ? 'The token provider has been disposed.' : 'The token provider was invalidated.'));
+  };
+  return Object.assign(getToken, {invalidate, dispose() {
+    if (disposed) return;
+    disposed = true;
+    invalidate({signingSecret: true});
+    disposeSource?.();
+  }});
 }

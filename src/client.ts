@@ -252,6 +252,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
   const transport = createTransport(options);
   const baseUrl = new URL(options.baseUrl, globalThis.location?.href).href;
   const client = {
+    auth: transport.auth,
     agents: {
       /** List agents
        * Authentication: ak-* or ek-*; auto uses ek-*.

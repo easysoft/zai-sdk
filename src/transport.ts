@@ -201,6 +201,10 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
   const fixedToken = options.getToken;
 
   return {
+    auth: providers ? {
+      invalidate(options) {providers.admin.invalidate(options); providers.user.invalidate(options);},
+      dispose() {providers.admin.dispose(); providers.user.dispose();},
+    } : undefined,
     async request<T>(input: ZAIOperationRequest): Promise<T> {
       const {signal} = input.options ?? {};
       if (signal?.aborted) throw aborted(signal);

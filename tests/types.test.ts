@@ -77,6 +77,14 @@ function assertPublicAPI(client: ZAIClient) {
   createZAITokenProvider({credentials: {appID: 'app', appKey: 'key', userID: 'user'}, expiresInSeconds: 1000});
   createZAITokenProvider({credentials: {appID: 'app', appKey: 'key', userID: 'user'}, tokenType: 'user', baseUrl: 'https://zai.test/v1/zai'});
   createZAITokenProvider({fetchToken: async () => ({token: 'token', expiresAt: 1000}), refreshBeforeSeconds: 10});
+  const tokenProvider = createZAITokenProvider({fetchToken: () => ({token: 'token', expiresAt: 1000})});
+  void tokenProvider();
+  tokenProvider.invalidate();
+  tokenProvider.invalidate({signingSecret: true});
+  tokenProvider.dispose();
+  client.auth?.invalidate();
+  client.auth?.invalidate({signingSecret: true});
+  client.auth?.dispose();
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', auth: {mode: 'auto', appID: 'app', appKey: 'key', userID: 'user', userName: '用户😀'}});
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: admin => {
     expectTypeOf(admin).toEqualTypeOf<boolean>();
@@ -185,6 +193,12 @@ function assertPublicAPI(client: ZAIClient) {
   createZAITokenProvider({fetchToken: () => ({token: 't', expiresAt: 1000}), expiresInSeconds: 1000});
   // @ts-expect-error External token acquisition must include the expiration timestamp.
   createZAITokenProvider({fetchToken: () => 'token'});
+  // @ts-expect-error Secret invalidation must be an explicit boolean.
+  tokenProvider.invalidate({signingSecret: 'true'});
+  // @ts-expect-error Disposal does not accept selective invalidation options.
+  tokenProvider.dispose({signingSecret: true});
+  // @ts-expect-error Client auth is absent when the caller supplies the token source.
+  client.auth.invalidate();
   // @ts-expect-error User providers need a root URL to acquire the signing secret.
   createZAITokenProvider({credentials: {appID: 'a', appKey: 'k', userID: 'u'}, tokenType: 'user'});
   // @ts-expect-error A client always needs an explicit token source or auto auth.
@@ -219,5 +233,10 @@ it('exports precise nested request, response, upload, and asynchronous stream ty
   expectTypeOf<CodingRepositoriesGetResponse['repository']['relative_path']>().toEqualTypeOf<string>();
   expectTypeOf<CodingRepositoriesUpdateResponse['repository']['relative_path']>().toEqualTypeOf<string>();
   expectTypeOf<ReturnType<typeof createZAITokenProvider>>().toEqualTypeOf<ZAITokenProvider>();
+  expectTypeOf<ReturnType<ZAITokenProvider>>().toEqualTypeOf<Promise<string>>();
+  expectTypeOf<ReturnType<ZAITokenProvider['invalidate']>>().toEqualTypeOf<void>();
+  expectTypeOf<ReturnType<ZAITokenProvider['dispose']>>().toEqualTypeOf<void>();
+  expectTypeOf<NonNullable<ZAIClient['auth']>['invalidate']>().toEqualTypeOf<ZAITokenProvider['invalidate']>();
+  expectTypeOf<NonNullable<ZAIClient['auth']>['dispose']>().toEqualTypeOf<ZAITokenProvider['dispose']>();
   expectTypeOf<ZAIUploadFile>().toEqualTypeOf<Blob | {blob: Blob; filename: string}>();
 });

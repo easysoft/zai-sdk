@@ -2,6 +2,14 @@
 
 0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
 
+## Token 与 signing secret 生命周期
+
+`createZAITokenProvider()` 返回的函数新增 `invalidate()` 和 `dispose()`。普通 `invalidate()` 仅清除 Token，保留已缓存的 signing secret；密钥轮换成功后调用 `invalidate({signingSecret: true})` 同时清除两者，下次获取再读取密钥。失效操作本身不发请求。
+
+`invalidate()` 和 `dispose()` 会中止进行中的认证获取，等待者收到 `ZAIClientError`（`code: 'aborted'`）；迟到结果不会重新写入缓存。`dispose()` 幂等且永久禁用实例，后续获取失败，`invalidate()` 不能恢复它。
+
+自动鉴权客户端新增 `client.auth`，以相同方法管理内部 ak、ek provider。自定义 `getToken` 客户端的 `client.auth` 为 `undefined`，由调用者持有并管理原 provider。退出登录时释放旧实例；切换用户或更换应用 API Key 时重新创建。已发出的业务请求和 SSE 使用各自的 `AbortSignal` 取消，认证生命周期方法不负责取消这些请求。
+
 ## 2026-10-22 契约增量
 
 - 新增 `coding.repositories.downloadFile(agentId, workspaceId, repositoryId, {path})`，返回 `Blob`，允许 ak/ek、默认 ek。`path` 相对仓库根目录，规范中可省略，但缺失或为空时服务返回 404；Runner 离线返回 503。会话附件的 `coding.sessions.downloadFile` 仍仅允许 ek，且保留 `file_id/path` 恰好一个的约束。
@@ -142,7 +150,7 @@ const client = createZAIClient({
 
 Token 默认 1000 秒有效、提前 60 秒续期。signing secret 在当前实例缓存，并发共享首次获取，普通 ek 续期不发请求。密钥获取独立超时默认 30 秒，可设 `signingSecretTimeoutMs`；取消一个业务请求不取消共享获取，失败后可重试。
 
-SDK 不自动轮换密钥，也不在 401/403 后升级令牌或重放请求。切换用户或轮换 signing secret 后必须重建 provider/client；已有 SSE 不自动重连。
+SDK 不自动轮换密钥，也不在 401/403 后升级令牌或重放请求。0.2.0 切换用户或轮换 signing secret 后必须重建 provider/client；当前版本可在轮换后主动清除缓存，见上方“Token 与 signing secret 生命周期”。已有 SSE 不自动重连。
 
 ## 会话、上传与诊断
 

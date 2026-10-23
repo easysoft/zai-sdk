@@ -104,6 +104,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
   const transport = createTransport(options);
   const baseUrl = new URL(options.baseUrl, globalThis.location?.href).href;
   const client = {
+    auth: transport.auth,
 ${renderResource(root, 4)}
   };
   return {

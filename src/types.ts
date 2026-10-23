@@ -7,7 +7,7 @@ export interface ZAIRequestOptions {
   idempotencyKey?: string;
 }
 
-import type {ZAICredentials} from './auth.js';
+import type {ZAICredentials, ZAITokenProvider} from './auth.js';
 
 /** Server-side credentials used to select ak/ek before each operation. */
 export interface ZAIAutoAuthOptions extends ZAICredentials {
@@ -54,5 +54,7 @@ export interface ZAIOperationRequest {
 }
 
 export interface ZAITransport {
+  /** SDK-owned authentication lifecycle; custom getToken sources remain caller-owned. */
+  auth: Pick<ZAITokenProvider, 'invalidate' | 'dispose'> | undefined;
   request<T>(input: ZAIOperationRequest): Promise<T>;
 }

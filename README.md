@@ -116,7 +116,20 @@ const ek = await getUserToken();
 
 Token 默认有效期 1000 秒，在下一次调用且剩余时间不超过 60 秒时续期。Token 和 signing secret 仅缓存于当前 provider／自动鉴权实例；并发首次获取共享一个请求，后续 ek 续期仅本地签名。密钥获取默认独立超时 30 秒；单个业务请求取消不取消共享获取。失败不缓存，后续调用可重试。
 
-SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因续期自动重连 SSE。切换用户或轮换 signing secret 后重新创建 provider/client。
+可主动清除缓存或释放 provider：
+
+```ts
+getUserToken.invalidate(); // 仅清除 Token，下次获取时复用已缓存的 signing secret。
+getUserToken.invalidate({signingSecret: true}); // 同时清除密钥，下次获取时重新读取。
+const renewedEK = await getUserToken();
+getUserToken.dispose(); // 退出登录时永久禁用这个 provider，可重复调用。
+```
+
+`invalidate()` 不发请求；它与 `dispose()` 都会中止进行中的认证获取，让等待者收到 `ZAIClientError`（`code: 'aborted'`），迟到的结果不会写回缓存。`dispose()` 后的获取始终失败，`invalidate()` 不能恢复已释放的实例。
+
+`auth.mode: 'auto'` 客户端通过 `client.auth?.invalidate()`、`client.auth?.invalidate({signingSecret: true})` 和 `client.auth?.dispose()` 同时管理内部 ak、ek provider。自定义 `getToken` 客户端的 `client.auth` 为 `undefined`，由调用者持有并管理原 provider。这些操作只管理认证获取；已发出的业务请求或 SSE 通过该请求自己的 `AbortSignal` 取消。
+
+SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因续期自动重连 SSE。轮换 signing secret 成功后，清除相关 provider/client 的 Token 和密钥缓存；切换用户或更换应用 API Key 时释放旧实例并重新创建。
 
 浏览器从业务后端获取签好的 ek，不保存应用 API Key 或 signing secret：
 
