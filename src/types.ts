@@ -22,6 +22,8 @@ export type CreateZAIClientOptions = {
   baseUrl: string;
   fetch?: typeof globalThis.fetch;
   headers?: HeadersInit;
+  /** Limit business-request token purposes. Defaults to both; shared operations still default to user. */
+  allowedTokenTypes?: readonly ('admin' | 'user')[];
 } & (
   | {
     /** Called before each request: true selects ak; false selects ek. Return the token without Bearer. */

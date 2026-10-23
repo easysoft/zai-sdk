@@ -107,6 +107,9 @@ function assertPublicAPI(client: ZAIClient) {
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: async admin => admin ? 'ak-token' : 'ek-token'});
   // Existing no-argument callbacks and fixed-type providers remain compatible.
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'ek-token'});
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'ek-token', allowedTokenTypes: ['user']});
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', allowedTokenTypes: ['admin', 'user'] as const});
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', auth: {mode: 'auto', ...identity, appKey: 'key'}, allowedTokenTypes: ['admin']});
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: createZAITokenProvider({credentials: {appID: 'a', appKey: 'k', userID: 'u'}})});
 
   // @ts-expect-error The chat probe is an explicit boolean option.
@@ -241,6 +244,12 @@ function assertPublicAPI(client: ZAIClient) {
   createZAIClient({baseUrl: 'https://zai.test/v1/zai'});
   // @ts-expect-error Automatic and caller-supplied token sources are mutually exclusive.
   createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', auth: {mode: 'auto', appID: 'a', appKey: 'k', userID: 'u'}});
+  // @ts-expect-error Client authority accepts an explicit list of token types.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', allowedTokenTypes: 'user'});
+  // @ts-expect-error Unknown credential purposes cannot be allowed.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'token', allowedTokenTypes: ['administrator']});
+  // @ts-expect-error Permissions are not boolean administrator selectors.
+  createZAIClient({baseUrl: 'https://zai.test/v1/zai', auth: {mode: 'auto', ...identity, appKey: 'key'}, allowedTokenTypes: [true]});
 }
 
 it('exports precise nested request, response, upload, and asynchronous stream types', () => {

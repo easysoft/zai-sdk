@@ -224,6 +224,7 @@ ${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
 
 const client = createZAIClient({
   baseUrl: '/v1/zai', // 同源代理；跨域时填写完整 API 根地址
+  allowedTokenTypes: ['user'],
   getToken: createZAITokenProvider({
     fetchToken: async signal => {
       const response = await fetch('/api/zai/token', {
@@ -343,7 +344,30 @@ const client = createZAIClient({
 await client.agents.list(); // 调用 getToken(false)
 await client.settings.models.list(); // 调用 getToken(false)，查询用户可调用目录。
 await client.settings.models.list({tokenType: 'admin'}); // 调用 getToken(true)，查询自有管理目录。`, 'typescript', true)}
-<p>无参回调和直接传入固定类型的 provider 仍兼容，但会忽略 admin，不会自动切换令牌类型；只返回 ek 的 provider 不能用于管理员接口。自定义缓存应分别管理 ak、ek，其缓存和续期由调用者负责。auth 自动模式与 getToken 仍然互斥。</p>`,
+<p>无参回调和直接传入固定类型的 provider 仍兼容，但会忽略 admin，不会自动切换令牌类型；只返回 ek 的 provider 不能用于管理员接口。自定义缓存应分别管理 ak、ek，其缓存和续期由调用者负责。auth 自动模式与 getToken 仍然互斥。</p>
+<h3>限制客户端用途</h3>
+<p><code>allowedTokenTypes</code> 限制这个客户端的业务请求可选择哪些令牌用途，适用于自动认证和自定义 getToken。默认允许 admin、user；普通业务可限制为 user，管理任务可限制为 admin。不允许的用途在调用 getToken 或发出任何认证、业务请求前，抛出 <code>ZAIClientError</code>（<code>code: 'invalid-input'</code>）。</p>
+${code(`import {createZAIClient} from 'zai-sdk';
+
+const baseUrl = 'https://zai.example.com/v1/zai';
+const credentials = {appID: 'your-app-id', appKey: 'server-side-app-key', userID: 'user-123'};
+const userClient = createZAIClient({
+  baseUrl,
+  allowedTokenTypes: ['user'],
+  auth: {mode: 'auto', ...credentials},
+});
+await userClient.agents.list(); // 默认 user，允许。
+// userClient.settings.models.list({tokenType: 'admin'}) 会在本地拒绝。
+
+const adminClient = createZAIClient({
+  baseUrl,
+  allowedTokenTypes: ['admin'],
+  auth: {mode: 'auto', ...credentials},
+});
+await adminClient.settings.models.list({tokenType: 'admin'});
+// 共享接口仍默认 user；省略 tokenType 会被此客户端拒绝。`, 'typescript', true)}
+<p>allowedTokenTypes 必须是非空数组，成员只能为 admin 或 user，可使用只读数组，重复成员允许。SDK 在创建客户端时保存快照，后续修改原数组不会改变限制。共享接口始终默认 user，不因列表仅含 admin 就自动改用 admin。</p>
+${note('该限制不解码或验证自定义回调返回的 Token，也不代替服务端授权。限制为 user 的自动认证客户端仍可内部使用 ak 获取 signing secret；运行进程无需持有应用 API Key 时，使用直接密钥 provider 并通过 getToken 接入。')}`,
     },
     {
       id: 'requests', title: '客户端与请求配置', description: 'API 地址、请求头、取消、超时和分页约定。',
@@ -352,6 +376,7 @@ await client.settings.models.list({tokenType: 'admin'}); // 调用 getToken(true
 <tr><td><code>baseUrl</code> <b class="required">必填</b></td><td>string</td><td>API 根地址，例如 https://zai.example.com/v1/zai。</td></tr>
 <tr><td><code>auth</code></td><td>ZAIAutoAuthOptions</td><td>服务端自动按接口权限选择令牌；与 getToken 二选一。</td></tr>
 <tr><td><code>getToken</code></td><td>(admin: boolean) =&gt; string | Promise&lt;string&gt;</td><td>每次请求前调用；true 表示本次选择 ak，false 表示选择 ek（含仅用户接口）。实际允许的令牌类型见各接口权限；可用两个 provider 分别缓存。</td></tr>
+<tr><td><code>allowedTokenTypes</code></td><td>readonly ('admin' | 'user')[]</td><td>默认允许两种用途；必须非空，创建时保存快照。不允许的用途在回调和网络前拒绝；不改变共享接口默认选择 user 的规则。</td></tr>
 <tr><td><code>fetch</code></td><td>typeof globalThis.fetch</td><td>可选，自定义 Fetch；默认使用原生 Fetch。</td></tr>
 <tr><td><code>headers</code></td><td>HeadersInit</td><td>可选，所有请求的默认请求头。</td></tr>
 </tbody></table></div>

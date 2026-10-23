@@ -65,6 +65,7 @@ pnpm build     # 同时生成原有 ESM、类型声明和 dist/zai.js
 <script>
   const client = ZAI.createZAIClient({
     baseUrl: '/v1/zai',
+    allowedTokenTypes: ['user'],
     getToken: ZAI.createZAITokenProvider({
       acquireTimeoutMs: 30_000,
       fetchToken: async signal => {
@@ -178,6 +179,7 @@ SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因
 ```ts
 const client = createZAIClient({
   baseUrl: '/v1/zai',
+  allowedTokenTypes: ['user'],
   getToken: createZAITokenProvider({
     acquireTimeoutMs: 30_000,
     fetchToken: async signal => {
@@ -211,6 +213,32 @@ const client = createZAIClient({
 ```
 
 这一选择在请求前完成，不是收到 403 后重试。无参回调和直接传入固定类型的 provider 仍兼容，但它们会忽略 `admin`，不会自动切换令牌类型；例如只返回 ek 的 provider 不能调用管理员接口。自定义缓存应分别管理 ak 和 ek，避免共用一个缓存值。`auth.mode: 'auto'` 与 `getToken` 仍然互斥。
+
+### 限制客户端用途
+
+普通业务客户端可设置 `allowedTokenTypes: ['user']`，管理任务可设置 `['admin']`。省略时允许两种用途。此选项适用于自动认证和自定义 `getToken`；SDK 根据接口及请求选项选出令牌用途后，若用途不在允许列表中，会在调用 `getToken` 或发出任何认证、业务请求前抛出 `ZAIClientError`（`code: 'invalid-input'`）。
+
+```ts
+const userClient = createZAIClient({
+  baseUrl,
+  allowedTokenTypes: ['user'],
+  auth: {mode: 'auto', ...credentials},
+});
+await userClient.agents.list(); // 默认 user，允许。
+// userClient.settings.models.list({tokenType: 'admin'}) 会在本地拒绝。
+
+const adminClient = createZAIClient({
+  baseUrl,
+  allowedTokenTypes: ['admin'],
+  auth: {mode: 'auto', ...credentials},
+});
+await adminClient.settings.models.list({tokenType: 'admin'});
+// 共享接口仍默认 user；省略 tokenType 会被此客户端拒绝，不会自动改用 admin。
+```
+
+`allowedTokenTypes` 接受非空的只读数组，成员只能为 `'admin'` 或 `'user'`，重复成员允许；SDK 在创建客户端时保存快照，后续修改原数组不会改变客户端限制。
+
+该限制约束业务请求选择的令牌用途，不解码或验证自定义回调返回的 Token，也不代替服务端权限检查。`['user']` 的自动认证客户端仍持有应用 API Key，并可在内部使用 ak 获取 signing secret。希望运行进程无需持有应用 API Key 时，使用直接密钥 provider，并通过 `getToken` 接入。
 
 ## 资源与调用方式
 

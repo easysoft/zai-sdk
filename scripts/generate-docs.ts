@@ -220,7 +220,7 @@ const coreDescriptions: Record<string, string> = {
   ZAIDoctorOptions: 'doctor 选项：真实对话开关、Agent 与模型选择、每次请求超时、取消、请求头及进度回调。',
   ZAIDoctorDetail: '单项检查的类型、名称、是否通过、说明和可选错误。',
   ZAIDoctorResult: '诊断整体结果、逐项详情、选定 Agent 和临时会话 ID；清理失败也使 pass 为 false。',
-  CreateZAIClientOptions: '客户端构造选项：API 根地址、Token 提供器、自定义 Fetch 和默认请求头。',
+  CreateZAIClientOptions: '客户端构造选项：API 根地址、Token 提供器、允许的业务请求令牌用途、自定义 Fetch 和默认请求头。',
   ZAIRequestOptions: '所有资源方法的末尾选项：AbortSignal、单次请求头、显式幂等键和令牌类型。',
   ZAIUploadFile: '支持 File / Blob，或显式指定文件名的 Blob。',
   ZAIAutoAuthOptions: '服务端自动鉴权：按每个操作的权限选择 ak 或 ek。',

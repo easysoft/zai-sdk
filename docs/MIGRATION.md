@@ -2,6 +2,14 @@
 
 0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
 
+## 限制客户端用途
+
+`createZAIClient()` 新增 `allowedTokenTypes?: readonly ('admin' | 'user')[]`，省略时允许两种用途。普通业务客户端可设为 `['user']`，管理任务可设为 `['admin']`。数组必须非空且只包含合法用途，允许重复成员；SDK 在创建时保存快照，后续修改原数组不改变限制。
+
+限制适用于自动认证及自定义 `getToken`。不允许的用途会在调用回调或发出任何认证、业务请求前，以 `ZAIClientError`（`code: 'invalid-input'`）拒绝。共享接口仍默认使用 user；仅允许 admin 的客户端调用共享接口时，必须显式传入 `{tokenType: 'admin'}`，例如 `client.settings.models.list({tokenType: 'admin'})`。
+
+该选项限制业务请求选择的用途，不解码或验证自定义 Token，也不代替服务端授权。仅允许 user 的自动认证客户端仍可在内部使用 ak 获取 signing secret；需要运行进程无需持有应用 API Key 时，改用直接密钥 provider。
+
 ## 直接签发用户令牌
 
 可信后端已经持有 signing secret 时，新增 `createZAIUserToken({appID, userID, signingSecret, userName?, expiresAt?})` 可同步签发 ek，无需应用 API Key 或网络请求。`expiresAt` 默认为当前 Unix 秒加 1000，显式值必须为未来的整数 Unix 秒。
@@ -142,19 +150,9 @@ const client = createZAIClient({
 });
 ```
 
-`auth` 与 `getToken` 互斥。默认选择：20 个管理员操作使用 ak，其余 100 个允许 ak/ek 的操作使用 ek。没有仅允许 ek 的操作。权限按 HTTP 方法和路径显式配置，详情、来源和实际选择展示在 HTML 的每个接口下。
+`auth` 与 `getToken` 互斥。当前接口分为仅 ak、共享 ak/ek 和仅 ek：管理员专属接口选择 ak，其余默认选择 ek。共享接口可通过 `{tokenType: 'admin'}` 显式使用 ak；固定权限接口拒绝冲突选项。权限按 HTTP 方法和路径显式配置，完整要求和来源见 HTML 的接口参考。
 
-仅允许 ak 的操作（省略 `/v1/zai` 前缀）：
-
-| 操作 | 数量 |
-| --- | ---: |
-| `GET/POST /models`，`GET/PATCH/DELETE /models/{id}` | 5 |
-| `GET /channels`，`PUT /channels/{id}` | 2 |
-| `GET /signing_secret`，`POST /signing_secret/generate` | 2 |
-| `POST /memories`，`PUT/DELETE /memories/{id}` | 3 |
-| `POST /memories/{id}/contents`，`PUT/DELETE /memories/{id}/contents/{content_id}`，`POST /memories/{id}/contents/batch` | 4 |
-| `GET /memories/{id}/contents/{content_id}/chunks`，`GET /memories/{id}/contents/{content_id}/jobs`，`GET /memories/queue/stats` | 3 |
-| `GET /coding/runners` | 1 |
+模型与渠道配置、signing secret、Runner 管理等接口需要 ak；Coding SSH 密钥、Git 身份、客户端工具回填等用户操作只允许 ek。模型目录 `settings.models.list()` 是共享接口，默认用 ek 查询应用可用目录，显式使用 admin 才查询自有管理目录。
 
 ak 继续用应用 API Key 本地签发；同步方法保留 `createZAIToken(appID, appKey, userID, expiredTime?, userName?)`。编码统一为 UTF-8 JSON/Base64，解除旧 Latin-1 限制；hash 使用小写 MD5，时间仍为 Unix 秒。可选昵称不参与 hash。
 

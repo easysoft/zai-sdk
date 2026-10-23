@@ -185,6 +185,12 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
   } catch (cause) {
     throw new ZAIClientError('invalid-input', 'baseUrl must be an HTTP(S) API root, including /v1/zai.', {cause});
   }
+  const allowed = options.allowedTokenTypes;
+  if (allowed !== undefined && (!Array.isArray(allowed) || !allowed.length
+    || Array.from(allowed).some(value => value !== 'admin' && value !== 'user'))) {
+    throw new ZAIClientError('invalid-input', 'allowedTokenTypes must be a non-empty array containing only admin or user.');
+  }
+  const allowedTokenTypes = new Set(allowed ?? ['admin', 'user']);
   // Generated resource signatures carry the schema types. This internal dynamic
   // adapter only handles the already-typed HTTP operation and raw response body.
   const client = createClient({baseUrl}) as unknown as DynamicOpenAPIClient;
@@ -209,6 +215,9 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
       const {signal} = input.options ?? {};
       if (signal?.aborted) throw aborted(signal);
       const tokenType = selectTokenType(input, !!providers);
+      if (!allowedTokenTypes.has(tokenType)) {
+        throw new ZAIClientError('invalid-input', 'The selected token type is not allowed by this client.');
+      }
       let body: string | FormData | Blob | undefined;
       let headers: Headers;
       try {

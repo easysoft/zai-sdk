@@ -387,6 +387,7 @@ pnpm add /tmp/zai-sdk-pack/zai-sdk-0.3.0.tgz</code></pre></div>
 
 <span class="hljs-keyword">const</span> client = <span class="hljs-title function_">createZAIClient</span>({
   <span class="hljs-attr">baseUrl</span>: <span class="hljs-string">&#x27;/v1/zai&#x27;</span>, <span class="hljs-comment">// 同源代理；跨域时填写完整 API 根地址</span>
+  <span class="hljs-attr">allowedTokenTypes</span>: [<span class="hljs-string">&#x27;user&#x27;</span>],
   <span class="hljs-attr">getToken</span>: <span class="hljs-title function_">createZAITokenProvider</span>({
     <span class="hljs-attr">fetchToken</span>: <span class="hljs-keyword">async</span> signal =&gt; {
       <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&#x27;/api/zai/token&#x27;</span>, {
@@ -502,11 +503,35 @@ client.<span class="hljs-property">auth</span>?.<span class="hljs-title function
 <span class="hljs-keyword">await</span> client.<span class="hljs-property">agents</span>.<span class="hljs-title function_">list</span>(); <span class="hljs-comment">// 调用 getToken(false)</span>
 <span class="hljs-keyword">await</span> client.<span class="hljs-property">settings</span>.<span class="hljs-property">models</span>.<span class="hljs-title function_">list</span>(); <span class="hljs-comment">// 调用 getToken(false)，查询用户可调用目录。</span>
 <span class="hljs-keyword">await</span> client.<span class="hljs-property">settings</span>.<span class="hljs-property">models</span>.<span class="hljs-title function_">list</span>({<span class="hljs-attr">tokenType</span>: <span class="hljs-string">&#x27;admin&#x27;</span>}); <span class="hljs-comment">// 调用 getToken(true)，查询自有管理目录。</span></code></pre></div>
-<p>无参回调和直接传入固定类型的 provider 仍兼容，但会忽略 admin，不会自动切换令牌类型；只返回 ek 的 provider 不能用于管理员接口。自定义缓存应分别管理 ak、ek，其缓存和续期由调用者负责。auth 自动模式与 getToken 仍然互斥。</p></section><section class="guide-section" id="requests" data-search-entry data-search-title="客户端与请求配置" data-search-kind="指南"><header><p class="eyebrow">使用指南</p><h2>客户端与请求配置<a class="heading-anchor" href="#requests" aria-label="客户端与请求配置的永久链接">#</a></h2><p class="section-description">API 地址、请求头、取消、超时和分页约定。</p></header><p><code>createZAIClient(options)</code> 返回 <code>ZAIClient</code>。<code>baseUrl</code> 必须包含 <code>/v1/zai</code>，Node.js 使用完整 HTTP(S) 地址；浏览器也支持相对地址。地址不能包含用户名、密码、查询参数或 fragment。</p>
+<p>无参回调和直接传入固定类型的 provider 仍兼容，但会忽略 admin，不会自动切换令牌类型；只返回 ek 的 provider 不能用于管理员接口。自定义缓存应分别管理 ak、ek，其缓存和续期由调用者负责。auth 自动模式与 getToken 仍然互斥。</p>
+<h3>限制客户端用途</h3>
+<p><code>allowedTokenTypes</code> 限制这个客户端的业务请求可选择哪些令牌用途，适用于自动认证和自定义 getToken。默认允许 admin、user；普通业务可限制为 user，管理任务可限制为 admin。不允许的用途在调用 getToken 或发出任何认证、业务请求前，抛出 <code>ZAIClientError</code>（<code>code: 'invalid-input'</code>）。</p>
+<div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">import</span> {createZAIClient} <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;zai-sdk&#x27;</span>;
+
+<span class="hljs-keyword">const</span> baseUrl = <span class="hljs-string">&#x27;https://zai.example.com/v1/zai&#x27;</span>;
+<span class="hljs-keyword">const</span> credentials = {<span class="hljs-attr">appID</span>: <span class="hljs-string">&#x27;your-app-id&#x27;</span>, <span class="hljs-attr">appKey</span>: <span class="hljs-string">&#x27;server-side-app-key&#x27;</span>, <span class="hljs-attr">userID</span>: <span class="hljs-string">&#x27;user-123&#x27;</span>};
+<span class="hljs-keyword">const</span> userClient = <span class="hljs-title function_">createZAIClient</span>({
+  baseUrl,
+  <span class="hljs-attr">allowedTokenTypes</span>: [<span class="hljs-string">&#x27;user&#x27;</span>],
+  <span class="hljs-attr">auth</span>: {<span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;auto&#x27;</span>, ...credentials},
+});
+<span class="hljs-keyword">await</span> userClient.<span class="hljs-property">agents</span>.<span class="hljs-title function_">list</span>(); <span class="hljs-comment">// 默认 user，允许。</span>
+<span class="hljs-comment">// userClient.settings.models.list({tokenType: &#x27;admin&#x27;}) 会在本地拒绝。</span>
+
+<span class="hljs-keyword">const</span> adminClient = <span class="hljs-title function_">createZAIClient</span>({
+  baseUrl,
+  <span class="hljs-attr">allowedTokenTypes</span>: [<span class="hljs-string">&#x27;admin&#x27;</span>],
+  <span class="hljs-attr">auth</span>: {<span class="hljs-attr">mode</span>: <span class="hljs-string">&#x27;auto&#x27;</span>, ...credentials},
+});
+<span class="hljs-keyword">await</span> adminClient.<span class="hljs-property">settings</span>.<span class="hljs-property">models</span>.<span class="hljs-title function_">list</span>({<span class="hljs-attr">tokenType</span>: <span class="hljs-string">&#x27;admin&#x27;</span>});
+<span class="hljs-comment">// 共享接口仍默认 user；省略 tokenType 会被此客户端拒绝。</span></code></pre></div>
+<p>allowedTokenTypes 必须是非空数组，成员只能为 admin 或 user，可使用只读数组，重复成员允许。SDK 在创建客户端时保存快照，后续修改原数组不会改变限制。共享接口始终默认 user，不因列表仅含 admin 就自动改用 admin。</p>
+<aside class="note"><span class="note-label">使用提示</span><p>该限制不解码或验证自定义回调返回的 Token，也不代替服务端授权。限制为 user 的自动认证客户端仍可内部使用 ak 获取 signing secret；运行进程无需持有应用 API Key 时，使用直接密钥 provider 并通过 getToken 接入。</p></aside></section><section class="guide-section" id="requests" data-search-entry data-search-title="客户端与请求配置" data-search-kind="指南"><header><p class="eyebrow">使用指南</p><h2>客户端与请求配置<a class="heading-anchor" href="#requests" aria-label="客户端与请求配置的永久链接">#</a></h2><p class="section-description">API 地址、请求头、取消、超时和分页约定。</p></header><p><code>createZAIClient(options)</code> 返回 <code>ZAIClient</code>。<code>baseUrl</code> 必须包含 <code>/v1/zai</code>，Node.js 使用完整 HTTP(S) 地址；浏览器也支持相对地址。地址不能包含用户名、密码、查询参数或 fragment。</p>
 <div class="table-wrap"><table><thead><tr><th>CreateZAIClientOptions</th><th>类型</th><th>说明</th></tr></thead><tbody>
 <tr><td><code>baseUrl</code> <b class="required">必填</b></td><td>string</td><td>API 根地址，例如 https://zai.example.com/v1/zai。</td></tr>
 <tr><td><code>auth</code></td><td>ZAIAutoAuthOptions</td><td>服务端自动按接口权限选择令牌；与 getToken 二选一。</td></tr>
 <tr><td><code>getToken</code></td><td>(admin: boolean) =&gt; string | Promise&lt;string&gt;</td><td>每次请求前调用；true 表示本次选择 ak，false 表示选择 ek（含仅用户接口）。实际允许的令牌类型见各接口权限；可用两个 provider 分别缓存。</td></tr>
+<tr><td><code>allowedTokenTypes</code></td><td>readonly ('admin' | 'user')[]</td><td>默认允许两种用途；必须非空，创建时保存快照。不允许的用途在回调和网络前拒绝；不改变共享接口默认选择 user 的规则。</td></tr>
 <tr><td><code>fetch</code></td><td>typeof globalThis.fetch</td><td>可选，自定义 Fetch；默认使用原生 Fetch。</td></tr>
 <tr><td><code>headers</code></td><td>HeadersInit</td><td>可选，所有请求的默认请求头。</td></tr>
 </tbody></table></div>
@@ -36991,11 +37016,13 @@ controller.<span class="hljs-title function_">abort</span>();
     <span class="hljs-attr">requestBodies</span>: <span class="hljs-built_in">never</span>;
     <span class="hljs-attr">headers</span>: <span class="hljs-built_in">never</span>;
     <span class="hljs-attr">pathItems</span>: <span class="hljs-built_in">never</span>;
-}</code></pre></div></div></details><details class="type-entry" id="type-createZAIClient" data-search-entry data-search-title="createZAIClient" data-search-kind="导出 API"><summary><code>createZAIClient</code><span class="disclosure" aria-hidden="true">＋</span></summary><div class="type-body"><p>创建资源客户端。baseUrl 必填，auth 与 getToken 二选一，返回 ZAIClient。 <a href="#requests">查看使用指南 →</a></p><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">declare</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">createZAIClient</span>(<span class="hljs-params"><span class="hljs-attr">options</span>: <span class="hljs-title class_">CreateZAIClientOptions</span></span>): <span class="hljs-title class_">ZAIClient</span>;</code></pre></div></div></details><details class="type-entry" id="type-CreateZAIClientOptions" data-search-entry data-search-title="CreateZAIClientOptions" data-search-kind="导出 API"><summary><code>CreateZAIClientOptions</code><span class="disclosure" aria-hidden="true">＋</span></summary><div class="type-body"><p>客户端构造选项：API 根地址、Token 提供器、自定义 Fetch 和默认请求头。</p><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">CreateZAIClientOptions</span> = {
+}</code></pre></div></div></details><details class="type-entry" id="type-createZAIClient" data-search-entry data-search-title="createZAIClient" data-search-kind="导出 API"><summary><code>createZAIClient</code><span class="disclosure" aria-hidden="true">＋</span></summary><div class="type-body"><p>创建资源客户端。baseUrl 必填，auth 与 getToken 二选一，返回 ZAIClient。 <a href="#requests">查看使用指南 →</a></p><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">declare</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">createZAIClient</span>(<span class="hljs-params"><span class="hljs-attr">options</span>: <span class="hljs-title class_">CreateZAIClientOptions</span></span>): <span class="hljs-title class_">ZAIClient</span>;</code></pre></div></div></details><details class="type-entry" id="type-CreateZAIClientOptions" data-search-entry data-search-title="CreateZAIClientOptions" data-search-kind="导出 API"><summary><code>CreateZAIClientOptions</code><span class="disclosure" aria-hidden="true">＋</span></summary><div class="type-body"><p>客户端构造选项：API 根地址、Token 提供器、允许的业务请求令牌用途、自定义 Fetch 和默认请求头。</p><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">CreateZAIClientOptions</span> = {
   <span class="hljs-comment">/** API root including /v1/zai. Relative URLs are supported in browsers. */</span>
   <span class="hljs-attr">baseUrl</span>: <span class="hljs-built_in">string</span>;
   <span class="hljs-attr">fetch</span>?: <span class="hljs-keyword">typeof</span> globalThis.<span class="hljs-property">fetch</span>;
   <span class="hljs-attr">headers</span>?: <span class="hljs-title class_">HeadersInit</span>;
+  <span class="hljs-comment">/** Limit business-request token purposes. Defaults to both; shared operations still default to user. */</span>
+  <span class="hljs-attr">allowedTokenTypes</span>?: <span class="hljs-title function_">readonly</span> (<span class="hljs-string">&#x27;admin&#x27;</span> | <span class="hljs-string">&#x27;user&#x27;</span>)[];
 } &amp; (
   | {
     <span class="hljs-comment">/** Called before each request: true selects ak; false selects ek. Return the token without Bearer. */</span>
