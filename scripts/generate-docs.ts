@@ -212,7 +212,8 @@ const apiGroups = Object.entries(groups).map(([group, info]) => {
 
 const coreDescriptions: Record<string, string> = {
   createZAIClient: '创建资源客户端。baseUrl 必填，auth 与 getToken 二选一，返回 ZAIClient。',
-  createZAIToken: '使用服务端凭据签发 Token。expiredTime 默认为当前 Unix 秒加 1000。',
+  createZAIToken: '使用应用 API Key 同步签发管理员 Token。expiredTime 默认为当前 Unix 秒加 1000。',
+  createZAIUserToken: '使用可信后端的 signing secret 同步签发 ek；expiresAt 为未来的整数 Unix 秒，默认当前秒加 1000。',
   createZAITokenProvider: '创建按请求缓存并续期的 Token 提供器，支持缓存失效和永久释放。',
   ZAIClientError: 'SDK 错误类；按 code 分支处理，可附带 HTTP 信息、errorInfo 及 cause。',
   ZAIClient: 'createZAIClient 的返回类型，包含全部资源方法、doctor 诊断方法与自动鉴权生命周期 auth。',
@@ -228,6 +229,9 @@ const coreDescriptions: Record<string, string> = {
   ZAIRunnerStatusStreamEvent: 'Runner 状态 SSE 数据帧，含 event、id?、rawData 和 unknown 类型的 data；正常 EOF 结束。',
   ZAIStreamEvent: 'SSE 数据事件或完成事件；data 以 unknown 保留。',
   ZAICredentials: '服务端签名凭据：appID、appKey、userID 及可选 userName。',
+  ZAIIdentity: '绑定的应用及用户身份：appID、userID。',
+  ZAIUserCredentials: '可信后端的用户令牌凭据：绑定身份和静态 signingSecret 或动态 getSigningSecret，二选一。',
+  ZAIUserTokenOptions: '同步 ek 签发参数：绑定身份、signingSecret、可选 userName 与 expiresAt。',
   ZAIToken: 'Token 与有效期；expiresAt 使用整数 Unix 秒。',
   ZAITokenProvider: '异步 Token 获取函数，附带 invalidate 清除缓存与 dispose 永久释放方法。',
   ZAITokenProviderOptions: 'credentials 与 fetchToken 二选一，支持提前续期窗口；fetchToken 接收共享获取信号并有独立超时。',
@@ -238,7 +242,7 @@ const coreDescriptions: Record<string, string> = {
   components: `OpenAPI components 类型；含新版规范的 ${Object.keys(spec.components?.schemas ?? {}).length} 个公共 schemas。`,
 };
 const coreLinks: Record<string, string> = {
-  createZAIClient: 'requests', createZAIToken: 'authentication', createZAITokenProvider: 'authentication',
+  createZAIClient: 'requests', createZAIToken: 'authentication', createZAIUserToken: 'authentication', createZAITokenProvider: 'authentication',
   ZAIClientError: 'errors', ZAIStreamEvent: 'streaming', ZAIUploadFile: 'files',
   ZAIDoctorOptions: 'doctor', ZAIDoctorDetail: 'doctor', ZAIDoctorResult: 'doctor',
 };

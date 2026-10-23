@@ -267,14 +267,44 @@ const getUserToken = createZAITokenProvider({
 const ek = await getUserToken();`, 'typescript', true)}
 <p>ak 直接使用应用 API Key 本地签发。首次获取 ek 时，SDK 用相同应用及用户签发 ak，读取 <code>GET /signing_secret</code>，核对应用 ID、签名密钥和令牌前缀，再本地签发 ek。自动模式复用客户端的 fetch 和 headers。SDK 从不自动调用密钥生成或轮换接口。</p>
 <p>两种令牌均使用小写 MD5、UTF-8 JSON/Base64 和秒级过期时间，支持中文及 emoji。可选 <code>userName</code> 写入 <code>user_name</code>，不参与 hash。同步管理员方法保留 <code>createZAIToken(appID, appKey, userID, expiredTime?, userName?)</code>。</p>
+<h3>直接使用签名密钥签发 ek</h3>
+${code(`import {createZAIUserToken, createZAITokenProvider} from 'zai-sdk';
+
+const identity = {appID: 'your-app-id', userID: 'user-123'};
+const signingSecret = 'server-side-signing-secret';
+const ek = createZAIUserToken({
+  ...identity, signingSecret, userName: '小明',
+  expiresAt: Math.floor(Date.now() / 1000) + 1000,
+});
+const getUserToken = createZAITokenProvider({
+  credentials: {...identity, signingSecret},
+  tokenType: 'user',
+});`, 'typescript', true)}
+<p><code>createZAIUserToken()</code> 同步本地签发，不发网络请求。expiresAt 默认为当前 Unix 秒加 1000，显式值必须为未来的整数 Unix 秒。直接密钥 provider 必须指定 <code>tokenType: 'user'</code>，不接受 baseUrl、fetch 或 headers。credentials 中的 appKey、signingSecret 和 getSigningSecret 必须恰好提供一种。</p>
+${code(`import {createZAITokenProvider} from 'zai-sdk';
+
+const getUserToken = createZAITokenProvider({
+  credentials: {
+    appID: 'your-app-id', userID: 'user-123',
+    getSigningSecret: async signal => {
+      const response = await fetch('https://secrets.example.com/zai/signing-secret', {signal});
+      if (!response.ok) throw new Error('获取签名密钥失败');
+      return response.text();
+    },
+  },
+  tokenType: 'user',
+  signingSecretTimeoutMs: 30_000,
+});`, 'typescript', true)}
+<p><code>getSigningSecret: (signal: AbortSignal) =&gt; string | Promise&lt;string&gt;</code> 允许从可信后端的集中凭据服务取得密钥。将共享认证任务的 signal 传给 Fetch；超时、invalidate 和 dispose 会中止任务，迟到结果不写回缓存。回调错误会脱敏，不包含原始错误内容。</p>
+${note('signing secret 能签发该应用下不同用户的 ek，并非用户级秘密。它和应用 API Key 都必须留在可信后端；浏览器只接收签好的短期 ek。')}
 <div class="table-wrap"><table><thead><tr><th>配置</th><th>默认值</th><th>行为</th></tr></thead><tbody>
-<tr><td>tokenType</td><td>admin</td><td>credentials 模式可选 user；user 必须提供 baseUrl。</td></tr>
+<tr><td>tokenType</td><td>admin</td><td>appKey 凭据可选 user，此时必须提供 baseUrl；直接密钥凭据必须显式选择 user。</td></tr>
 <tr><td>expiresInSeconds</td><td>1000</td><td>本地签发的有效期，必须为正整数。</td></tr>
 <tr><td>refreshBeforeSeconds</td><td>60</td><td>剩余秒数不超过窗口时，在下次请求前刷新。</td></tr>
 <tr><td>signingSecretTimeoutMs</td><td>30000</td><td>本地签发 ek 时获取签名密钥的独立超时，单位为毫秒。</td></tr>
 <tr><td>acquireTimeoutMs</td><td>30000</td><td>仅 fetchToken 模式可用，共享 Token 获取超时；1 至 2,147,483,647 的整数，单位为毫秒。</td></tr>
 </tbody></table></div>
-<p>Token 和 signing secret 仅缓存在当前 provider／自动鉴权实例内。并发首次获取共享一次网络请求，普通 ek 续期只重新本地签名；失败不缓存，下次可重试。取消单个业务请求不会取消其他请求共享的密钥获取。没有后台刷新定时器。</p>
+<p>Token 和 signing secret 仅缓存在当前 provider／自动鉴权实例内。并发首次获取共享一次密钥获取，普通 ek 续期只重新本地签名；失败不缓存，下次可重试。取消单个业务请求不会取消其他请求共享的密钥获取。没有后台刷新定时器。</p>
 <h3>清除缓存与释放实例</h3>
 ${code(`import {createZAIClient, createZAITokenProvider} from 'zai-sdk';
 
@@ -292,7 +322,7 @@ client.auth?.invalidate({signingSecret: true}); // 同时管理内部 ak、ek pr
 client.auth?.dispose();`, 'typescript', true)}
 <p><code>invalidate()</code> 本身不发请求。它与 <code>dispose()</code> 都会中止进行中的认证获取，等待者收到 <code>ZAIClientError</code>（<code>code: 'aborted'</code>）；旧任务迟到的结果不会写回缓存。<code>dispose()</code> 后获取始终失败，调用 <code>invalidate()</code> 也不能恢复实例。</p>
 <p>自动鉴权客户端的 <code>client.auth</code> 提供相同的 <code>invalidate()</code>、<code>dispose()</code> 方法；自定义 <code>getToken</code> 客户端的 <code>client.auth</code> 为 <code>undefined</code>，由调用者持有并管理原 provider。这些方法只管理认证获取；已发出的业务请求或 SSE 使用该请求自己的 <code>AbortSignal</code> 取消。</p>
-${note('轮换 signing secret 成功后清除相关实例的 Token 和密钥缓存；切换用户或更换应用 API Key 时释放旧实例并重新创建。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
+${note('轮换 signing secret 成功后清除相关实例的 Token 和密钥缓存，动态来源会重新读取。静态 signingSecret 清缓存后仍复用创建时的值，更换它、切换用户或更换应用 API Key 时应释放旧实例并重新创建。SDK 不在 401/403 后升级为 ak 或重放请求，也不自动重连已有 SSE。')}
 <h3>外部 Token 获取与超时</h3>
 <p>浏览器使用 <code>fetchToken: (signal: AbortSignal) =&gt; ZAIToken | Promise&lt;ZAIToken&gt;</code>，由业务后端返回 <code>{token: 'ek-…', expiresAt}</code>。<code>expiresAt</code> 和同步方法的 <code>expiredTime</code> 都是 Unix 秒。将回调收到的 signal 传给后端 Fetch；超时、<code>invalidate()</code> 和 <code>dispose()</code> 都会中止它。</p>
 <p><code>acquireTimeoutMs</code> 默认 30 秒。超时抛出 <code>ZAIClientError</code>（<code>code: 'authentication'</code>，消息 <code>Token acquisition timed out.</code>），迟到结果不会写回缓存，后续调用可重新获取。这是共享获取任务自己的 signal，取消单个业务请求不影响其他等待者；超时也只限制 Token 获取，不限制随后的业务请求。</p>
@@ -498,7 +528,7 @@ console.log(models, channels);`, 'typescript', true)}
 <p>11 个写操作自动生成幂等键；重试应复用原键。仓库更新与 Turn 的 202 表示接受，不表示就绪或完成。普通附件可用 file_id/path，Coding 上传后以 attachment_ids 引用；原件下载仅允许 ek，单次链接不持久化到消息。合法 Coding error 事件继续传递，仍需读取 turn.failed；只拼接 message.delta，空文本事件也推进游标。</p>
 <p>模型测试、标题生成和记忆重建可能消耗额度，均保持显式调用；doctor 默认不增加这些行为。完整迁移说明和 0.1→0.2 历史保留在随包提供的 MIGRATION.md。</p>
 <h3>从 0.1.x 升级的历史变化</h3><p>根地址从 /v8 改为 /v1/zai；旧顶层 executor、workspaces、repositories、models 已移除。工作区、仓库和公钥进入 coding；models 改为 settings.models。实体字段 integration_id 改为 app_id，Agent 类型 executor 改为 runner；普通会话不再使用 executor_provider。</p>
-<p>工作区和仓库更新使用 PUT；仓库文件列表返回 entries，内容可能是 base64 或被截断，旧仓库下载无替代端点。模型管理不支持 all，也不再归一化旧模型数组。同步管理员签发保留位置参数并改用 UTF-8；用户令牌通过应用 API Key 获取签名密钥后生成。</p>
+<p>工作区和仓库更新使用 PUT；仓库文件列表返回 entries，内容可能是 base64 或被截断，旧仓库下载无替代端点。模型管理不支持 all，也不再归一化旧模型数组。同步管理员签发保留位置参数并改用 UTF-8；用户令牌可通过应用 API Key 获取密钥，也可直接使用可信后端的 signing secret 签发。</p>
 <p>当前原始规范已包含 Coding SSE，共 100 条路径、153 个 HTTP 操作、156 个资源方法。新增 coding.repositories.downloadFile 返回 Blob；仓库响应新增必填 relative_path，构造响应对象时需补齐。supplement 当前为空并保留包导出。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
 <h3>保留的规范缺口</h3><ul>
 <li>Memories、QA、文件提取的部分描述写“必填”，但 Schema 未设置 required；类型遵循正式 Schema，示例仍提供业务必需值。</li>

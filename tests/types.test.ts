@@ -1,6 +1,6 @@
 import {expect, expectTypeOf, it} from 'vitest';
 import {
-  createZAIClient, createZAITokenProvider,
+  createZAIClient, createZAITokenProvider, createZAIUserToken,
   type ZAIClient, type AgentsListResponse, type MessagesSendResponse,
   type SettingsModelsListResponse, type SessionsDownloadFileResponse, type ZAIStreamEvent,
   type CodingSessionsCreateInput, type CodingEventsStreamResponse, type ZAICodingStreamEvent, type ZAIRunnerStatusStreamEvent,
@@ -9,6 +9,7 @@ import {
   type CodingRepositoriesGetResponse, type CodingRepositoriesUpdateResponse,
   type ChatMessagesSendResponse, type ChatSendResponse, type FilesExtractInput,
   type ZAITokenProvider, type ZAIUploadFile, type ZAIDoctorResult, type ZAIDoctorDetail,
+  type ZAIIdentity, type ZAIUserCredentials, type ZAIUserTokenOptions,
 } from '../src/index.js';
 
 /** Compiled by tsc but never invoked: invalid calls must remain type errors. */
@@ -76,6 +77,15 @@ function assertPublicAPI(client: ZAIClient) {
   void client.skills.publishRevision('skill', {bundle: {blob: new Blob(), filename: 'skill.zip'}, changelog: 'v1'});
   createZAITokenProvider({credentials: {appID: 'app', appKey: 'key', userID: 'user'}, expiresInSeconds: 1000});
   createZAITokenProvider({credentials: {appID: 'app', appKey: 'key', userID: 'user'}, tokenType: 'user', baseUrl: 'https://zai.test/v1/zai'});
+  const identity = {appID: 'app', userID: 'user'} satisfies ZAIIdentity;
+  const userCredentials = {...identity, userName: '用户😀', signingSecret: 'secret'} satisfies ZAIUserCredentials;
+  createZAIUserToken({...identity, signingSecret: 'secret', expiresAt: 1_893_457_000} satisfies ZAIUserTokenOptions);
+  createZAITokenProvider({credentials: userCredentials, tokenType: 'user', expiresInSeconds: 1000});
+  createZAITokenProvider({credentials: {...identity, getSigningSecret: signal => {
+    expectTypeOf(signal).toEqualTypeOf<AbortSignal>();
+    return 'secret';
+  }}, tokenType: 'user', signingSecretTimeoutMs: 5_000});
+  createZAITokenProvider({credentials: {...identity, getSigningSecret: async () => 'secret'}, tokenType: 'user'});
   createZAITokenProvider({fetchToken: async () => ({token: 'token', expiresAt: 1000}), refreshBeforeSeconds: 10});
   createZAITokenProvider({fetchToken: signal => {
     expectTypeOf(signal).toEqualTypeOf<AbortSignal>();
@@ -211,6 +221,22 @@ function assertPublicAPI(client: ZAIClient) {
   client.auth.invalidate();
   // @ts-expect-error User providers need a root URL to acquire the signing secret.
   createZAITokenProvider({credentials: {appID: 'a', appKey: 'k', userID: 'u'}, tokenType: 'user'});
+  // @ts-expect-error Direct EK signing requires a signing secret.
+  createZAIUserToken({appID: 'app', userID: 'user'});
+  // @ts-expect-error Direct EK signing accepts a concrete secret, not an asynchronous source.
+  createZAIUserToken({appID: 'app', userID: 'user', getSigningSecret: async () => 'secret'});
+  // @ts-expect-error An administrator key and a signing secret are mutually exclusive.
+  createZAITokenProvider({credentials: {...identity, appKey: 'key', signingSecret: 'secret'}, tokenType: 'user'});
+  // @ts-expect-error Static and dynamic signing secrets are mutually exclusive.
+  createZAITokenProvider({credentials: {...identity, signingSecret: 'secret', getSigningSecret: () => 'secret'}, tokenType: 'user'});
+  // @ts-expect-error Supplied signing secrets cannot produce administrator tokens.
+  createZAITokenProvider({credentials: userCredentials, tokenType: 'admin'});
+  // @ts-expect-error Supplied signing secrets require an explicit user token type.
+  createZAITokenProvider({credentials: userCredentials});
+  // @ts-expect-error Direct secret sources do not retrieve secrets from the ZAI API.
+  createZAITokenProvider({credentials: userCredentials, tokenType: 'user', baseUrl: 'https://zai.test/v1/zai'});
+  // @ts-expect-error Dynamic secret callbacks own their network transport.
+  createZAITokenProvider({credentials: {...identity, getSigningSecret: () => 'secret'}, tokenType: 'user', fetch});
   // @ts-expect-error A client always needs an explicit token source or auto auth.
   createZAIClient({baseUrl: 'https://zai.test/v1/zai'});
   // @ts-expect-error Automatic and caller-supplied token sources are mutually exclusive.

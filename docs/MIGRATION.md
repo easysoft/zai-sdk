@@ -2,6 +2,25 @@
 
 0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
 
+## 直接签发用户令牌
+
+可信后端已经持有 signing secret 时，新增 `createZAIUserToken({appID, userID, signingSecret, userName?, expiresAt?})` 可同步签发 ek，无需应用 API Key 或网络请求。`expiresAt` 默认为当前 Unix 秒加 1000，显式值必须为未来的整数 Unix 秒。
+
+需要缓存与续期时使用：
+
+```ts
+const getUserToken = createZAITokenProvider({
+  credentials: {appID, userID, signingSecret},
+  tokenType: 'user',
+});
+```
+
+直接密钥凭据必须显式指定 `tokenType: 'user'`，不接受 `baseUrl`、`fetch` 或 `headers`。也可将 `signingSecret` 替换为 `getSigningSecret: (signal: AbortSignal) => string | Promise<string>`，从集中凭据服务取回密钥；`appKey`、`signingSecret` 和 `getSigningSecret` 必须恰好提供一种。新增公开类型 `ZAIIdentity`、`ZAIUserCredentials` 和 `ZAIUserTokenOptions` 分别描述绑定身份、直接密钥凭据和同步签发参数。
+
+动态来源使用 `signingSecretTimeoutMs`（默认 30 秒）和共享认证任务的 signal。超时、失效或释放会中止任务，回调错误脱敏，迟到结果不会回写缓存。密钥只获取一次并缓存，普通续期仍在本地签名；`invalidate({signingSecret: true})` 后重新读取。静态 `signingSecret` 清缓存后仍复用创建时的值，更换它应重新创建 provider。
+
+signing secret 可以签发该应用下不同用户的 ek，并非用户级秘密，必须留在可信后端。浏览器继续从业务后端取得签好的短期 ek。
+
 ## Token 与 signing secret 生命周期
 
 `createZAITokenProvider()` 返回的函数新增 `invalidate()` 和 `dispose()`。普通 `invalidate()` 仅清除 Token，保留已缓存的 signing secret；密钥轮换成功后调用 `invalidate({signingSecret: true})` 同时清除两者，下次获取再读取密钥。失效操作本身不发请求。
@@ -139,7 +158,7 @@ const client = createZAIClient({
 
 ak 继续用应用 API Key 本地签发；同步方法保留 `createZAIToken(appID, appKey, userID, expiredTime?, userName?)`。编码统一为 UTF-8 JSON/Base64，解除旧 Latin-1 限制；hash 使用小写 MD5，时间仍为 Unix 秒。可选昵称不参与 hash。
 
-`createZAITokenProvider({credentials})` 仍默认管理员令牌。要取得 ek，使用 `{credentials, tokenType:'user', baseUrl}`：SDK 先签 ak 读取 `/signing_secret`，校验响应后本地签 ek。0.2.0 的 `fetchToken` 模式保持不变，当前版本新增 signal 与获取超时，见上方说明；浏览器应从业务后端获取 ek。
+应用 API Key 凭据的 `createZAITokenProvider({credentials})` 默认管理员令牌。要取得 ek，使用 `{credentials, tokenType:'user', baseUrl}`：SDK 先签 ak 读取 `/signing_secret`，校验响应后本地签 ek。也可直接提供签名密钥，见上方“直接签发用户令牌”。当前 `fetchToken` 模式新增 signal 与获取超时，见上方说明；浏览器应从业务后端获取 ek。
 
 自定义客户端回调从无参扩展为 `getToken(admin: boolean): string | Promise<string>`。每次发送请求前，管理员专属接口传 `true`，共享接口传 `false`；分别返回 ak 和 ek（共享接口也允许 ak）。回调只有这个布尔参数，不接收其他接口信息，SDK 不解码返回令牌。这不是在 403 后升级令牌重试。
 

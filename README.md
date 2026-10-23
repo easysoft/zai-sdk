@@ -93,7 +93,7 @@ OUT=../zui_exts/zentao/lib/zai/public/zai pnpm build:umd
 接口权限分为仅 ak、共享 ak/ek 和仅 ek。自动模式为管理员接口使用 ak，其余默认使用 ek；共享接口可通过 `tokenType` 显式选择。权限来自当前规范、[鉴权文档](https://zai-dev.sh.oop.cc/docs/authentication/app-api) 和 [Coding API](https://zai-dev.sh.oop.cc/docs/zai/coding/api) 的具体说明，服务端仍检查应用和用户归属。全部接口的权限和来源见 HTML 参考。
 
 - ak：应用 API Key 直接本地签发，不请求服务端。
-- ek：首次用相同应用及用户签发 ak，调用 `GET /signing_secret`，核对应用 ID、密钥及前缀后本地签发。
+- ek：可直接使用可信后端持有的 signing secret 本地签发；使用应用 API Key 时，首次用相同应用及用户签发 ak，调用 `GET /signing_secret`，核对应用 ID、密钥及前缀后本地签发。
 - 两者使用小写 MD5、UTF-8 JSON/Base64、秒级过期时间，支持中文和 emoji。可选 `userName` 写入 `user_name`，不参与 hash。
 
 保留同步管理员签发与显式 provider：
@@ -115,7 +115,48 @@ const getUserToken = createZAITokenProvider({
 const ek = await getUserToken();
 ```
 
-Token 默认有效期 1000 秒，在下一次调用且剩余时间不超过 60 秒时续期。Token 和 signing secret 仅缓存于当前 provider／自动鉴权实例；并发首次获取共享一个请求，后续 ek 续期仅本地签名。密钥获取默认独立超时 30 秒；单个业务请求取消不取消共享获取。失败不缓存，后续调用可重试。
+后端已经持有 signing secret 时，无需应用 API Key 或 ZAI 网络请求即可同步签发 ek：
+
+```ts
+import {createZAIUserToken, createZAITokenProvider} from 'zai-sdk';
+
+const identity = {appID: 'your-app-id', userID: 'user-123'};
+const signingSecret = process.env.ZAI_SIGNING_SECRET!;
+const ek = createZAIUserToken({
+  ...identity,
+  signingSecret,
+  userName: '小明',
+  expiresAt: Math.floor(Date.now() / 1000) + 1000,
+});
+const getUserToken = createZAITokenProvider({
+  credentials: {...identity, signingSecret},
+  tokenType: 'user',
+});
+```
+
+`createZAIUserToken()` 的 `expiresAt` 默认为当前 Unix 秒加 1000，显式值必须为未来的整数 Unix 秒。直接密钥 provider 必须使用 `tokenType: 'user'`，不接受 `baseUrl`、`fetch` 或 `headers`。`credentials` 中的 `appKey`、`signingSecret` 和 `getSigningSecret` 必须恰好提供一种。
+
+集中凭据服务可以通过 `getSigningSecret` 提供密钥：
+
+```ts
+const getUserToken = createZAITokenProvider({
+  credentials: {
+    appID: 'your-app-id',
+    userID: 'user-123',
+    getSigningSecret: async signal => {
+      const response = await fetch('https://secrets.example.com/zai/signing-secret', {signal});
+      if (!response.ok) throw new Error('获取签名密钥失败');
+      return response.text(); // 由可信后端的凭据服务返回密钥。
+    },
+  },
+  tokenType: 'user',
+  signingSecretTimeoutMs: 30_000,
+});
+```
+
+`getSigningSecret` 签名为 `(signal: AbortSignal) => string | Promise<string>`。它使用共享认证任务自己的 signal，超时、`invalidate()` 或 `dispose()` 会中止任务，迟到结果不写回缓存；回调错误会脱敏，不包含原始错误内容。signing secret 能签发该应用下不同用户的 ek，并非用户级秘密；只在可信后端使用，不能下发浏览器。
+
+Token 默认有效期 1000 秒，在下一次调用且剩余时间不超过 60 秒时续期。Token 和 signing secret 仅缓存于当前 provider／自动鉴权实例；并发首次获取共享一次密钥获取，后续 ek 续期仅本地签名。密钥获取默认独立超时 30 秒；单个业务请求取消不取消共享获取。失败不缓存，后续调用可重试。
 
 可主动清除缓存或释放 provider：
 
@@ -130,7 +171,7 @@ getUserToken.dispose(); // 退出登录时永久禁用这个 provider，可重�
 
 `auth.mode: 'auto'` 客户端通过 `client.auth?.invalidate()`、`client.auth?.invalidate({signingSecret: true})` 和 `client.auth?.dispose()` 同时管理内部 ak、ek provider。自定义 `getToken` 客户端的 `client.auth` 为 `undefined`，由调用者持有并管理原 provider。这些操作只管理认证获取；已发出的业务请求或 SSE 通过该请求自己的 `AbortSignal` 取消。
 
-SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因续期自动重连 SSE。轮换 signing secret 成功后，清除相关 provider/client 的 Token 和密钥缓存；切换用户或更换应用 API Key 时释放旧实例并重新创建。
+SDK 不自动生成或轮换密钥，不在 401/403 后改用 ak 重放，不因续期自动重连 SSE。轮换 signing secret 成功后，清除相关 provider/client 的 Token 和密钥缓存，动态来源会重新读取。静态 `signingSecret` 清缓存后仍使用创建时的值，更换它、切换用户或更换应用 API Key 时应释放旧实例并重新创建。
 
 浏览器从业务后端获取签好的 ek，不保存应用 API Key 或 signing secret：
 
