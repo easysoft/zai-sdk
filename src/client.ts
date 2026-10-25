@@ -562,7 +562,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        cancel(sessionId: string, turnId: string, options?: ZAIRequestOptions): Promise<CodingTurnsCancelResponse> { return transport.request<CodingTurnsCancelResponse>({method: "post", path: "/coding/sessions/{session_id}/turns/{turn_id}/cancel", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "turn_id": turnId}, options}); },
+        cancel(sessionId: string, turnId: string, options?: ZAIRequestOptions): Promise<CodingTurnsCancelResponse> { return transport.request<CodingTurnsCancelResponse>({method: "post", path: "/coding/sessions/{session_id}/turns/{turn_id}/cancel", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "turn_id": turnId}, body: {}, options}); },
         /** Steer the running turn
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api

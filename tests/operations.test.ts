@@ -137,8 +137,9 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
         expect(await request.json()).toEqual(operation.streamName ? {...input as object, stream: false} : input);
         expect(request.headers.get('content-type')).toBe('application/json');
       } else {
-        expect(await request.text()).toBe('');
-        expect(request.headers.has('content-type')).toBe(false);
+        const emptyJSON = operation.group === 'coding.turns' && operation.name === 'cancel';
+        expect(await request.text()).toBe(emptyJSON ? '{}' : '');
+        expect(request.headers.get('content-type')).toBe(emptyJSON ? 'application/json' : null);
       }
       if (stream) return new Response(`: heartbeat\n\nid: 2\nevent: ${eventName}\ndata: ${JSON.stringify(event)}\n\n`, {status, headers: {'content-type': 'text/event-stream'}});
       return binary ? new Response(result as string, {status}) : Response.json(result, {status});
