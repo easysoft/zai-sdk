@@ -139,7 +139,8 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
         expect(await request.json()).toEqual(operation.streamName ? {...input as object, stream: false} : input);
         expect(request.headers.get('content-type')).toBe('application/json');
       } else {
-        const emptyJSON = operation.group === 'coding.turns' && operation.name === 'cancel';
+        const emptyJSON = path === '/coding/sessions/{session_id}/turns/{turn_id}/cancel'
+          || path === '/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/sync';
         expect(await request.text()).toBe(emptyJSON ? '{}' : '');
         expect(request.headers.get('content-type')).toBe(emptyJSON ? 'application/json' : null);
       }

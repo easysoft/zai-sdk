@@ -71,6 +71,8 @@ it('returns repository synchronization acceptance without polling or retrying', 
   expect(requests).toHaveLength(1);
   expect(requests[0]!.method).toBe('POST');
   expect(new URL(requests[0]!.url).pathname).toBe('/v1/zai/coding/agents/agent/workspaces/workspace/repos/repo/sync');
+  expect(requests[0]!.headers.get('content-type')).toBe('application/json');
+  expect(await requests[0]!.json()).toEqual({});
 });
 
 it('uses admin credentials and a reusable idempotency key for session-bound runner recovery', async () => {

@@ -404,7 +404,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see ../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}~1workspaces~1{workspace_id}~1repos~1{repository_id}~1sync/post
          */
-        sync(agentId: string, workspaceId: string, repositoryId: string, options?: ZAIRequestOptions): Promise<CodingRepositoriesSyncResponse> { return transport.request<CodingRepositoriesSyncResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/sync", auth: "user", successStatuses: [202], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, options}); }
+        sync(agentId: string, workspaceId: string, repositoryId: string, options?: ZAIRequestOptions): Promise<CodingRepositoriesSyncResponse> { return transport.request<CodingRepositoriesSyncResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/sync", auth: "user", successStatuses: [202], pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, body: {}, options}); }
       },
       runners: {
         /** List application runner profiles

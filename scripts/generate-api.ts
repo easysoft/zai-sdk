@@ -71,9 +71,9 @@ for (const [group, name, method, path, auth, source, streamName, streamKind] of 
     fields.push(streamName ? 'body: {...input, stream: false}' : 'body: input');
     if (isUpload || isBundle || binaryInput) fields.push(`encoding: '${encoding}'`);
   }
-  // The deployed cancel route parses JSON although its schema has no request body.
-  // Preserve cancel(sessionId, turnId, options) while sending an empty JSON object.
-  if (`${group}.${name}` === 'coding.turns.cancel') fields.push('body: {}');
+  // These deployed routes parse JSON although their schemas have no request body.
+  // Keep their input-free signatures while supplying the required empty object.
+  if (['coding.turns.cancel', 'coding.repositories.sync'].includes(`${group}.${name}`)) fields.push('body: {}');
   if (binary || streamKind) fields.push(`responseType: '${streamKind ? 'stream' : 'blob'}'`);
   args.push('options?: ZAIRequestOptions');
   fields.push('options');
