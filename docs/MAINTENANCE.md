@@ -24,6 +24,10 @@ pnpm docs:check
 
 类型生成设置 `defaultNonNullable: false`，可选参数的 default 不应变成调用方必填项。Memory 空内容查询的 `undefined` 返回及失败重试选择器的互斥类型在生成器中维护，原始契约保持不变；对应运行时行为和类型边界均有回归。会话级实例恢复仅 ak，Agent 级实例准备仅 ek，不按名称推断权限。
 
+真实部署的取消 Turn 和仓库同步路由需要空 JSON，即使原始规范没有 requestBody；在生成器中维护此适配，不增加无用的公开 input 参数。仓库文件写入仅 ek，已由维护者确认；与共享 ak/ek 的仓库文件下载分别维护权限。真实服务差异与证据见 [LIVE-VALIDATION.md](./LIVE-VALIDATION.md)。
+
+Playwright 产物固定写入 `test-results/browser/`。不要改回整个 `test-results/`，浏览器启动时会清理 outputDir，导致真实验收 JSON 和其他证据被删除。
+
 ## 页面约定
 
 这是面向 SDK 使用者的中文内容文档。正文优先，左侧按使用指南与资源组织导航；方法折叠展示，避免大段嵌套字段淹没目录。搜索结果可用键盘访问，点击锚点会展开对应接口，浏览器前进/后退与外部深链接均可用。

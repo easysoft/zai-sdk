@@ -4,7 +4,8 @@ import {randomUUID} from 'node:crypto';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {setTimeout as delay} from 'node:timers/promises';
 import test, {after, type TestContext} from 'node:test';
-import {createZAIClient, createZAITokenProvider, ZAIClientError, type ZAIClient, type ZAIStreamEvent} from '../src/index.js';
+import {isDeepStrictEqual} from 'node:util';
+import {createZAIClient, createZAITokenProvider, ZAIClientError, type ZAIClient, type ZAICodingStreamEvent, type ZAIStreamEvent} from '../src/index.js';
 import {ZAI_OPERATIONS} from '../src/operations.js';
 
 function required(name: string) {
@@ -18,8 +19,10 @@ const baseUrl = url.href;
 const credentials = {appID: required('TEST_ZAI_APP_ID'), appKey: required('TEST_ZAI_APP_KEY'), userID: required('TEST_ZAI_USER_ID')};
 const options = (ms = 30_000) => ({signal: AbortSignal.timeout(ms)});
 const marker = `zai-sdk-migration-${randomUUID()}`;
-const requests: {method: string; path: string; token: string; status: number; ms: number}[] = [];
+const requests: {method: string; path: string; token: string; status: number; ms: number; requestId: string | null}[] = [];
 const results: {name: string; pass: boolean; error?: string}[] = [];
+const checks: {name: string; pass: boolean; error?: string}[] = [];
+const observations: {name: string; values: Record<string, string | number | boolean | null>}[] = [];
 const cleanupResults: {name: string; status: 'pending' | 'cleaned' | 'failed'; error?: string}[] = [];
 const permissionMismatches: string[] = [];
 const checkFailures: string[] = [];
@@ -30,7 +33,7 @@ function track(ids: string[], id: string) {
 }
 function saveResults() {
   mkdirSync('test-results', {recursive: true});
-  writeFileSync('test-results/live-migration.json', JSON.stringify({date: new Date().toISOString(), baseUrl, marker, results, cleanupResults, codingResources, permissionMismatches, checkFailures, requests}, null, 2));
+  writeFileSync('test-results/live-migration.json', JSON.stringify({date: new Date().toISOString(), baseUrl, marker, results, checks, observations, cleanupResults, codingResources, permissionMismatches, checkFailures, requests}, null, 2));
 }
 const tracedFetch: typeof fetch = async (input, init) => {
   const request = new Request(input, init);
@@ -40,7 +43,8 @@ const tracedFetch: typeof fetch = async (input, init) => {
   const start = Date.now();
   const response = await fetch(request);
   requests.push({method: request.method, path: operation?.path ?? pathname,
-    token: request.headers.get('authorization')?.startsWith('Bearer ak-') ? 'ak' : 'ek', status: response.status, ms: Date.now() - start});
+    token: request.headers.get('authorization')?.startsWith('Bearer ak-') ? 'ak' : 'ek', status: response.status, ms: Date.now() - start,
+    requestId: response.headers.get('x-request-id')});
   saveResults();
   return response;
 };
@@ -52,16 +56,28 @@ const user = createZAIClient({baseUrl, getToken: getUser, fetch: tracedFetch});
 
 function safeError(error: unknown): Error {
   if (error instanceof ZAIClientError) {
-    const reason = error.errorInfo?.reason_code;
-    return new Error(`${error.method ?? ''} ${error.path ?? ''}: ${error.code}, HTTP ${error.status ?? 'none'}${reason && /^[a-zA-Z0-9_-]+$/.test(reason) ? `, ${reason}` : ''}`);
+    const reason = error.errorInfo?.reason_code ?? error.errorInfo?.code;
+    const requestId = error.headers?.get('x-request-id');
+    return new Error(`${error.method ?? ''} ${error.path ?? ''}: ${error.code}, HTTP ${error.status ?? 'none'}${reason && /^[a-zA-Z0-9_-]+$/.test(reason) ? `, ${reason}` : ''}${requestId && /^[a-zA-Z0-9_-]+$/.test(requestId) ? `, request ${requestId}` : ''}`);
   }
   return new Error(error instanceof Error ? error.message : 'Live check failed.');
 }
 
 type Cleanup = (name: string, run: () => Promise<unknown>) => void;
 async function independentCheck(name: string, run: () => Promise<unknown>) {
-  try { await run(); }
-  catch (error) { checkFailures.push(`${name}: ${safeError(error).message}`); saveResults(); }
+  const mismatchStart = permissionMismatches.length;
+  try {
+    await run();
+    assert.equal(permissionMismatches.length, mismatchStart, `${name}: the server accepted a forbidden token.`);
+    checks.push({name, pass: true});
+  }
+  catch (error) {
+    const message = safeError(error).message;
+    checkFailures.push(`${name}: ${message}`);
+    checks.push({name, pass: false, error: message});
+  }
+  console.log(`${checks.length}. ${checks.at(-1)!.pass ? 'PASS' : 'FAIL'} ${name}`);
+  saveResults();
 }
 async function expectForbidden(name: string, request: Promise<unknown>) {
   try { await request; }
@@ -106,6 +122,127 @@ function live(name: string, run: (t: TestContext, cleanup: Cleanup) => Promise<v
 }
 
 after(saveResults);
+
+live('live 0.4.0 quota, personal skills and ordinary commands', async (t, cleanup) => {
+  console.log(`Live environment: ${baseUrl}; app/user configured; credentials omitted; cleanup enabled.`);
+  for (const tokenType of ['user', 'admin'] as const) {
+    await independentCheck(`quota with ${tokenType}`, async () => {
+      const quota = await client.me.getQuota({...options(), tokenType});
+      assert.ok(['active', 'expired', 'exhausted'].includes(quota.status));
+      assert.equal(typeof quota.used_tokens, 'number');
+      assert.ok(quota.remaining_tokens === null || quota.remaining_tokens >= 0);
+      if (quota.available_tokens === null) assert.equal(quota.remaining_tokens, null);
+    });
+  }
+  const {skill} = await client.skills.create({key: marker, name: marker, scope: 'personal', owner_id: credentials.userID, status: 'draft'}, options());
+  cleanup(`personal skill ${skill.id}`, async () => {
+    await client.skills.delete(skill.id, options());
+    assert.ok(!(await client.skills.list({scope: 'personal', owner_id: credentials.userID}, options())).some(item => item.id === skill.id && item.status !== 'deleted'));
+  });
+  await independentCheck('personal skill ownership, filters and immutable scope', async () => {
+    assert.equal(skill.scope, 'personal');
+    assert.equal(skill.owner_id, credentials.userID);
+    for (const tokenType of ['user', 'admin'] as const) {
+      assert.ok((await client.skills.list({scope: 'personal', owner_id: credentials.userID}, {...options(), tokenType})).some(item => item.id === skill.id));
+    }
+    assert.ok(!(await client.skills.list({scope: 'app'}, options())).some(item => item.id === skill.id));
+    await assert.rejects(client.skills.update(skill.id, {scope: 'app'}, options()), error => error instanceof ZAIClientError && error.status === 400);
+  });
+  const {agents} = await client.agents.list(options());
+  const agent = agents.find(item => item.type === 'custom' && item.status === 'active' && item.is_default)
+    ?? agents.find(item => item.type === 'custom' && item.status === 'active');
+  assert.ok(agent, 'Ordinary command validation requires an active custom Agent.');
+  const {session} = await client.sessions.create(agent.id, {title: marker, skills: [], reference_settings: {memories: {collections: []}}, custom_data: {sdk_live_test: marker}}, options());
+  cleanup(`ordinary session ${session.id}`, () => client.sessions.delete(session.id, options()));
+  for (const tokenType of ['user', 'admin'] as const) {
+    await independentCheck(`ordinary command catalog with ${tokenType}`, async () => {
+      assert.ok(Array.isArray((await client.sessions.listCommands(session.id, {...options(), tokenType})).commands));
+    });
+  }
+  await independentCheck('ordinary JSON thinking default and usage fields', async () => {
+    const result = await client.messages.send(session.id, {content: [{type: 'input_text', text: 'Reply with exactly OK. Do not use tools.'}], thinking_option_id: null, tools: [], tool_execution_mode: 'schema-only'}, options(90_000));
+    assert.ok(result.content?.trim());
+    if (result.reasoning_content !== undefined) assert.equal(typeof result.reasoning_content, 'string');
+    if (result.usage_metrics) assert.ok(['turn', 'provider'].includes(result.usage_metrics.token_scope));
+    t.diagnostic(`Ordinary response: reasoning=${result.reasoning_content !== undefined}, usage_metrics=${!!result.usage_metrics}; content omitted.`);
+  });
+});
+
+live('live 0.4.0 Memory defaults, content semantics and failed retries', async (t, cleanup) => {
+  const collection = await client.memories.create({name: marker}, options());
+  cleanup(`memory collection ${collection.id}`, async () => {
+    await client.memories.delete(collection.id, options());
+    assert.ok(!(await client.memories.list(options())).some(item => item.id === collection.id && item.status !== 'deleted'));
+  });
+  await independentCheck('Memory defaults and missing content empty 200', async () => {
+    assert.equal(collection.max_tokens_per_chunk, 1024);
+    assert.equal(collection.overlap_tokens, 0);
+    assert.equal(await client.memories.getContent(collection.id, randomUUID(), options()), undefined);
+    await client.memories.update(collection.id, {name: `${marker}-updated`, status: 'enabled'}, options());
+    await assert.rejects(client.memories.rebuild(collection.id, {max_tokens_per_chunk: 8193}, options()), error => error instanceof ZAIClientError && error.status === 400);
+  });
+  const content = await client.memories.upsertContent(collection.id, {content: 'SDK memory acceptance text.', key: marker, content_type: 'markdown', attrs: {sdk_live_test: marker}}, options());
+  assert.ok(content.success && content.content_id);
+  const id = content.content_id;
+  await independentCheck('Memory key upsert and update defaults', async () => {
+    const same = await client.memories.upsertContent(collection.id, {content: 'SDK memory acceptance updated.', key: marker}, options());
+    assert.equal(same.content_id, id);
+    await client.memories.updateContent(collection.id, id, {content: 'SDK memory acceptance final.'}, options());
+    const current = await client.memories.getContent(collection.id, id, options());
+    assert.ok(current);
+    assert.equal(current.content, 'SDK memory acceptance final.');
+    assert.equal(current.content_type, 'text');
+    assert.equal(current.key, null);
+    assert.equal(current.attrs, null);
+  });
+  await independentCheck('Memory batch preserves duplicate keys and supports filtering', async () => {
+    const batch = await client.memories.createContentsBatch(collection.id, {contents: [
+      {content: 'SDK batch first.', key: marker}, {content: 'SDK batch second.', key: marker},
+    ]}, options());
+    assert.equal(new Set(batch.content_ids).size, 2);
+    assert.equal((await client.memories.filterContents(collection.id, {content_keywords: 'SDK batch'}, options())).length, 2);
+  });
+  await independentCheck('Memory failed retry admin permission', () => expectForbidden('Memory failed retry with ek', user.memories.retryFailed(collection.id, {all_failed: true}, options())));
+  await independentCheck('Memory failed retry selections', async () => {
+    const selected = await client.memories.retryFailed(collection.id, {content_ids: [id, id]}, options());
+    assert.equal(selected.success, true);
+    assert.equal(selected.requeued + selected.skipped, 1, 'Duplicate selected IDs must be deduplicated.');
+    await assert.rejects(client.memories.retryFailed(collection.id, {content_ids: [randomUUID()]}, options()), error => error instanceof ZAIClientError && error.status === 404);
+    const all = await client.memories.retryFailed(collection.id, {all_failed: true}, options());
+    assert.equal(all.success, true);
+  });
+  await independentCheck('Memory worker completion and redacted failure diagnostics', async () => {
+    const deadline = Date.now() + 60_000;
+    for (;;) {
+      const contents = await client.memories.listContents(collection.id, undefined, options());
+      if (contents.every(item => item.embedding_status === 'completed' || item.embedding_status === 'error')) break;
+      assert.ok(Date.now() < deadline, 'Temporary Memory embedding must finish within the acceptance deadline.');
+      await delay(1500);
+    }
+    const failures = await client.memories.listFailures(collection.id, {page: 1, page_size: 1}, options());
+    assert.equal(failures.collection_id, collection.id);
+    const feedback = failures.contents[0]?.embedding_feedback;
+    const raw = await tracedFetch(`${baseUrl.replace(/\/$/, '')}/memories/${collection.id}/failures?page=1&page_size=1`, {headers: {Authorization: `Bearer ${await getAdmin()}`}, signal: options().signal});
+    assert.equal(raw.status, 200);
+    observations.push({name: 'Memory worker', values: {
+      collectionId: collection.id, contentId: id, failed: failures.total,
+      kind: feedback?.kind ?? 'none', retryCount: feedback?.retry_count ?? 0, maxRetries: feedback?.max_retries ?? 0,
+      message: feedback?.message === 'fetch failed' ? 'fetch failed' : 'redacted',
+      nativeMatchesSdk: isDeepStrictEqual(await raw.json(), failures),
+    }});
+    t.diagnostic(`Memory current failed contents: ${failures.total}; raw Worker errors omitted.`);
+    if (failures.total) {
+      await independentCheck('Memory actual failed-content retry and unpaginated retry-all', async () => {
+        const failedId = failures.contents[0]!.id;
+        const selected = await client.memories.retryFailed(collection.id, {content_ids: [failedId, failedId]}, options());
+        assert.equal(selected.requeued, 1);
+        const all = await client.memories.retryFailed(collection.id, {all_failed: true}, options());
+        assert.ok(all.requeued >= failures.total - 1, 'Retry-all must include failures outside the one-item diagnostic page.');
+      });
+    }
+    assert.equal(failures.total, 0, 'The configured embedding service must complete the temporary contents.');
+  });
+});
 
 live('live read-only ak/ek permissions and getToken(context)', async t => {
   const shared: [string, (c: ZAIClient) => Promise<unknown>][] = [
@@ -197,8 +334,11 @@ live('live Chat CRUD, both JSON/SSE endpoints and file extraction', async (t, cl
   assert.equal((await client.chat.conversations.get(conversation.id, options())).title, marker);
   await client.chat.conversations.update(conversation.id, {title: `${marker}-updated`}, options());
   assert.equal((await client.chat.conversations.get(conversation.id, options())).title, `${marker}-updated`);
-  const input = {content: 'Reply with exactly OK. Do not use tools or read files.', tools: [], tool_execution_mode: 'schema-only' as const};
-  assert.ok((await client.chat.messages.send(conversation.id, input, options(60_000))).content?.trim(), 'Chat JSON must return text.');
+  const input = {content: 'Reply with exactly OK. Do not use tools or read files.', thinking_option_id: null, tools: [], tool_execution_mode: 'schema-only' as const};
+  const reply = await client.chat.messages.send(conversation.id, input, options(60_000));
+  assert.ok(reply.content?.trim(), 'Chat JSON must return text.');
+  if (reply.usage_metrics) assert.ok(['turn', 'provider'].includes(reply.usage_metrics.token_scope));
+  observations.push({name: 'Chat usage', values: {usageMetrics: !!reply.usage_metrics, reasoning: reply.reasoning_content !== undefined}});
   await consume(await client.chat.messages.stream(conversation.id, input, options(60_000)));
   assert.ok((await client.chat.send({...input, conversation_id: conversation.id}, options(60_000))).content?.trim(), 'Convenience Chat JSON must return text.');
   await consume(await client.chat.stream({...input, conversation_id: conversation.id}, options(60_000)));
@@ -361,7 +501,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   assert.ok(Array.isArray((await client.coding.repositories.list(agent.id, workspace.id, options())).repositories));
   const catalog = await client.coding.models.list({agent_id: agent.id}, options());
   assert.ok(catalog.models.length > 0, 'The runner must return a model catalog.');
-  const sessionInput = {workspace_id: workspace.id, title: marker};
+  const sessionInput = {workspace_id: workspace.id, title: marker, thinking_option_id: null, custom_data: {sdk_live_test: marker}};
   const sessionKey = `${marker}-session`;
   cleanup(`Coding sessions for temporary Agent ${agent.id}`, async () => {
     for (let page = 1; ; page++) {
@@ -394,6 +534,84 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   await client.coding.sessions.getTools(session.id, options());
   await client.coding.interactions.list(session.id, undefined, options());
   assert.equal((await client.coding.agents.getStatus(agent.id, {session_id: session.id}, options())).status, 'ready');
+  console.log('Coding live: checking 0.4.0 commands, goals, recovery and isolated repository writes.');
+  await independentCheck('Coding session recovery uses ak and reuses its idempotency key', async () => {
+    const key = `${marker}-recover`;
+    const recovered = await client.coding.sessions.ensureRunnerInstance(session.id, {}, {...options(), idempotencyKey: key});
+    assert.equal(recovered.id, instance.id);
+    assert.equal((await client.coding.sessions.ensureRunnerInstance(session.id, {}, {...options(), idempotencyKey: key})).id, instance.id);
+  });
+  await independentCheck('Coding session recovery rejects ek', () => expectForbidden('session recovery with ek', user.coding.sessions.ensureRunnerInstance(session.id, {}, options())));
+  await independentCheck('Coding command catalogs and non-inference goal controls', async () => {
+    for (const tokenType of ['user', 'admin'] as const) {
+      assert.ok(Array.isArray((await client.coding.sessions.listCommands(session.id, {...options(), tokenType})).commands));
+      for (const action of ['get', 'pause', 'clear'] as const) {
+        assert.equal(typeof await client.coding.sessions.controlGoal(session.id, {action}, {...options(), tokenType}), 'object');
+      }
+    }
+    const control = await client.coding.turns.start(session.id, {content: '/goal'}, options());
+    if ('id' in control) {
+      await client.coding.turns.cancel(session.id, control.id, options());
+      assert.fail('A goal query must return HTTP 200 goal control, not create inference.');
+    }
+  });
+  await independentCheck('Coding pinned model catalog, thinking and metadata null semantics', async () => {
+    assert.equal(session.thinking_option_id, null);
+    assert.equal(session.forked_from_session_id, null);
+    assert.equal(session.forked_from_turn_id, null);
+    const models = await client.coding.models.list({agent_id: agent.id, session_id: session.id}, options());
+    assert.ok(models.models.length);
+    const model = models.models.find(item => item.id === models.default_model) ?? models.models[0]!;
+    const thinking = model.thinking_options?.find(item => item.available !== false);
+    if (thinking) {
+      assert.equal((await client.coding.sessions.update(session.id, {model: model.id, thinking_option_id: thinking.id}, options())).thinking_option_id, thinking.id);
+      assert.equal((await client.coding.sessions.update(session.id, {title: marker}, options())).thinking_option_id, thinking.id);
+    }
+    assert.equal((await client.coding.sessions.update(session.id, {thinking_option_id: null, custom_data: null}, options())).thinking_option_id, null);
+    const current = await client.coding.sessions.get(session.id, options());
+    assert.equal(current.custom_data?.sdk_live_test, undefined, 'Clearing business metadata must retain only internal session state.');
+    observations.push({name: 'Coding model', values: {model: model.id, thinkingOptions: model.thinking_options?.length ?? 0, thinkingOverrideChecked: !!thinking}});
+  });
+  let repositoryId: string | undefined;
+  let repositoryFileWritten = false;
+  const repositoryPath = 'sdk-live/roundtrip-你好.bin';
+  const repositoryBytes = Uint8Array.of(0, 255, 128, 10);
+  await independentCheck('Coding repository sync, raw file round trip and paginated diff', async () => {
+    const {repository} = await client.coding.repositories.create(agent.id, workspace.id, {repo_key: 'sdk-live', name: marker, url: null}, options());
+    repositoryId = repository.id;
+    cleanup(`temporary repository ${repository.id}`, () => client.coding.repositories.delete(agent.id, workspace.id, repository.id, options()));
+    for (const tokenType of ['user', 'admin'] as const) {
+      const synced = await client.coding.repositories.sync(agent.id, workspace.id, repository.id, {...options(), tokenType});
+      assert.equal(synced.repository.id, repository.id);
+      assert.ok(synced.repository.sync);
+    }
+    const readyBy = Date.now() + 90_000;
+    for (;;) {
+      const current = await client.coding.repositories.get(agent.id, workspace.id, repository.id, options());
+      if (current.repository.sync.available === true) break;
+      assert.ok(Date.now() < readyBy, 'Temporary repository must become available.');
+      await delay(1000);
+    }
+    const uploaded = await client.coding.sessions.writeRepositoryFile(session.id, {repo_key: 'sdk-live', path: repositoryPath}, new Blob([repositoryBytes]), options());
+    assert.equal(uploaded.size, repositoryBytes.length);
+    repositoryFileWritten = true;
+    for (const tokenType of ['user', 'admin'] as const) {
+      const downloaded = await client.coding.repositories.downloadFile(agent.id, workspace.id, repository.id, {path: repositoryPath}, {...options(), tokenType});
+      assert.deepEqual(new Uint8Array(await downloaded.arrayBuffer()), repositoryBytes);
+    }
+    const emptyPath = 'sdk-live/empty.txt';
+    await client.coding.sessions.writeRepositoryFile(session.id, {repo_key: 'sdk-live', path: emptyPath}, new Blob(), options());
+    assert.equal((await client.coding.repositories.downloadFile(agent.id, workspace.id, repository.id, {path: emptyPath}, options())).size, 0);
+    await independentCheck('Coding repository file write rejects ak', () => expectForbidden('repository file write with ak', admin.coding.sessions.writeRepositoryFile(session.id, {repo_key: 'sdk-live', path: emptyPath}, new Blob(), options())));
+    await assert.rejects(client.coding.sessions.writeRepositoryFile(session.id, {repo_key: 'sdk-live', path: '.git/sdk-live'}, new Blob(['forbidden']), options()), error => error instanceof ZAIClientError && error.status === 400);
+    const diff = await client.coding.git.diff(session.id, {repo_key: 'sdk-live', offset: 0, limit: 1, include_diff: 'false'}, options());
+    assert.equal(diff.status, 'ready');
+    assert.ok(diff.diffs.length <= 1);
+    assert.ok(Array.isArray(diff.pages));
+    assert.ok(diff.diffs.every(item => item.diff === ''));
+    const filtered = await client.coding.git.diff(session.id, {repo_key: 'sdk-live', path: emptyPath, include_diff: 'true'}, options());
+    assert.ok(filtered.diffs.every(item => item.path === emptyPath));
+  });
   const text = 'ZAI SDK 0.3.0 live attachment — 你好\n';
   const file = await client.coding.sessions.uploadFile(session.id, {name: 'sdk-live.txt'}, new Blob([text], {type: 'text/plain'}), options());
   track(codingResources.fileIds, file.id);
@@ -416,7 +634,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   console.log('Coding live: starting one minimal Turn and observing its persisted events.');
   const turn = await client.coding.turns.start(session.id, {
     content: 'Reply with exactly OK. Do not run any tools or commands. Do not read or modify any files.', client_turn_id: marker,
-    tools: {version: 1, tools: [], servers: {}}, attachment_ids: [file.id],
+    tools: {version: 1, tools: [], servers: {}}, attachment_ids: [file.id], thinking_option_id: null,
   }, options());
   assert.ok('id' in turn, 'A message must start an inference turn, not return goal control.');
   track(codingResources.turnIds, turn.id);
@@ -424,7 +642,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   cleanup(`turn ${turn.id}`, async () => {
     if (!terminal) await client.coding.turns.cancel(session.id, turn.id, options());
   });
-  const events = [];
+  const events: ZAICodingStreamEvent[] = [];
   let message = '';
   let afterSeq = '0';
   const streamOptions = options(90_000);
@@ -446,6 +664,11 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   assert.equal(final.status, 'completed', 'Coding turn must complete successfully.');
   assert.ok(final.assistant_content.trim(), 'Coding turn must contain a response.');
   assert.ok(message.trim(), 'Coding message.delta payload.text must contain a response.');
+  await independentCheck('Coding Turn superseded and usage fields', async () => {
+    assert.equal(final.superseded_at, null);
+    if (final.usage_metrics) assert.ok(['turn', 'provider'].includes(final.usage_metrics.token_scope));
+    observations.push({name: 'Coding usage', values: {usageMetrics: !!final.usage_metrics, eventUsageMetrics: events.some(item => !!item.data.usage_metrics)}});
+  });
   const replay = await client.coding.events.list(session.id, {after_seq: '0', limit: '100'}, options());
   assert.ok(replay.events.some(e => e.type === 'turn.completed' && e.turn_id === turn.id));
   const first = events[0]!;
@@ -457,5 +680,45 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   } finally {
     await resumed.return?.();
   }
+  await independentCheck('Coding fork history remains frozen after source rewind', async () => {
+    const fork = await client.coding.sessions.create(agent.id, {workspace_id: workspace.id, title: marker, fork_from: {session_id: session.id, turn_id: turn.id}}, options(150_000));
+    track(codingResources.sessionIds, fork.id);
+    assert.equal(fork.forked_from_session_id, session.id);
+    assert.equal(fork.forked_from_turn_id, turn.id);
+    const history = await client.coding.sessions.getForkHistory(fork.id, options());
+    assert.ok(history.turns.some(item => item.turn.id === turn.id));
+    assert.ok(isDeepStrictEqual(await client.coding.sessions.getForkHistory(fork.id, {...options(), tokenType: 'admin'}), history), 'Both token types must read the same inherited history.');
+    const rewound = await client.coding.turns.rewind(session.id, turn.id, {mode: 'conversation'}, options());
+    assert.ok(rewound.rewound_turn_ids.includes(turn.id));
+    assert.equal(typeof (await client.coding.turns.get(session.id, turn.id, options())).superseded_at, 'string');
+    await independentCheck('Coding rewind event visibility and unchanged workspace files', async () => {
+      const visible = await client.coding.events.list(session.id, {after_seq: '0', limit: '100'}, options());
+      const audit = await client.coding.events.list(session.id, {after_seq: '0', limit: '100', include_superseded: 'true'}, options());
+      const originalSequences = new Set(replay.events.filter(item => item.turn_id === turn.id).map(item => item.seq));
+      assert.ok(!visible.events.some(item => originalSequences.has(item.seq)), 'Default replay must hide events stored before the rewind.');
+      assert.ok(audit.events.some(item => originalSequences.has(item.seq)));
+      assert.ok(visible.events.some(item => item.type === 'session.rewound'));
+      let sawRewind = false;
+      for await (const event of await client.coding.events.stream(session.id, {after_seq: afterSeq}, options(10_000))) {
+        if (event.data.type === 'session.rewound') { sawRewind = true; break; }
+      }
+      assert.ok(sawRewind, 'The live stream must deliver the rewind control event.');
+      if (repositoryId && repositoryFileWritten) {
+        const unchanged = await client.coding.repositories.downloadFile(agent.id, workspace.id, repositoryId, {path: repositoryPath}, options());
+        assert.deepEqual(new Uint8Array(await unchanged.arrayBuffer()), repositoryBytes);
+      }
+    });
+    const afterRewind = await client.coding.sessions.getForkHistory(fork.id, options());
+    const raw = await tracedFetch(`${baseUrl.replace(/\/$/, '')}/coding/sessions/${fork.id}/fork-history`, {headers: {Authorization: `Bearer ${await getUser()}`}, signal: options().signal});
+    assert.equal(raw.status, 200);
+    const unchanged = isDeepStrictEqual(afterRewind, history);
+    observations.push({name: 'Fork after source rewind', values: {
+      unchanged, nativeMatchesSdk: isDeepStrictEqual(await raw.json(), afterRewind),
+      beforeEvents: history.turns.reduce((count, item) => count + item.events.length, 0),
+      afterEvents: afterRewind.turns.reduce((count, item) => count + item.events.length, 0),
+      sourceSuperseded: afterRewind.turns.some(item => item.turn.superseded_at !== null),
+    }});
+    assert.ok(unchanged, 'Fork inherited turns and events must remain frozen after rewinding the source.');
+  });
   t.diagnostic(`Coding turn completed; ${events.length} SSE events, persisted replay and cursor resumption passed. Session history and instance volumes follow service retention semantics.`);
 });

@@ -1,4 +1,84 @@
-# 仓库下载权限核对（2026-10-22）
+# ZAI SDK 0.4.0 真实环境验证（2026-11-02）
+
+目标环境为 `https://zai-dev.sh.oop.cc/v1/zai`，使用本地 `.env.local` 的应用凭据。Coding 实测模型为 `deepseek-v4-flash`，Memory 集合默认嵌入模型为 `qwen3-embedding`。测试覆盖 JSON、三类 SSE、二进制文件和 multipart 提取；请求追踪记录方法、模板路径、令牌种类、状态、耗时与请求 ID，不记录凭据。
+
+**真实验收尚未全部通过。** 本轮修复并提交两处 SDK 问题：仓库同步补发空 JSON（`f9fb9ff`），仓库文件写入按维护者确认收紧为仅 ek（`1d9ccc6`）。其余主要差异是会话实例恢复权限、Fork 历史冻结语义，以及 Memory 上游嵌入失败。下文明确区分 SDK 修复、服务端返回和测试判定。
+
+## 新增接口验收
+
+| 接口 | 实测结果 |
+| --- | --- |
+| `me.getQuota` | ak/ek 均为 200，返回完整额度字段；本环境无限额度的 `available_tokens/remaining_tokens` 均为 null |
+| `sessions.listCommands` | 临时普通会话下 ak/ek 均为 200，返回 commands 数组 |
+| `coding.sessions.listCommands` | 临时 Coding 会话下 ak/ek 均为 200 |
+| `coding.sessions.controlGoal` | 空目标下 ak/ek 的 get、pause、clear 均为 200；`turns.start({content: '/goal'})` 返回 200 目标控制结果，没有创建 Turn |
+| `coding.sessions.getForkHistory` | ak/ek 均为 200，来源会话和轮次关联正确；源轮次 Rewind 后，继承轮次的 `superseded_at` 随之变化，冻结语义未通过 |
+| `coding.sessions.ensureRunnerInstance` | ak 返回 403 / `user_token_required`，固定 ek 实测返回 200；与维护者确认的仅 ak 权限相反，SDK 保持仅 ak |
+| `coding.sessions.writeRepositoryFile` | ek 的二进制和零字节写入成功，原始字节下载一致；ak 返回 403，维护者确认仅 ek 后修正 SDK；`.git` 路径返回预期 400 |
+| `coding.repositories.sync` | 原 SDK 无体 POST 返回 400；修复后 ak/ek 均为 202，仓库 sync 可读取且最终 available 为 true |
+| `coding.turns.rewind` | 200，目标轮次标记 superseded；默认回放隐藏旧事件，审计查询保留旧事件，SSE 收到 `session.rewound`；工作区文件字节保持不变 |
+| `memories.retryFailed` | ak 为 202、ek 为 403；重复 ID 去重、缺失 ID 返回 404；真实失败内容重入队成功，all_failed 不受失败列表分页限制。嵌入完成另行检查，仍失败 |
+
+## 变更行为验收
+
+- 个人技能创建、当前 owner 过滤、app/personal 范围隔离通过；修改 scope 返回 400。临时技能保持 draft，结束后删除。
+- Memory 仅传 name 创建成功，默认分块 1024、重叠 0；8193 分块预算被拒绝。缺失内容的空体 200 返回 `undefined`；单条 key upsert 复用 ID，更新省略的 content_type/key/attrs 恢复默认；批量重复 key 保留两条独立内容，过滤成功。
+- 普通消息 JSON 与 Chat 两套 JSON/SSE 端点接受 `thinking_option_id: null`。普通、Chat、Coding Turn 及 Coding SSE 均观测到 `usage_metrics`；本次普通/Chat 响应未出现可选的 reasoning_content。
+- Coding 模型目录支持 session_id；思考配置 null 清除覆盖，custom_data null 清除业务测试键并保留内部状态。当前模型返回 0 个 thinking_options，因此未验证有效字符串选项的切换。
+- 仓库文件下载的 ak/ek 均成功；Diff 的 offset/limit/path/include_diff、pages 以及不带补丁文本的查询通过。本次使用平台管理的空仓库，没有克隆外部仓库。
+- 旧镜像策略接口返回 503 / `runner_legacy_policy_unsupported`，与新版说明一致。
+
+## SDK 修复与证据
+
+### 仓库同步的空 JSON
+
+部署服务在资源查找前解析 JSON，而 OpenAPI 未声明请求体。对不存在的临时 ID 做原生请求对照：无体返回 400 / `Bad Request`（请求 ID `38762ab9-4836-42b6-ae13-5cef646528dd`），`{}` 返回正常的 404 / `Workspace not found`（`2260de87-6bd7-4678-acde-ebe357dfb060`）。随后在真实临时仓库中确认补发 `{}` 后 ak/ek 均为 202。
+
+在生成器中沿用取消 Turn 的空 JSON 适配，保持 `sync(agentId, workspaceId, repositoryId, options)` 签名；原始 OpenAPI 不覆盖。先增加请求体与 Content-Type 回归并确认失败，再修复，全部 1,116 项单元测试通过。
+
+### 仓库文件写入权限
+
+实际 ek 为 200，ak 为 403 / `user_token_required`；维护者确认仅 ek。映射改为 user-only，生成客户端及文档同步更新。回归确认显式 `tokenType: 'admin'` 在获取凭据和发出请求前被拒绝；真实权限验证则使用固定 ak provider，确保观察到的是服务端 403，而非客户端拒绝。
+
+修正后映射为 38 个仅 ak、116 个共享 ak/ek、9 个仅 ek；仍有 12 个操作要求幂等键。
+
+## 待服务端对齐的问题
+
+1. **会话实例恢复权限与确认结果相反。** 最后复测 ak 为 403 / `user_token_required`，请求 ID `18dca0b2-9330-415c-a5b3-1d016bc12ee8`；固定 ek 为 200，请求 ID `99b99ddd-a349-4ceb-a657-3cfbc0539724`。SDK 保持仅 ak，不自动降级或换令牌重试。由于 ak 请求在鉴权阶段被拒绝，会话级恢复的 ak 成功路径和幂等重放尚未验收。
+2. **Fork 历史并非完全冻结。** 源轮次 `1ccf73a7-4cea-4d51-b477-5e005eac977f` Rewind 后，Fork 历史内同一轮次的 `superseded_at` 从 null 变为时间戳。原生 GET 与 SDK 返回一致；最后两个读取请求 ID 为 `daefd75e-e769-4846-981b-a57ba278cd0d`、`3377b3c3-6adf-47db-891a-9894f9352ce3`。本次确认的是历史元数据变化，没有发现文本丢失，也未验证 Fork 后续推理是否受影响。
+3. **Memory 上游嵌入失败。** `qwen3-embedding` 的失败反馈为 `kind: upstream`、`message: fetch failed`、`retry_count/max_retries: 3/3`。源文本保存完整，原生失败列表与 SDK 一致；最后读取请求 ID 为 `7d3b027a-1421-4c34-ad8d-f62e60ff409a`、`5af1a1e3-aea5-498f-ba01-8f5291c3fba2`，临时集合 `69aeabc3-7f86-448b-8541-8997a51769c9`、内容 `c69513d8-1437-4db3-bf45-83e9907536f8`。当前证据无法确定具体网络或上游配置原因，不能通过 SDK 的写入 200 或重试 202 判定完成。
+4. **既有 Coding Agent 详情权限差异仍在。** ak/ek 均返回 200，而本地规范仍要求管理员令牌；最后 ek 请求 ID 为 `066c8d56-779c-4cbd-aab9-1a71c24af866`。未据此修改 SDK 权限或认定越权漏洞。
+
+验收脚本保持上述差异为失败，不放宽契约使结果变绿。两个早期测试判定已修正：清空 custom_data 不应要求内部状态也消失；`session.rewound` 控制事件可引用目标 Turn，默认回放应隐藏的是回退前的旧事件序号。
+
+## 批次、清理与复现
+
+最终统一验收完成于 2026-11-02 17:50 SGT：4 个测试组中 2 个通过、2 个失败，22 个独立检查中 18 个通过、4 个失败。共记录 **173 次请求、85 个不同 HTTP 操作**，包含重复请求、清理和预期拒绝；不包含前置探针、早期尝试和后续独立清理复核。HTTP 状态统计为 200 × 136、201 × 10、202 × 11、400 × 3、403 × 9、404 × 4。
+
+额度/技能/普通会话和 Chat 两组通过；Memory 因 Worker 失败未通过，Coding 因会话恢复、Fork 与既有 Agent 详情权限差异未通过。仓库同步、仅 ek 写入、Diff 和 Rewind 的检查均通过。
+
+早期 JSON 曾被 Playwright 默认输出目录清理。现将浏览器产物隔离到 `test-results/browser/`，重新执行完整的聚焦验收并保存最终证据；后续 CI 同时验证证据文件校验和不变。
+
+未启动或修改原测试用户的已停止共享实例。后续使用五个独立测试用户 `zai-sdk-live-20261102-c28f40b7`、`...c28f40b8`、`...c28f40b9`、`...c28f40ba`、`...c28f40bb`；最终统一验收使用最后一个用户。每次仅删除本轮创建且不在基线内的实例。
+
+包括早期尝试，全部测试资源均已按 finally 清理：6 个临时 Coding Agent、5 个新实例、5 个工作区及其仓库、10 个 Coding 会话、3 个普通会话、2 个 Chat 会话、3 个个人技能、4 个 Memory 集合。验收显式发起的 16 个短对话轮次均完成，无待取消任务。10 个 Coding 附件随相关资源清理并遵循服务保留策略。最终独立回读 8 项全部通过，包括全部 6 个临时 Agent 消失、5 个测试用户无活动实例，以及最终批次会话、技能和 Memory 的删除或归档状态。
+
+这些结果表示 API 层面的删除、归档或软删除，不代表物理清除。实例 volume、归档历史、附件以及独立测试用户的账户和用量记录可能保留；SDK 没有测试用户删除接口。没有轮换密钥、修改原用户 Git 身份、执行远程 Git 提交或推送。
+
+```sh
+# 使用未占用的测试用户标识，避免启停现有用户的共享实例。
+TEST_ZAI_USER_ID=zai-sdk-live-unique-user \
+  node --env-file=.env.local --import tsx --test --test-concurrency=1 \
+  --test-name-pattern='0.4.0|Chat CRUD|isolated Coding' tests/live-migration.ts
+```
+
+原始 `.env.local` 的应用凭据继续生效，环境变量仅覆盖测试用户。该命令会产生少量模型/嵌入用量，默认清理；当前服务差异未修复时应以非零退出，不能视为整套通过。本次未运行完整 `pnpm test:live`，也未覆盖全部 163 个接口、外部仓库克隆、50 MiB 边界、真实浏览器 CORS、有效思考选项字符串或耗尽/过期额度的真实用户。
+
+脚本为 [tests/live-migration.ts](../tests/live-migration.ts)。脱敏证据在被 Git 忽略的 `test-results/`：`live-0.4.0-final.json`、`live-0.4.0-final.log`、`live-0.4.0-sync-body-diagnostic.json` 和 `live-0.4.0-cleanup-verification.json`。离线检查另见 [VALIDATION.md](./VALIDATION.md)。未推送或发布。
+
+---
+
+# 仓库下载权限核对（2026-10-22 历史记录）
 
 通过已登录的文档页面核对 [Coding API](https://zai-dev.sh.oop.cc/docs/zai/coding/api#h-4aihmi) 的鉴权说明及仓库文件端点清单：`.../repos/{repository_id}/files/download` 使用共享 ak/ek 鉴权。文档对 `.../sessions/{session_id}/files/download` 另有仅 ek 的明确限制，SDK 分别映射为 `user` 和 `user-only`；共享接口默认选择 ek，允许显式选择 ak。
 
