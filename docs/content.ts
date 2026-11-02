@@ -147,6 +147,7 @@ export const operationNotes: Record<string, string> = {
   'coding.agents.getStatus': '默认以 ek 查询当前用户；使用 {tokenType: "admin"} 时必须提供 external_user_id。用户令牌不能覆盖用户范围。',
   'coding.agents.streamStatus': '权限与 getStatus 相同。状态 SSE 返回 ZAIRunnerStatusStreamEvent，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。',
   'coding.agents.ensureRunnerInstance': '仅使用 ek 确保当前用户实例；202 表示已接受，仍需查询状态确认就绪。',
+  'coding.sessions.ensureRunnerInstance': '仅 ak，恢复指定会话绑定的既有实例，不创建 Turn。必须携带幂等键；SDK 在省略时生成，重试须复用原键。与仅 ek 的 coding.agents.ensureRunnerInstance 权限不同。',
   'coding.sessions.create': '不再接受 provider 或 runner_id；通过 mode、plan_mode、system_prompt 和 primary_repo_key 配置会话行为。system_prompt 已移除规范中的 16,000 字符限制，不代表模型上下文或服务资源无限制。',
   'coding.sessions.generateTitle': '生成标题可能调用模型并消耗额度，保持显式调用。',
   'coding.sessions.uploadFile': 'input 接受 Blob（包含 File），文件名通过 name 查询参数传递；按 application/octet-stream 发送原始内容，允许零字节。返回 id 用于 attachment_ids。',

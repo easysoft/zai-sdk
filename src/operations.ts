@@ -2402,7 +2402,7 @@ export const ZAI_OPERATIONS = [
     "name": "ensureRunnerInstance",
     "method": "post",
     "path": "/coding/sessions/{session_id}/runner-instance",
-    "auth": "user-only",
+    "auth": "admin",
     "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1runner-instance/post",
     "streamName": null,
     "streamKind": null,

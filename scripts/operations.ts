@@ -124,8 +124,7 @@ export const operations = [
   ['coding.sessions', 'listCommands', 'get', `${codingSession}/commands`, 'user', specificationSource('get', `${codingSession}/commands`)],
   ['coding.sessions', 'controlGoal', 'post', `${codingSession}/goal`, 'user', specificationSource('post', `${codingSession}/goal`)],
   ['coding.sessions', 'getForkHistory', 'get', `${codingSession}/fork-history`, 'user', specificationSource('get', `${codingSession}/fork-history`)],
-  // The session-bound recovery follows the existing user-only Agent recovery flow.
-  ['coding.sessions', 'ensureRunnerInstance', 'post', `${codingSession}/runner-instance`, 'user-only', specificationSource('post', `${codingSession}/runner-instance`)],
+  ['coding.sessions', 'ensureRunnerInstance', 'post', `${codingSession}/runner-instance`, 'admin', specificationSource('post', `${codingSession}/runner-instance`)],
   ['coding.sessions', 'generateTitle', 'post', `${codingSession}/generate-title`, 'user', codingAPISource],
   ['coding.sessions', 'listFiles', 'get', `${codingSession}/files`, 'user', codingAPISource],
   ['coding.sessions', 'uploadFile', 'post', `${codingSession}/files`, 'user', codingAPISource],

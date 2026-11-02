@@ -554,10 +554,10 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          */
         getForkHistory(sessionId: string, options?: ZAIRequestOptions): Promise<CodingSessionsGetForkHistoryResponse> { return transport.request<CodingSessionsGetForkHistoryResponse>({method: "get", path: "/coding/sessions/{session_id}/fork-history", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
         /** Ensure the current session's bound runner instance
-         * Authentication: ek-* required.
+         * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1runner-instance/post
          */
-        ensureRunnerInstance(sessionId: string, input?: CodingSessionsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingSessionsEnsureRunnerInstanceResponse> { return transport.request<CodingSessionsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/sessions/{session_id}/runner-instance", auth: "user-only", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"session_id": sessionId}, body: input, options}); },
+        ensureRunnerInstance(sessionId: string, input?: CodingSessionsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingSessionsEnsureRunnerInstanceResponse> { return transport.request<CodingSessionsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/sessions/{session_id}/runner-instance", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Generate a coding session title
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
