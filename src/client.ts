@@ -105,7 +105,7 @@ export type MemoriesUpsertContentResponse = paths["/memories/{id}/contents"]["po
 export type MemoriesUpsertContentInput = NonNullable<paths["/memories/{id}/contents"]["post"]['requestBody']>['content']['application/json'];
 export type MemoriesCreateContentsBatchResponse = paths["/memories/{id}/contents/batch"]["post"]['responses'][200]['content']['application/json'];
 export type MemoriesCreateContentsBatchInput = NonNullable<paths["/memories/{id}/contents/batch"]["post"]['requestBody']>['content']['application/json'];
-export type MemoriesGetContentResponse = paths["/memories/{id}/contents/{content_id}"]["get"]['responses'][200]['content']['application/json'];
+export type MemoriesGetContentResponse = paths["/memories/{id}/contents/{content_id}"]["get"]['responses'][200]['content']['application/json'] | undefined;
 export type MemoriesUpdateContentResponse = paths["/memories/{id}/contents/{content_id}"]["put"]['responses'][200]['content']['application/json'];
 export type MemoriesUpdateContentInput = NonNullable<paths["/memories/{id}/contents/{content_id}"]["put"]['requestBody']>['content']['application/json'];
 export type MemoriesDeleteContentResponse = paths["/memories/{id}/contents/{content_id}"]["delete"]['responses'][200]['content']['application/json'];
@@ -922,7 +922,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
        * Authentication: ak-* or ek-*; auto uses ek-*.
        * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
-      getContent(id: string, contentId: string, options?: ZAIRequestOptions): Promise<MemoriesGetContentResponse> { return transport.request<MemoriesGetContentResponse>({method: "get", path: "/memories/{id}/contents/{content_id}", auth: "user", successStatuses: [200], pathParams: {"id": id, "content_id": contentId}, options}); },
+      getContent(id: string, contentId: string, options?: ZAIRequestOptions): Promise<MemoriesGetContentResponse> { return transport.request<MemoriesGetContentResponse>({method: "get", path: "/memories/{id}/contents/{content_id}", auth: "user", successStatuses: [200], allowEmptyResponse: true, pathParams: {"id": id, "content_id": contentId}, options}); },
       /** Update memory content (admin only)
        * Authentication: ak-* required.
        * @see ../zai-openapi.json#/paths/~1memories~1{id}~1contents~1{content_id}/put

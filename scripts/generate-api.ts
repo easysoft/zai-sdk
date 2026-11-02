@@ -37,10 +37,13 @@ for (const [group, name, method, path, auth, source, streamName, streamKind] of 
   const encoding = binaryInput ? 'binary' : isUpload ? (multipartSchema.properties?.path ? 'multipart' : 'file') : isBundle ? 'bundle' : 'json';
   const statuses = Object.keys(op.responses).filter(status => /^2\d\d$/.test(status));
   const binary = statuses.some(status => !!op.responses[status]?.content?.['application/octet-stream']);
+  // This operation documents an empty 200 for missing content outside its JSON schema.
+  const allowEmptyResponse = `${group}.${name}` === 'memories.getContent';
   const response = streamKind ? `AsyncIterableIterator<${streamKind === 'coding' ? 'ZAICodingStreamEvent' : 'ZAIRunnerStatusStreamEvent'}>` : binary ? 'Blob' : statuses.map(status => `${ref}['responses'][${status}]['content']['application/json']`).join(' | ');
-  aliases.push(`export type ${publicType}Response = ${response};`);
+  aliases.push(`export type ${publicType}Response = ${response}${allowEmptyResponse ? ' | undefined' : ''};`);
   const args = pathParams.map(param => `${camel(param)}: string`);
   const fields = [`method: ${q(method)}`, `path: ${q(path)}`, `auth: ${q(auth)}`, `successStatuses: [${statuses.join(', ')}]`];
+  if (allowEmptyResponse) fields.push('allowEmptyResponse: true');
   const validation = validations[`${group}.${name}`];
   const idempotencyRequired = parameters.some(parameter => parameter.in === 'header' && parameter.name.toLowerCase() === 'idempotency-key' && parameter.required);
   if (validation) fields.push(`validation: ${q(validation)}`);

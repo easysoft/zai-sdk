@@ -65,6 +65,8 @@ export interface ZAIOperationRequest {
   validation?: 'file-query' | 'file-body' | 'tool-result' | 'user-scope';
   responseType?: 'json' | 'blob' | 'stream';
   successStatuses?: readonly number[];
+  /** Only operations documenting an empty success body may return undefined. */
+  allowEmptyResponse?: boolean;
   options?: ZAIRequestOptions;
 }
 

@@ -159,6 +159,7 @@ export const operationNotes: Record<string, string> = {
   'coding.repositories.update': 'HTTP 202 表示已接受更新，不代表仓库已就绪。',
   'coding.repositories.downloadFile': '允许 ak/ek，默认 ek，返回 Blob。path 相对仓库根目录，缺失或为空返回 404，Runner 离线返回 503。此接口与仅允许 ek 的会话附件原件下载分别处理。',
   'memories.rebuild': '重建嵌入可能消耗模型额度，显式调用后通过状态和失败内容查询跟踪结果。',
+  'memories.getContent': '内容不存在时服务端返回空体 HTTP 200，SDK 返回 undefined；调用方应先判断是否存在。仅此操作允许空成功响应，非空响应仍须为合法 JSON。',
   'chat.send': '输入 content 是文本，返回值未声明 conversation ID。需要继续对话时优先显式创建并保存会话 ID。',
   'chat.stream': '便捷发送的 SSE 变体；SDK 固定 stream: true。',
   'settings.signingSecret.regenerate': '密钥轮换会使旧 ek 签名失效。成功后对相关 provider 或自动客户端的 client.auth 调用 invalidate({signingSecret: true})；SDK 不自动轮换或重试请求。',

@@ -316,12 +316,14 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
           if (!response.body) throw new ZAIClientError('invalid-response', 'The file response has no body.');
           return await response.blob() as T;
         }
+        const optionalBody = input.allowEmptyResponse ? await response.text() : undefined;
+        if (optionalBody === '') return undefined as T;
         const mediaType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
         if (mediaType !== 'application/json' && !mediaType?.endsWith('+json')) {
           discardResponse(response);
           throw new ZAIClientError('invalid-response', 'Expected a JSON response.', {status: response.status});
         }
-        const text = await response.text();
+        const text = optionalBody ?? await response.text();
         try {return JSON.parse(text) as T;} catch (cause) {
           throw new ZAIClientError('invalid-response', 'The response is not valid JSON.', {cause, status: response.status, body: text});
         }

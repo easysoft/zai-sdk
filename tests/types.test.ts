@@ -11,7 +11,12 @@ import {
   type ZAITokenProvider, type ZAIUploadFile, type ZAIDoctorResult, type ZAIDoctorDetail,
   type ZAIIdentity, type ZAIUserCredentials, type ZAIUserTokenOptions,
   type ZAIAuthContext, type ZAITokenAcquisitionContext,
+  type components, type MemoriesGetContentResponse,
 } from '../src/index.js';
+
+it('includes missing content in the memory lookup response type', () => {
+  expectTypeOf<MemoriesGetContentResponse>().toEqualTypeOf<components['schemas']['MemoryContent'] | undefined>();
+});
 
 /** Compiled by tsc but never invoked: invalid calls must remain type errors. */
 function assertPublicAPI(client: ZAIClient) {
