@@ -58,6 +58,12 @@ try {
     const client = createClient({baseUrl: 'https://example.test/v1/zai', getToken: ({purpose}) => { purposes.push(purpose); return purpose === 'admin' ? 'ak-fixture' : 'ek-fixture'; }, fetch: async input => {
       const request = input as Request;
       const url = new URL(request.url);
+      if (url.pathname.endsWith('/me/quota')) return Response.json({remaining_tokens: null, status: 'active'});
+      if (url.pathname.endsWith('/memories/collection/contents/missing')) return new Response(null, {status: 200});
+      if (url.pathname.endsWith('/retry-failed')) {
+        assert.deepEqual(await request.json(), {all_failed: true});
+        return Response.json({success: true, requeued: 0, skipped: 1}, {status: 202});
+      }
       if (url.pathname.endsWith('/status/stream')) return new Response('event: runner.status\nid: 1\ndata: {"status":"ready"}\n\n', {headers: {'content-type': 'text/event-stream'}});
       if (url.pathname.endsWith('/repos/repo/files/download')) {
         assert.equal(url.searchParams.get('path'), '目录/file.bin');
@@ -83,6 +89,10 @@ try {
     const download = await client.coding.repositories.downloadFile('agent', 'workspace', 'repo', {path: '目录/file.bin'});
     assert.deepEqual(new Uint8Array(await download.arrayBuffer()), Uint8Array.of(0, 255, 128));
     assert.deepEqual(purposes, ['user', 'user', 'user', 'user']);
+    assert.equal((await client.me.getQuota()).remaining_tokens, null);
+    assert.equal(await client.memories.getContent('collection', 'missing'), undefined);
+    assert.equal((await client.memories.retryFailed('collection', {all_failed: true})).skipped, 1);
+    assert.deepEqual(purposes.slice(4), ['user', 'user', 'admin']);
   }
 
   // A standalone UMD build emits one file and preserves its destination's contents.
@@ -101,7 +111,7 @@ import {createZAITokenProvider, createZAIClient, ZAIClientError} from 'zai-sdk';
 import spec from 'zai-sdk/openapi.json' with {type:'json'};
 import supplement from 'zai-sdk/openapi-supplement.json' with {type:'json'};
 assert.ok(import.meta.resolve('zai-sdk/zai.js').endsWith('/dist/zai.js'));
-assert.equal(Object.keys(spec.paths).length,100);
+assert.equal(Object.keys(spec.paths).length,110);
 assert.equal(Object.keys(supplement.paths).length,0);
 const getToken = createZAITokenProvider({credentials:{appID:'package',appKey:'fixture',userID:'user'}});
 const purposes = [];
@@ -139,6 +149,15 @@ const statuses: Promise<AsyncIterableIterator<ZAIRunnerStatusStreamEvent>> = cli
 void client.chat.messages.send('conversation',message);
 void client.files.extract({file:new Blob(['text'])});
 void client.coding.events.stream('session',{after_seq:'0'});
+void client.me.getQuota();
+void client.skills.list({scope:'personal',owner_id:'user'},{tokenType:'user'});
+void client.memories.create({name:'Defaults are optional'});
+void client.memories.retryFailed('collection',{all_failed:true});
+// @ts-expect-error Retry selections must be mutually exclusive in the published declarations too.
+void client.memories.retryFailed('collection',{all_failed:true,content_ids:['content']});
+void client.coding.sessions.ensureRunnerInstance('session',{}, {idempotencyKey:'recover',tokenType:'admin'});
+void client.coding.sessions.writeRepositoryFile('session',{repo_key:'main',path:'note.txt'},new Blob(['text']));
+void client.coding.turns.rewind('session','turn',{mode:'conversation'});
 void event; void diagnosis; void statuses; void repositoryFile;
 `);
   await run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--lib', 'ES2022,DOM,DOM.Iterable', 'consumer.ts'], {cwd: temporary});

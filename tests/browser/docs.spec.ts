@@ -76,6 +76,19 @@ test('documentation distinguishes stream protocols, binary uploads and user perm
   await expect(page.locator('#api-coding-sessions-create')).toContainText('重试须复用原键');
 });
 
+test('documentation explains the 0.4.0 permissions, empty responses and retry choices', async ({page}) => {
+  await page.goto('/docs/index.html#api-coding-sessions-ensureRunnerInstance');
+  await expect(page.locator('#api-coding-sessions-ensureRunnerInstance .operation-auth')).toContainText('仅 ak');
+  await expect(page.locator('#api-coding-sessions-ensureRunnerInstance')).toContainText('重试须复用原键');
+  await page.goto('/docs/index.html#api-memories-getContent');
+  await expect(page.locator('#api-memories-getContent')).toContainText('SDK 返回 undefined');
+  await page.goto('/docs/index.html#api-memories-retryFailed');
+  await expect(page.locator('#api-memories-retryFailed')).toContainText('恰好提供一项');
+  await expect(page.locator('#api-memories-retryFailed .operation-auth')).toContainText('仅 ak');
+  await page.goto('/docs/index.html#api-me-getQuota');
+  await expect(page.locator('#api-me-getQuota')).toContainText('null 表示无限额度');
+});
+
 test('documentation works from a standalone local file without network access', async ({page, context}) => {
   // WebKit offline emulation also blocks file: navigation. Deny all network
   // requests explicitly, while permitting the local document itself to load.

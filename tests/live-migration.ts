@@ -123,15 +123,6 @@ live('live read-only ak/ek permissions and getToken(context)', async t => {
     ['signing secret', c => c.settings.signingSecret.get(options())],
     ['runners', c => c.coding.runners.list(options())],
     ['coding agents', c => c.coding.agents.list(options())],
-    ['runner image policies', async c => {
-      const response = await c.coding.runners.listImagePolicies(options());
-      assert.ok(Array.isArray(response.policies), 'Image policies must be returned as an array.');
-      for (const policy of response.policies) {
-        assert.equal(typeof policy.id, 'string');
-        assert.equal(typeof policy.runner_adapter, 'string');
-      }
-      t.diagnostic(`Runner image policy response validated: ${response.policies.length} policies.`);
-    }],
     ['memory queue', c => c.memories.getEmbeddingQueueStats(options())],
   ];
   for (const [name, call] of shared) {
@@ -144,6 +135,14 @@ live('live read-only ak/ek permissions and getToken(context)', async t => {
     await independentCheck(`${name} with ek`, () => expectForbidden(`${name} with ek`, call(user)));
     t.diagnostic(`${name}: ak access and ek rejection checked; failures are recorded separately.`);
   }
+  await independentCheck('retired runner image policies with ak', () => assert.rejects(admin.coding.runners.listImagePolicies(options()), error => {
+    if (!(error instanceof ZAIClientError) || error.status !== 503) return false;
+    const body = error.body as {error?: string | {code?: string}} | undefined;
+    const code = typeof body?.error === 'string' ? body.error : body?.error?.code;
+    return (code ?? error.errorInfo?.code) === 'runner_legacy_policy_unsupported';
+  }));
+  await independentCheck('runner image policies with ek', () => expectForbidden('runner image policies with ek', user.coding.runners.listImagePolicies(options())));
+  t.diagnostic('Retired image policy endpoint checked for its documented 503 and ek rejection.');
   const agent = (await admin.coding.agents.list(options())).agents.find(item => item.status === 'active');
   if (agent) {
     await independentCheck('Coding Agent detail with ak', async () => {

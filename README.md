@@ -1,6 +1,6 @@
 # ZAI SDK
 
-面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.3.1 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **100 条路径、153 个 HTTP 操作、156 个资源方法**。
+面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.4.0 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **110 条路径、163 个 HTTP 操作、166 个资源方法**。
 
 中文完整文档在 [`docs/index.html`](./docs/index.html)，包含每个接口的权限、来源、字段、调用签名和可复制示例。页面可离线打开，无需启动服务。升级旧项目请先阅读 [`docs/MIGRATION.md`](./docs/MIGRATION.md)。
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm build
 pnpm pack --pack-destination /tmp/zai-sdk-pack
 # 在消费项目中执行：
-pnpm add /tmp/zai-sdk-pack/zai-sdk-0.3.1.tgz
+pnpm add /tmp/zai-sdk-pack/zai-sdk-0.4.0.tgz
 ```
 
 服务端使用应用 API Key，SDK 按接口权限自动选择令牌：
@@ -297,9 +297,9 @@ for await (const event of stream) {
 }
 ```
 
-先在应用控制台保存 Coding 环境，使用 ak 创建 Coding Agent（只需 `name`），再用 ek 确保 SSH 密钥、配置 Git 身份、创建工作区和会话。查询状态就绪后启动 Turn。Profile 写接口保留供旧客户端兼容，不作为新应用配置入口。
+先在应用控制台保存 Coding 环境，使用 ak 创建 Coding Agent（只需 `name`），再用 ek 确保 SSH 密钥、配置 Git 身份、创建工作区和会话。查询状态就绪后启动 Turn。旧 Profile 创建及镜像策略列表接口返回 503 / `runner_legacy_policy_unsupported`，镜像配置改在应用控制台维护。
 
-Coding turn 启动及仓库更新返回 HTTP 202，只表示接受请求。`coding.events.stream()` 已纳入正式 OpenAPI：保留 `id/event/rawData` 及完整事件对象，忽略约每 20 秒一次的心跳；连接约 60 秒关闭。合法 `error` 事件仍需继续读取后续 `turn.failed`；turn 完成、失败或取消仍是数据事件，不结束流；不要求 `[DONE]`，EOF 只表示连接结束。调用者保存处理完的事件游标，通过 `after_seq` 或 `options.headers` 中的 `Last-Event-ID` 手动恢复，并按 seq 去重。[Coding 事件协议](https://zai-dev.sh.oop.cc/docs/zai/coding/events)
+Coding turn 启动可能返回 HTTP 202 的 Turn，或 HTTP 200 的目标控制结果；后者没有 Turn ID，也不启动推理。仓库更新的 HTTP 202 只表示接受请求。`coding.events.stream()` 已纳入正式 OpenAPI：保留 `id/event/rawData` 及完整事件对象，忽略约每 20 秒一次的心跳；连接约 60 秒关闭。合法 `error` 事件仍需继续读取后续 `turn.failed`；turn 完成、失败或取消仍是数据事件，不结束流；不要求 `[DONE]`，EOF 只表示连接结束。调用者保存处理完的事件游标，通过 `after_seq` 或 `options.headers` 中的 `Last-Event-ID` 手动恢复，并按 seq 去重。[Coding 事件协议](https://zai-dev.sh.oop.cc/docs/zai/coding/events)
 
 `coding.interactions.resolve()` 成功只表示决策已接收并排队。实际计划模式以 `session.updated` 的 `payload.plan_mode` 为准，最终完成等待对应 Turn 的 `turn.completed`。创建会话时 `system_prompt` 的规范已移除 16,000 字符限制；这不表示模型上下文或服务资源没有上限。
 
@@ -311,6 +311,7 @@ const codingSession = await client.coding.sessions.create('runner-agent-id', {
 const status = await client.coding.agents.getStatus('runner-agent-id', {session_id: codingSession.id});
 if (status.status !== 'ready') throw new Error('Runner 尚未就绪');
 const turn = await client.coding.turns.start(codingSession.id, {content: '分析测试失败原因'});
+if (!('id' in turn)) throw new Error('返回了目标控制结果，未启动 Turn');
 const signal = AbortSignal.timeout(300_000); // 整个观察过程共用截止时间。
 let afterSeq = 0;
 let terminal = false;
@@ -331,7 +332,7 @@ while (!terminal) {
 console.log(afterSeq);
 ```
 
-`coding.agents.streamStatus()` 返回独立的 Runner 状态流，保留 `event/id/rawData`，`data` 是 `unknown`，正常 EOF 结束，不要求 `[DONE]`。状态查询和状态流默认 ek；admin 查询须传 `external_user_id`，普通用户不可覆盖用户范围。`ensureRunnerInstance()` 仅允许 ek 操作当前用户。
+`coding.agents.streamStatus()` 返回独立的 Runner 状态流，保留 `event/id/rawData`，`data` 是 `unknown`，正常 EOF 结束，不要求 `[DONE]`。状态查询和状态流默认 ek；admin 查询须传 `external_user_id`，普通用户不可覆盖用户范围。`coding.agents.ensureRunnerInstance()` 仅允许 ek 操作当前用户；`coding.sessions.ensureRunnerInstance()` 仅允许 ak 恢复既有会话绑定实例，重试时复用幂等键。
 
 三种流都支持 AbortSignal，迭代中 `break` 会释放连接；取得流但未开始迭代时可调用 `await stream.return()`。通道错误、无效 JSON/UTF-8、超过 1 MiB 的解析缓冲和读取异常会报错。消息流缺少 `[DONE]` 的 EOF 报错，Coding 流的 EOF 正常结束迭代；均不自动重连。
 
@@ -367,7 +368,7 @@ await client.coding.toolCalls.resolve('coding-session-id', 'tool-call-id', {outp
 
 这些规则只处理认证边界。普通业务 HTTP 错误（含 401/403）的 `body/errorInfo/headers` 诊断和业务 `AbortSignal.reason` 保持原行为，不能据此将所有错误对象直接写入公开日志。原先依赖认证回调异常的 `cause` 或对象引用的代码，应改按返回的安全 `code` 处理。
 
-规范要求的 11 个写操作自动生成幂等键。`options.idempotencyKey` 优先于合并后的同名请求头；显式键必须非空且为 1–128 字符。每次独立调用生成新键，业务重试必须复用原键；SDK 不自动重试。
+规范要求的 12 个写操作自动生成幂等键。`options.idempotencyKey` 优先于合并后的同名请求头；显式键必须非空且为 1–128 字符。每次独立调用生成新键，业务重试必须复用原键；SDK 不自动重试。
 
 ## OpenAPI 规范
 

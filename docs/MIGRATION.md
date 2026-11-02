@@ -1,6 +1,93 @@
-# 从 0.2.x 升级到 0.3.0
+# 从 0.3.x 升级到 0.4.0
 
-0.3.0 直接适配新版契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。当前原始规范（含 Coding SSE）覆盖 **100 条路径、153 个 HTTP 操作、55 个公共 Schema、156 个资源方法**。
+0.4.0 适配 2026-11-02 提供的 OpenAPI：110 条路径、163 个 HTTP 操作、59 个公共 Schema、166 个资源方法。根地址仍为 `/v1/zai`。服务端规范的 `info.version` 仍为 `1.0.0`，不能据此判断是否包含本次变化。
+
+## 必须调整的调用
+
+`skills.list` 新增查询参数，原来的请求选项移到第二个参数：
+
+```ts
+await client.skills.list(undefined, {signal});
+await client.skills.list({scope: 'personal', owner_id: 'user-123'}, {signal});
+```
+
+`coding.turns.start` 返回联合类型：HTTP 202 为 Turn，HTTP 200 为目标控制结果。先判断是否有 `id`，再订阅和等待该 Turn；目标控制结果不启动推理，也没有可取消的 Turn。
+
+```ts
+const result = await client.coding.turns.start(sessionId, {content: '分析项目结构'});
+if ('id' in result) {
+  console.log('已受理 Turn', result.id);
+} else {
+  console.log('目标控制结果', result.goal); // unknown，按实际结构进一步判断。
+}
+```
+
+Memory 请求按新版 `required` 收紧：集合创建需要 `name`，更新需要 `name/status`，内容写入需要 `content`，批量需要 `contents`，搜索需要 `query`，高级过滤需要显式 input。带默认值的可选字段仍可省略；`memories.create({name: '知识库'})` 合法，SDK 不代填默认值。
+
+`memories.getContent` 在服务端返回空体 HTTP 200 时返回 `undefined`。先判断存在性再访问字段；其他接口的空响应、非空的无效 JSON 和非预期状态仍报错。
+
+响应对象新增必填字段：Coding 会话的 `thinking_option_id/forked_from_session_id/forked_from_turn_id`，Turn 的 `superseded_at`，仓库的 `sync`，Agent 状态的 `failure_reason`。构造类型化测试数据时需补齐；其中可为 null 的字段不能用省略代替。Memory 返回值的部分字段也放宽为可 null。
+
+## 新资源方法
+
+| 方法 | 行为与权限 |
+| --- | --- |
+| `me.getQuota()` | ak/ek 均可，默认 ek；查询令牌所属用户，额度耗尽或过期仍可读取 |
+| `sessions.listCommands()` | 普通会话可用技能目录，ak/ek |
+| `coding.sessions.listCommands()` | Coding 技能与动作目录，ak/ek |
+| `coding.sessions.controlGoal()` | `get/pause/clear`，不创建推理轮次，ak/ek |
+| `coding.sessions.getForkHistory()` | 冻结的继承历史，ak/ek |
+| `coding.turns.rewind()` | 仅 `mode: 'conversation'`，回退上下文，ak/ek |
+| `coding.sessions.writeRepositoryFile()` | 二进制写入注册仓库，ak/ek |
+| `coding.repositories.sync()` | 异步重试仓库准备，ak/ek |
+| `coding.sessions.ensureRunnerInstance()` | 仅 ak；恢复已有会话绑定实例，需要幂等键 |
+| `memories.retryFailed()` | 仅 ak；重试当前失败内容，202 表示受理 |
+
+会话级实例恢复的仅 ak 权限已由维护者确认，与既有 Agent 级 `coding.agents.ensureRunnerInstance` 的仅 ek 权限不同。SDK 共映射 38 个仅 ak、117 个共享 ak/ek、8 个仅 ek 操作；12 个操作要求幂等键。自动模式按映射选令牌，鉴权失败不升级权限或重放请求。
+
+## 思考配置、推理内容与用量
+
+普通消息、Chat 和 Coding 增加 `thinking_option_id`。Coding 创建会话时省略或 null 使用模型/引擎默认值；更新时省略保持原值、null 清除覆盖；启动 Turn 时省略继承会话、null 跳过会话选择、字符串只覆盖本轮。通过 `coding.models.list({agent_id, session_id})` 读取该会话固定引擎的选项和兼容信息，不硬编码选项名称。
+
+响应增加 `reasoning_content` 和 `usage_metrics`。`ConversationUsage.token_scope` 的 `turn` 表示本轮模型调用总和，`provider` 表示最新提供方快照，不能累计当作轮次总量。未知 token/上下文数值可为 null；`context.utilization` 是比例，0.5 表示 50%，可能大于 1，SDK 不裁剪。消息 SSE 保留原始数据，Coding SSE 的 `usage_metrics` 提供对应类型。
+
+额度的 `available_tokens/remaining_tokens: null` 表示无限额度。查询不会重置使用量，也不会重新应用默认额度规则。模型配置支持 reasoning 选项与默认值；模型测试能力增加 `text.decisions`。
+
+## Coding 历史与仓库
+
+创建会话可传 `fork_from: {session_id, turn_id}`，继承历史通过 `getForkHistory` 单独读取。Rewind 将目标及之后的 Turn 移出当前上下文，工作区文件不变。`turns.get` 仍可读取这些 Turn；展示当前对话前检查 `superseded_at`。
+
+`events.list/stream` 默认隐藏被回退 Turn 的事件，`include_superseded: 'true'` 返回完整审计历史。实时客户端仍会收到 `session.rewound`，应据此重新读取当前历史或清理已展示的轮次；游标继续按实际收到的 seq 推进。
+
+`custom_data` 是业务元数据，更新为 null 或 `{}` 会清空，省略保持；保留键由服务端校验。标题和业务元数据可在 Turn 运行期间更新，模型、模式、思考选项及主仓库调整需要空闲会话。
+
+`writeRepositoryFile(sessionId, {repo_key, path}, blob)` 按 `application/octet-stream` 写入，最多 50 MiB；path 相对指定仓库根目录，可创建父目录并替换普通文件，不创建消息附件或 Git 提交。服务端拒绝符号链接与 `.git` 路径，需要支持该能力的 Runner。
+
+`repositories.sync` 重用进行中的准备任务，不执行 pull/reset/merge。通过仓库 `sync` 字段跟踪；`available` 是最近观测到的本地可用性，与同步成功分别判断。创建 Coding 会话可能等待仓库准备最多 120 秒，失败或超时仍返回会话，不能把创建成功视为仓库就绪。
+
+`coding.git.diff` 增加 `offset/limit/path/include_diff`，返回 `pages` 和 `truncated`；`include_diff` 使用字符串 `'true'/'false'`。SDK 不自动翻页。相同远程仓库 URL 在同一工作区只能注册一次。
+
+## 技能、Memory 与旧 Runner 行为
+
+个人技能使用 `scope: 'personal'` 并明确提供 `owner_id`；过滤条件不会授予访问其他用户的权限。`scope/owner_id` 创建后不可修改，即使原始更新 Schema 列出了字段，也不要提交它们。使用两个 `listCommands` 接口读取会话实际可用的命令。
+
+`memories.retryFailed` 必须在非空 `content_ids` 与 `all_failed: true` 中二选一，SDK 在获取令牌前检查序列化后的请求。重复 ID 由服务端去重；保留原文、配置、向量及旧任务历史。受理不等于嵌入完成，使用集合状态和 `listFailures` 跟踪；SDK 不自动重试或轮询。
+
+集合分块大小为 1–8192，重叠为有效分块大小的 0–四分之一，批量内容为 1–500 条。创建时省略参数使用默认值，rebuild 时省略保持原配置。内容更新省略 `content_type/key/attrs` 会使用默认值，而非保留旧值；单条 POST 的 key 才执行 upsert，批量不会按 key 去重。数值范围与业务约束仍由服务端检查。
+
+优先用应用范围内的 `listFailures` 获取脱敏诊断。`listContentEmbeddingJobs` 的原始错误未脱敏，契约说明其旧实现仅按 content_id 查询，不核对路径集合或应用归属；不要将其作为面向普通用户的诊断入口。队列统计不能证明特定内容已完成。
+
+Runner adapter 收窄为 `codex`。旧 `coding.runners.create/listImagePolicies` 返回 503 / `runner_legacy_policy_unsupported`，更新 Profile 时传 `image_policy_id` 也返回该错误；改用应用 Coding 配置。方法仍保留以覆盖原始契约，不包装成成功结果。
+
+## 契约保留项
+
+原始 OpenAPI 不作覆盖，supplement 仍为空。Goal 响应未定义内部字段，保持 `unknown`；Memory 空体成功按接口描述作单独适配；技能所有者的条件必填及不可变规则目前主要写在描述中。生成器不将默认值误判为必填，也不增加旧服务兼容层。
+
+---
+
+# 从 0.2.x 升级到 0.3.0（历史说明）
+
+0.3.0 直接适配当时的契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。以下保留当时的迁移说明与统计；当前版本以本文 0.4.0 部分为准。
 
 ## 认证错误脱敏
 
