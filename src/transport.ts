@@ -116,10 +116,18 @@ function validateFileSelector(value: unknown): void {
   }
 }
 
-function validateJSONBody(body: string | FormData | Blob | undefined, validation: 'file-body' | 'tool-result'): void {
+function validateJSONBody(body: string | FormData | Blob | undefined, validation: 'file-body' | 'tool-result' | 'memory-retry'): void {
   const value: unknown = typeof body === 'string' ? JSON.parse(body) : undefined;
   if (validation === 'file-body') {
     validateFileSelector(value);
+    return;
+  }
+  if (validation === 'memory-retry') {
+    if (!isRecord(value) || Object.keys(value).length !== 1
+      || !(value.all_failed === true || (Array.isArray(value.content_ids) && value.content_ids.length > 0
+        && value.content_ids.every(id => typeof id === 'string' && id.trim())))) {
+      throw new ZAIClientError('invalid-input', 'Provide only non-empty content_ids or all_failed: true.');
+    }
     return;
   }
   if (!isRecord(value) || Object.keys(value).length !== 1 || (!Object.hasOwn(value, 'output') && !Object.hasOwn(value, 'error'))) {
@@ -248,7 +256,7 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
           }
         }
         body = serializeBody(input);
-        if (input.validation === 'file-body' || input.validation === 'tool-result') validateJSONBody(body, input.validation);
+        if (input.validation === 'file-body' || input.validation === 'tool-result' || input.validation === 'memory-retry') validateJSONBody(body, input.validation);
         headers = new Headers(options.headers);
         new Headers(input.options?.headers).forEach((value, key) => headers.set(key, value));
         setIdempotencyKey(headers, input);

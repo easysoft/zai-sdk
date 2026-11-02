@@ -18,6 +18,7 @@ const validations: Record<string, string> = {
   'coding.toolCalls.resolve': 'tool-result',
   'coding.agents.getStatus': 'user-scope',
   'coding.agents.streamStatus': 'user-scope',
+  'memories.retryFailed': 'memory-retry',
 };
 const fileSelector = '{file_id: string; path?: never} | {path: string; file_id?: never}';
 
@@ -63,6 +64,7 @@ for (const [group, name, method, path, auth, source, streamName, streamKind] of 
     if (streamName) bodyType = `Omit<${jsonType}, 'stream'>`;
     if (validation === 'file-body') bodyType = fileSelector;
     if (validation === 'tool-result') bodyType = '{output: unknown; error?: never} | {error: {code: string; message: string}; output?: never}';
+    if (validation === 'memory-retry') bodyType = '{content_ids: [string, ...string[]]; all_failed?: never} | {all_failed: true; content_ids?: never}';
     aliases.push(`export type ${publicType}Input = ${bodyType};`);
     const required = validation === 'file-body' || validation === 'tool-result' || op.requestBody?.required || Object.values(content).some(media => resolveSchema(media.schema, spec).required?.length);
     args.push(`input${required ? '' : '?'}: ${publicType}Input`);

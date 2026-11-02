@@ -121,7 +121,7 @@ export type MemoriesRebuildInput = NonNullable<paths["/memories/{id}/rebuild"]["
 export type MemoriesListFailuresResponse = paths["/memories/{id}/failures"]["get"]['responses'][200]['content']['application/json'];
 export type MemoriesListFailuresQuery = NonNullable<paths["/memories/{id}/failures"]["get"]['parameters']['query']>;
 export type MemoriesRetryFailedResponse = paths["/memories/{id}/retry-failed"]["post"]['responses'][202]['content']['application/json'];
-export type MemoriesRetryFailedInput = NonNullable<paths["/memories/{id}/retry-failed"]["post"]['requestBody']>['content']['application/json'];
+export type MemoriesRetryFailedInput = {content_ids: [string, ...string[]]; all_failed?: never} | {all_failed: true; content_ids?: never};
 export type CodingRunnersListResponse = paths["/coding/runners"]["get"]['responses'][200]['content']['application/json'] | paths["/coding/runners"]["get"]['responses'][201]['content']['application/json'] | paths["/coding/runners"]["get"]['responses'][202]['content']['application/json'];
 export type CodingRunnersCreateResponse = paths["/coding/runners"]["post"]['responses'][200]['content']['application/json'] | paths["/coding/runners"]["post"]['responses'][201]['content']['application/json'] | paths["/coding/runners"]["post"]['responses'][202]['content']['application/json'];
 export type CodingRunnersCreateInput = NonNullable<paths["/coding/runners"]["post"]['requestBody']>['content']['application/json'];
@@ -972,7 +972,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
        * Authentication: ak-* required.
        * @see ../zai-openapi.json#/paths/~1memories~1{id}~1retry-failed/post
        */
-      retryFailed(id: string, input: MemoriesRetryFailedInput, options?: ZAIRequestOptions): Promise<MemoriesRetryFailedResponse> { return transport.request<MemoriesRetryFailedResponse>({method: "post", path: "/memories/{id}/retry-failed", auth: "admin", successStatuses: [202], pathParams: {"id": id}, body: input, options}); },
+      retryFailed(id: string, input: MemoriesRetryFailedInput, options?: ZAIRequestOptions): Promise<MemoriesRetryFailedResponse> { return transport.request<MemoriesRetryFailedResponse>({method: "post", path: "/memories/{id}/retry-failed", auth: "admin", successStatuses: [202], validation: "memory-retry", pathParams: {"id": id}, body: input, options}); },
       /** Filter memory contents with advanced operators
        * Authentication: ak-* or ek-*; auto uses ek-*.
        * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api

@@ -1732,7 +1732,7 @@ export const ZAI_OPERATIONS = [
     "hasBody": true,
     "encoding": "json",
     "idempotencyRequired": false,
-    "validation": null,
+    "validation": "memory-retry",
     "responseType": "json",
     "statuses": [
       202

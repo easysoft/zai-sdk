@@ -62,7 +62,7 @@ export interface ZAIOperationRequest {
   encoding?: 'json' | 'multipart' | 'file' | 'bundle' | 'binary';
   auth?: ZAIOperationAuth;
   idempotencyRequired?: boolean;
-  validation?: 'file-query' | 'file-body' | 'tool-result' | 'user-scope';
+  validation?: 'file-query' | 'file-body' | 'tool-result' | 'user-scope' | 'memory-retry';
   responseType?: 'json' | 'blob' | 'stream';
   successStatuses?: readonly number[];
   /** Only operations documenting an empty success body may return undefined. */

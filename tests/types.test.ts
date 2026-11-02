@@ -57,6 +57,14 @@ function assertPublicAPI(client: ZAIClient) {
   void client.memories.createContentsBatch('collection', {contents: [{content: 'Text'}]});
   void client.memories.searchChunksByEmbedding('collection', {query: 'Search'});
   void client.memories.searchContentsByEmbedding('collection', {query: 'Search'});
+  void client.memories.retryFailed('collection', {content_ids: ['content']});
+  void client.memories.retryFailed('collection', {all_failed: true});
+  // @ts-expect-error Retrying all failures and selecting contents are mutually exclusive.
+  void client.memories.retryFailed('collection', {content_ids: ['content'], all_failed: true});
+  // @ts-expect-error An empty selection never means all failures.
+  void client.memories.retryFailed('collection', {content_ids: []});
+  // @ts-expect-error An explicit selection is required.
+  void client.memories.retryFailed('collection', {});
   // @ts-expect-error Collection name is required, even when other fields have defaults.
   void client.memories.create({});
   // @ts-expect-error Updates require status as well as name.
