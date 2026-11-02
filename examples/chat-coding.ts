@@ -22,10 +22,12 @@ export async function codingExample(client: ZAIClient, agentId: string, workspac
   if (status.status !== 'ready') throw new Error('Runner is not ready. Query its status before starting a turn.');
   const idempotencyKey = crypto.randomUUID(); // Persist and reuse this value if session creation is retried.
   const session = await client.coding.sessions.create(agentId, {workspace_id: workspaceId, title: 'SDK Coding 示例'}, {signal, idempotencyKey});
-  let turn: Awaited<ReturnType<ZAIClient['coding']['turns']['start']>> | undefined;
+  let turn: Awaited<ReturnType<ZAIClient['coding']['turns']['get']>> | undefined;
   let terminal = false;
   try {
-    turn = await client.coding.turns.start(session.id, {content: '简要描述项目结构，不修改任何文件。'}, {signal});
+    const accepted = await client.coding.turns.start(session.id, {content: '简要描述项目结构，不修改任何文件。'}, {signal});
+    if (!('id' in accepted)) throw new Error('Goal control returned without starting a turn.');
+    turn = accepted;
     let lastSeq = '0';
     const events: ZAICodingEvent[] = [];
     while (!terminal) {

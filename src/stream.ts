@@ -1,5 +1,6 @@
 import {createParser, type EventSourceMessage} from 'eventsource-parser';
 import {ZAIClientError} from './errors.js';
+import type {components} from './schema.js';
 
 /** SSE data is intentionally unfiltered so new fields and model capabilities survive. */
 export type ZAIStreamEvent =
@@ -13,6 +14,7 @@ export interface ZAICodingEvent {
   turn_id: string | null;
   payload: Record<string, unknown>;
   created_at: string;
+  usage_metrics?: components['schemas']['ConversationUsage'];
   [key: string]: unknown;
 }
 

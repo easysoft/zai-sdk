@@ -11,6 +11,7 @@ hljs.registerLanguage('typescript', typescript);
 const codeLanguages = {typescript: 'typescript', Shell: 'bash', 'JSON / OpenAPI': 'json'} as const;
 
 export const groups: Record<string, {title: string; description: string}> = {
+  me: {title: '当前用户', description: '查询令牌所属用户的额度、使用量和有效期。'},
   agents: {title: 'Agent', description: '管理 AI 助手，配置 custom、runner 或平台预置的 system 类型。'},
   sessions: {title: '普通会话', description: '管理 Agent 会话、上下文、文件与图片生成。'},
   messages: {title: '普通消息', description: '以 content 数组发送消息，返回 JSON 或 SSE。'},
@@ -42,6 +43,16 @@ export const groups: Record<string, {title: string; description: string}> = {
 };
 
 export const operationTitles: Record<string, string> = {
+  'me.getQuota': '查询当前用户额度',
+  'sessions.listCommands': '列出会话技能命令',
+  'coding.sessions.listCommands': '列出 Coding 命令',
+  'coding.sessions.controlGoal': '查询、暂停或清除目标',
+  'coding.sessions.getForkHistory': '读取分叉继承历史',
+  'coding.sessions.ensureRunnerInstance': '恢复会话绑定实例',
+  'coding.sessions.writeRepositoryFile': '写入仓库文件',
+  'coding.repositories.sync': '重试仓库准备',
+  'coding.turns.rewind': '回退会话上下文',
+  'memories.retryFailed': '重试失败的记忆内容',
   'agents.list': '列出 Agent', 'agents.create': '创建 Agent', 'agents.get': '获取 Agent',
   'agents.update': '更新 Agent', 'agents.delete': '删除 Agent',
   'coding.keys.getPublic': '获取当前用户的公钥', 'coding.keys.rotate': '轮换当前用户的公钥',
@@ -497,6 +508,7 @@ const session = await client.coding.sessions.create(agent.id, {
 const status = await client.coding.agents.getStatus(agent.id, {session_id: session.id});
 if (status.status !== 'ready') throw new Error('Runner 尚未就绪，请稍后查询状态');
 const accepted = await client.coding.turns.start(session.id, {content: '分析当前测试失败原因'});
+if (!('id' in accepted)) throw new Error('返回了目标控制结果，未启动 Turn');
 console.log(accepted); // HTTP 202 表示已接受，不代表任务完成。
 
 const signal = AbortSignal.timeout(300_000);
@@ -566,7 +578,7 @@ console.log(models, channels);`, 'typescript', true)}
 <p>模型测试、标题生成和记忆重建可能消耗额度，均保持显式调用；doctor 默认不增加这些行为。完整迁移说明和 0.1→0.2 历史保留在随包提供的 MIGRATION.md。</p>
 <h3>从 0.1.x 升级的历史变化</h3><p>根地址从 /v8 改为 /v1/zai；旧顶层 executor、workspaces、repositories、models 已移除。工作区、仓库和公钥进入 coding；models 改为 settings.models。实体字段 integration_id 改为 app_id，Agent 类型 executor 改为 runner；普通会话不再使用 executor_provider。</p>
 <p>工作区和仓库更新使用 PUT；仓库文件列表返回 entries，内容可能是 base64 或被截断，旧仓库下载无替代端点。模型管理不支持 all，也不再归一化旧模型数组。同步管理员签发保留位置参数并改用 UTF-8；用户令牌可通过应用 API Key 获取密钥，也可直接使用可信后端的 signing secret 签发。</p>
-<p>当前原始规范已包含 Coding SSE，共 100 条路径、153 个 HTTP 操作、156 个资源方法。新增 coding.repositories.downloadFile 返回 Blob；仓库响应新增必填 relative_path，构造响应对象时需补齐。supplement 当前为空并保留包导出。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
+<p>当前原始规范已包含 Coding SSE，共 110 条路径、163 个 HTTP 操作、166 个资源方法。新增用户额度、命令目录、目标控制、分叉与回退、仓库文件写入、仓库准备、会话实例恢复和记忆失败重试。supplement 当前为空并保留包导出。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
 <h3>保留的规范缺口</h3><ul>
 <li>Memories、QA、文件提取的部分描述写“必填”，但 Schema 未设置 required；类型遵循正式 Schema，示例仍提供业务必需值。</li>
 <li>SettingsModel.model_type 的 nullable 类型与 enum 不一致；不推测性扩充生成类型。</li>

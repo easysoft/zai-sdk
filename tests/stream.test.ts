@@ -34,6 +34,13 @@ async function collect(stream: AsyncIterable<ZAIStreamEvent>) {
 
 describe('persistent Coding SSE', () => {
   const event = {seq: 1, type: 'turn.completed', turn_id: 'turn-1', payload: {error: null, text: '你好😀'}, created_at: '2026-09-29', future: true};
+
+  it('preserves usage snapshots and session rewind notifications', async () => {
+    const usage = {input_tokens: null, output_tokens: 12, cached_input_tokens: 0, token_scope: 'provider', context: {used_tokens: 120, max_tokens: 100, utilization: 1.2, source: 'reported'}};
+    const events = [{...event, usage_metrics: usage}, {...event, seq: 2, type: 'session.rewound', turn_id: null, payload: {rewound_turn_ids: ['turn-1']}}];
+    const {response} = source([events.map(data => `id: ${data.seq}\nevent: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`).join('')], {close: true});
+    expect(await collect(parseZAICodingStream(response))).toEqual(events.map(data => ({type: 'data', id: String(data.seq), event: data.type, rawData: JSON.stringify(data), data})));
+  });
   const frame = (data: typeof event) => `id: ${data.seq}\nevent: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`;
 
   it('keeps reading after each turn terminal event and ends at EOF without DONE', async () => {

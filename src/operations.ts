@@ -2,6 +2,26 @@
 /** Operation manifest used by contract tests and diagnostics. user allows either token; auto selects ek-*. */
 export const ZAI_OPERATIONS = [
   {
+    "group": "me",
+    "name": "getQuota",
+    "method": "get",
+    "path": "/me/quota",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1me~1quota/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
     "group": "agents",
     "name": "list",
     "method": "get",
@@ -530,6 +550,30 @@ export const ZAI_OPERATIONS = [
     ]
   },
   {
+    "group": "coding.repositories",
+    "name": "sync",
+    "method": "post",
+    "path": "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/sync",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}~1workspaces~1{workspace_id}~1repos~1{repository_id}~1sync/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "agent_id",
+      "workspace_id",
+      "repository_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      202
+    ]
+  },
+  {
     "group": "sessions",
     "name": "list",
     "method": "get",
@@ -700,6 +744,28 @@ export const ZAI_OPERATIONS = [
     "path": "/sessions/{session_id}/generate-title",
     "auth": "user",
     "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "sessions",
+    "name": "listCommands",
+    "method": "get",
+    "path": "/sessions/{session_id}/commands",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1sessions~1{session_id}~1commands/get",
     "streamName": null,
     "streamKind": null,
     "pathParams": [
@@ -1041,7 +1107,10 @@ export const ZAI_OPERATIONS = [
     "streamName": null,
     "streamKind": null,
     "pathParams": [],
-    "query": [],
+    "query": [
+      "scope",
+      "owner_id"
+    ],
     "hasBody": false,
     "encoding": "json",
     "idempotencyRequired": false,
@@ -1648,6 +1717,28 @@ export const ZAI_OPERATIONS = [
     ]
   },
   {
+    "group": "memories",
+    "name": "retryFailed",
+    "method": "post",
+    "path": "/memories/{id}/retry-failed",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1memories~1{id}~1retry-failed/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      202
+    ]
+  },
+  {
     "group": "coding.runners",
     "name": "list",
     "method": "get",
@@ -2242,6 +2333,96 @@ export const ZAI_OPERATIONS = [
   },
   {
     "group": "coding.sessions",
+    "name": "listCommands",
+    "method": "get",
+    "path": "/coding/sessions/{session_id}/commands",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1commands/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "controlGoal",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/goal",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1goal/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "getForkHistory",
+    "method": "get",
+    "path": "/coding/sessions/{session_id}/fork-history",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1fork-history/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "ensureRunnerInstance",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/runner-instance",
+    "auth": "user-only",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1runner-instance/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": true,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200,
+      201,
+      202
+    ]
+  },
+  {
+    "group": "coding.sessions",
     "name": "generateTitle",
     "method": "post",
     "path": "/coding/sessions/{session_id}/generate-title",
@@ -2310,6 +2491,31 @@ export const ZAI_OPERATIONS = [
     "responseType": "json",
     "statuses": [
       201
+    ]
+  },
+  {
+    "group": "coding.sessions",
+    "name": "writeRepositoryFile",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/repository-files",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1repository-files/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [
+      "repo_key",
+      "path"
+    ],
+    "hasBody": true,
+    "encoding": "binary",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
     ]
   },
   {
@@ -2425,6 +2631,7 @@ export const ZAI_OPERATIONS = [
     "validation": null,
     "responseType": "json",
     "statuses": [
+      200,
       202
     ]
   },
@@ -2498,6 +2705,29 @@ export const ZAI_OPERATIONS = [
     ]
   },
   {
+    "group": "coding.turns",
+    "name": "rewind",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/turns/{turn_id}/rewind",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1turns~1{turn_id}~1rewind/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id",
+      "turn_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
     "group": "coding.events",
     "name": "list",
     "method": "get",
@@ -2511,7 +2741,8 @@ export const ZAI_OPERATIONS = [
     ],
     "query": [
       "after_seq",
-      "limit"
+      "limit",
+      "include_superseded"
     ],
     "hasBody": false,
     "encoding": "json",
@@ -2535,7 +2766,8 @@ export const ZAI_OPERATIONS = [
       "session_id"
     ],
     "query": [
-      "after_seq"
+      "after_seq",
+      "include_superseded"
     ],
     "hasBody": false,
     "encoding": "json",
@@ -2606,7 +2838,11 @@ export const ZAI_OPERATIONS = [
       "session_id"
     ],
     "query": [
-      "repo_key"
+      "repo_key",
+      "offset",
+      "limit",
+      "path",
+      "include_diff"
     ],
     "hasBody": false,
     "encoding": "json",
@@ -2740,6 +2976,7 @@ export const ZAI_OPERATIONS = [
     "query": [
       "provider",
       "agent_id",
+      "session_id",
       "refresh"
     ],
     "hasBody": false,

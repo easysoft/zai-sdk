@@ -2,7 +2,7 @@ import {expect, it, vi} from 'vitest';
 import {codingExample} from '../examples/chat-coding.js';
 import {createZAIClient, type ZAICodingEvent} from '../src/index.js';
 
-function setup(streamResponse: (request: Request, attempt: number) => Response) {
+function setup(streamResponse: (request: Request, attempt: number) => Response, turnResponse: object = {id: 'turn'}) {
   const requests: Request[] = [];
   const streams: Request[] = [];
   const client = createZAIClient({baseUrl: 'https://zai.test/v1/zai', getToken: () => 'ek-test', fetch: async input => {
@@ -11,7 +11,7 @@ function setup(streamResponse: (request: Request, attempt: number) => Response) 
     const path = new URL(request.url).pathname;
     if (path.endsWith('/status')) return Response.json({status: 'ready'});
     if (path.endsWith('/agents/agent/sessions')) return Response.json({id: 'session'}, {status: 201});
-    if (path.endsWith('/turns')) return Response.json({id: 'turn'}, {status: 202});
+    if (path.endsWith('/turns')) return Response.json(turnResponse, {status: 'id' in turnResponse ? 202 : 200});
     if (path.endsWith('/stream')) {
       streams.push(request);
       return streamResponse(request, streams.length);
@@ -71,4 +71,12 @@ it('propagates channel failures and cleans up instead of retrying them', async (
   expect(streams).toHaveLength(1);
   expect(requests.some(request => request.url.endsWith('/cancel'))).toBe(true);
   expect(requests.some(request => request.method === 'DELETE')).toBe(true);
+});
+
+it('archives a session without streaming or canceling when goal control starts no turn', async () => {
+  const {client, requests, streams} = setup(() => response([]), {goal: {status: 'paused'}});
+  await expect(codingExample(client, 'agent', 'workspace')).rejects.toThrow('without starting a turn');
+  expect(streams).toHaveLength(0);
+  expect(requests.some(request => request.url.endsWith('/cancel'))).toBe(false);
+  expect(requests.filter(request => request.method === 'DELETE')).toHaveLength(1);
 });

@@ -115,7 +115,7 @@ live('live read-only ak/ek permissions and getToken(context)', async t => {
     ['coding.sessions', c => c.coding.sessions.list({page_size: '1'}, options())],
     ['memories', c => c.memories.list(options())],
     ['qa', c => c.qa.list(options())],
-    ['skills', c => c.skills.list(options())],
+    ['skills', c => c.skills.list(undefined, options())],
     ['models', c => c.settings.models.list(options())],
   ];
   const restricted: [string, (c: ZAIClient) => Promise<unknown>][] = [
@@ -419,6 +419,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
     content: 'Reply with exactly OK. Do not run any tools or commands. Do not read or modify any files.', client_turn_id: marker,
     tools: {version: 1, tools: [], servers: {}}, attachment_ids: [file.id],
   }, options());
+  assert.ok('id' in turn, 'A message must start an inference turn, not return goal control.');
   track(codingResources.turnIds, turn.id);
   let terminal = false;
   cleanup(`turn ${turn.id}`, async () => {

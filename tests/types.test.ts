@@ -40,6 +40,32 @@ function assertPublicAPI(client: ZAIClient) {
   void client.coding.models.list({agent_id: 'agent'});
   void client.coding.modes.list({agent_id: 'agent'});
   void client.coding.turns.start('session', {content: 'Fix the regression'});
+  void client.me.getQuota({tokenType: 'admin'});
+  void client.skills.list({scope: 'personal', owner_id: 'user'}, {signal: new AbortController().signal});
+  void client.coding.sessions.controlGoal('session', {action: 'pause'});
+  void client.coding.sessions.create('agent', {workspace_id: 'workspace', fork_from: {session_id: 'source', turn_id: 'turn'}, thinking_option_id: null, custom_data: {issue: 1}});
+  void client.coding.turns.rewind('session', 'turn', {mode: 'conversation'});
+  void client.coding.events.list('session', {include_superseded: 'true'});
+  void client.memories.create({name: 'Defaults remain optional'});
+  void client.memories.update('collection', {name: 'Name', status: 'enabled'});
+  void client.memories.upsertContent('collection', {content: 'Text'});
+  void client.memories.createContentsBatch('collection', {contents: [{content: 'Text'}]});
+  void client.memories.searchChunksByEmbedding('collection', {query: 'Search'});
+  void client.memories.searchContentsByEmbedding('collection', {query: 'Search'});
+  // @ts-expect-error Collection name is required, even when other fields have defaults.
+  void client.memories.create({});
+  // @ts-expect-error Updates require status as well as name.
+  void client.memories.update('collection', {name: 'Name'});
+  // @ts-expect-error Content text is required.
+  void client.memories.upsertContent('collection', {});
+  // @ts-expect-error Search text is required.
+  void client.memories.searchChunksByEmbedding('collection', {});
+  // @ts-expect-error Request options belong after the optional skill query.
+  void client.skills.list({signal: new AbortController().signal});
+  // @ts-expect-error The goal control endpoint does not start or resume inference.
+  void client.coding.sessions.controlGoal('session', {action: 'resume'});
+  // @ts-expect-error Rewind only supports conversation history, not workspace files.
+  void client.coding.turns.rewind('session', 'turn', {mode: 'workspace'});
   void client.sessions.create('agent', {workspace_id: 'workspace'});
   void client.messages.send('session', {
     content: [{type: 'input_text', text: 'hello'}, {type: 'input_image', path: 'a.png'}],

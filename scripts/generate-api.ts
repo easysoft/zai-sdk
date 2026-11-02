@@ -119,7 +119,8 @@ ${renderResource(root, 4)}
 
 export type ZAIClient = ReturnType<typeof createZAIClient>;
 `;
-const schema = astToString(await openapiTS(specificationForTypes(spec) as unknown as Parameters<typeof openapiTS>[0], {emptyObjectsUnknown: true}));
+// Defaults describe server behavior; only required makes a property mandatory.
+const schema = astToString(await openapiTS(specificationForTypes(spec) as unknown as Parameters<typeof openapiTS>[0], {emptyObjectsUnknown: true, defaultNonNullable: false}));
 const outputs = new Map([
   ['src/schema.ts', schema],
   ['src/client.ts', client],

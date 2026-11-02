@@ -1,4 +1,70 @@
 export interface paths {
+    "/me/quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the authenticated app user's token allowance
+         * @description Available with ek-* or ak-* tokens. Identity comes from the authenticated token. Exhausted or expired allowances do not block this query. A new external user receives the current application default allowance on the first authenticated request, if a rule is configured. Later rule changes do not affect existing users. Deleting a limit never deletes historical usage or reapplies the default rule.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current allowance */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            configured: boolean;
+                            /**
+                             * @description Fixed expiration time or validity period counted from period_started_at.
+                             * @enum {string}
+                             */
+                            expiry_mode: "fixed" | "duration";
+                            /** @description Validity in 24-hour days; null for fixed expiration. */
+                            validity_days: number | null;
+                            /** @description Token limit; null means unlimited. Input and output tokens are added together. */
+                            available_tokens: number | null;
+                            /** @description Usage since the period start (first request for automatically assigned allowances, otherwise creation or last reset), grouped by model request start time. */
+                            used_tokens: number;
+                            /** @description Nonnegative remaining tokens; null means unlimited. */
+                            remaining_tokens: number | null;
+                            /** @description ISO 8601 expiration; null means permanent. */
+                            expires_at: string | null;
+                            period_started_at: string | null;
+                            /** @enum {string} */
+                            status: "active" | "exhausted" | "expired";
+                        };
+                    };
+                };
+                /** @description Missing or invalid application token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents": {
         parameters: {
             query?: never;
@@ -600,6 +666,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Optional Chat thinking level; omitted or null preserves legacy behavior. */
+                        thinking_option_id?: string | null;
                         /** @description Optional user-facing session title. When omitted, Dathor creates a default title. */
                         title?: string | null;
                         /** @description Runner agents only: bind the session to a development workspace by its uuid id (workspaces.id). The workspace must belong to this agent and be visible to the current user, otherwise the request is rejected. The binding is persisted as custom_data.workspace_id and all subsequent turns run inside that workspace. When omitted, the session falls back to the (agent, user) default workspace (lazily created). PI custom agents ignore this field (they do not participate in coding). */
@@ -1027,7 +1095,7 @@ export interface paths {
         put?: never;
         /**
          * Create a coding session
-         * @description Ensure the current user's instance and freeze its profile, instance ID and revision. Caller runner/provider overrides are rejected. Creation is allowed while the instance starts.
+         * @description Ensure the current user's instance and freeze its profile, instance ID and revision. Caller runner/provider overrides are rejected. Creation is allowed while the instance starts. After creation, waits up to 120 seconds for pending repository preparation; failure or timeout still returns the session, and pending tasks continue in the background.
          */
         post: {
             parameters: {
@@ -1043,6 +1111,12 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Application business metadata. Keys starting with _ and mode, plan_mode, thinking_option_id, primary_repo_key, system_prompt, agent_configuration, agent_revision, runner are reserved. */
+                        custom_data?: {
+                            [key: string]: unknown;
+                        };
+                        /** @description Save a session thinking override; omit or null to use model/engine defaults. */
+                        thinking_option_id?: string | null;
                         /** @description Codex-only independent planning switch; defaults to false. */
                         plan_mode?: boolean;
                         /** @description Provider-native execution mode. Omitted or null initializes a saved platform default: codex auto, claude default, opencode build; pi has no mode. */
@@ -1052,6 +1126,12 @@ export interface paths {
                         primary_repo_key?: string | null;
                         auto_title?: boolean;
                         workspace_id: string;
+                        fork_from?: {
+                            /** Format: uuid */
+                            session_id: string;
+                            /** Format: uuid */
+                            turn_id: string;
+                        };
                         model?: string | null;
                         title?: string | null;
                     };
@@ -1065,6 +1145,13 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            goal?: {
+                                objective: string;
+                                /** @enum {string} */
+                                status: "active" | "paused" | "blocked" | "usageLimited" | "budgetLimited" | "complete";
+                            } | null;
+                            /** @description Saved session override; null means use the model or engine default. */
+                            thinking_option_id: string | null;
                             plan_mode: boolean;
                             mode: string | null;
                             system_prompt: string | null;
@@ -1081,6 +1168,8 @@ export interface paths {
                             status: string;
                             paseo_agent_id: string | null;
                             provider_session_id: string | null;
+                            forked_from_session_id: string | null;
+                            forked_from_turn_id: string | null;
                             last_event_seq: number;
                             custom_data?: {
                                 [key: string]: unknown;
@@ -1248,6 +1337,13 @@ export interface paths {
                     content: {
                         "application/json": {
                             sessions: {
+                                goal?: {
+                                    objective: string;
+                                    /** @enum {string} */
+                                    status: "active" | "paused" | "blocked" | "usageLimited" | "budgetLimited" | "complete";
+                                } | null;
+                                /** @description Saved session override; null means use the model or engine default. */
+                                thinking_option_id: string | null;
                                 plan_mode: boolean;
                                 mode: string | null;
                                 system_prompt: string | null;
@@ -1264,6 +1360,8 @@ export interface paths {
                                 status: string;
                                 paseo_agent_id: string | null;
                                 provider_session_id: string | null;
+                                forked_from_session_id: string | null;
+                                forked_from_turn_id: string | null;
                                 last_event_seq: number;
                                 custom_data?: {
                                     [key: string]: unknown;
@@ -1430,6 +1528,13 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            goal?: {
+                                objective: string;
+                                /** @enum {string} */
+                                status: "active" | "paused" | "blocked" | "usageLimited" | "budgetLimited" | "complete";
+                            } | null;
+                            /** @description Saved session override; null means use the model or engine default. */
+                            thinking_option_id: string | null;
                             plan_mode: boolean;
                             mode: string | null;
                             system_prompt: string | null;
@@ -1446,6 +1551,8 @@ export interface paths {
                             status: string;
                             paseo_agent_id: string | null;
                             provider_session_id: string | null;
+                            forked_from_session_id: string | null;
+                            forked_from_turn_id: string | null;
                             last_event_seq: number;
                             custom_data?: {
                                 [key: string]: unknown;
@@ -1574,8 +1681,8 @@ export interface paths {
             };
         };
         /**
-         * Update session title, model, execution mode or primary repository
-         * @description Update session settings atomically. Title-only changes are allowed during a turn. Model, mode, plan_mode and primary repository changes require an idle session (otherwise 409). Mode is a provider-native Paseo mode ID; null restores inherited defaults.
+         * Update session metadata, title, model, execution mode or primary repository
+         * @description Update session settings atomically. Title and business custom_data changes are allowed during a turn. Model, mode, plan_mode, thinking_option_id and primary repository changes require an idle session (otherwise 409). Mode is a Codex mode ID; null restores inherited defaults.
          */
         put: {
             parameters: {
@@ -1589,6 +1696,12 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Replace business metadata; null or {} clears it. Omit to keep it. Internal session state is preserved. Allowed during a turn. */
+                        custom_data?: {
+                            [key: string]: unknown;
+                        } | null;
+                        /** @description Exact model thinking option ID; omitted keeps the saved choice, null clears it. */
+                        thinking_option_id?: string | null;
                         plan_mode?: boolean;
                         mode?: string | null;
                         primary_repo_key?: string | null;
@@ -1605,6 +1718,13 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            goal?: {
+                                objective: string;
+                                /** @enum {string} */
+                                status: "active" | "paused" | "blocked" | "usageLimited" | "budgetLimited" | "complete";
+                            } | null;
+                            /** @description Saved session override; null means use the model or engine default. */
+                            thinking_option_id: string | null;
                             plan_mode: boolean;
                             mode: string | null;
                             system_prompt: string | null;
@@ -1621,6 +1741,8 @@ export interface paths {
                             status: string;
                             paseo_agent_id: string | null;
                             provider_session_id: string | null;
+                            forked_from_session_id: string | null;
+                            forked_from_turn_id: string | null;
                             last_event_seq: number;
                             custom_data?: {
                                 [key: string]: unknown;
@@ -1751,7 +1873,7 @@ export interface paths {
         post?: never;
         /**
          * Archive a coding session
-         * @description Archive the session and ask the runner to archive its paseo agent. Events and turns are kept.
+         * @description Archive the session and ask the runner to archive its Codex session. Events and turns are kept.
          */
         delete: {
             parameters: {
@@ -1771,6 +1893,13 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            goal?: {
+                                objective: string;
+                                /** @enum {string} */
+                                status: "active" | "paused" | "blocked" | "usageLimited" | "budgetLimited" | "complete";
+                            } | null;
+                            /** @description Saved session override; null means use the model or engine default. */
+                            thinking_option_id: string | null;
                             plan_mode: boolean;
                             mode: string | null;
                             system_prompt: string | null;
@@ -1787,6 +1916,8 @@ export interface paths {
                             status: string;
                             paseo_agent_id: string | null;
                             provider_session_id: string | null;
+                            forked_from_session_id: string | null;
+                            forked_from_turn_id: string | null;
                             last_event_seq: number;
                             custom_data?: {
                                 [key: string]: unknown;
@@ -2239,6 +2370,562 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/coding/sessions/{session_id}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List slash commands */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Command catalog */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            commands: {
+                                name: string;
+                                description: string;
+                                /** @enum {string} */
+                                kind: "skill" | "action";
+                                /** @enum {string} */
+                                source: "app" | "user" | "system" | "action";
+                                skillId?: string;
+                                revisionId?: string;
+                                /** @enum {string} */
+                                scope?: "app" | "personal";
+                                version?: number;
+                                /** @enum {string} */
+                                syncState?: "update_failed" | "pending_removal";
+                            }[];
+                            errors?: {
+                                key?: string;
+                                code: string;
+                                message: string;
+                                state?: string;
+                            }[];
+                            unavailable?: string[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read, pause or clear a goal without starting inference */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "get" | "pause" | "clear";
+                    };
+                };
+            };
+            responses: {
+                /** @description Goal state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            goal?: unknown;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/fork-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the inherited history of a forked session
+         * @description Returns a read-only, frozen list of source turns. These turns are not billed or replayed as new turns.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Inherited turns */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            turns: {
+                                source_session_id: string;
+                                turn: {
+                                    /** @enum {string} */
+                                    kind?: "message" | "goal" | "compact";
+                                    id: string;
+                                    session_id: string;
+                                    status: string;
+                                    user_content: string;
+                                    attachments?: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        name: string;
+                                        size: number;
+                                    }[];
+                                    assistant_content: string;
+                                    asset_delivery?: {
+                                        /** @enum {string} */
+                                        mode: "reference";
+                                    } | {
+                                        /** @enum {string} */
+                                        mode: "client_proxy";
+                                        url_template: string;
+                                    };
+                                    thinking_option_id?: string | null;
+                                    /** @enum {string} */
+                                    thinking_source?: "turn" | "session" | "model" | "supplier" | "engine";
+                                    finish_reason: string | null;
+                                    model: string | null;
+                                    repo_key: string | null;
+                                    provider_session_id: string | null;
+                                    superseded_at: string | null;
+                                    usage: {
+                                        [key: string]: unknown;
+                                    } | null;
+                                    usage_metrics?: components["schemas"]["ConversationUsage"];
+                                    summary: {
+                                        [key: string]: unknown;
+                                    } | null;
+                                    error: {
+                                        [key: string]: unknown;
+                                    } | null;
+                                    created_at: string;
+                                    started_at: string | null;
+                                    finished_at: string | null;
+                                };
+                                events: {
+                                    usage_metrics?: components["schemas"]["ConversationUsage"];
+                                    seq: number;
+                                    /** @description Event name; session.updated carries {turn_id, plan_mode} for actual Codex plan-mode changes. turn.completed is final task completion. */
+                                    type: string;
+                                    turn_id: string | null;
+                                    payload: {
+                                        [key: string]: unknown;
+                                    };
+                                    created_at: string;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/coding/sessions/{session_id}/turns": {
         parameters: {
             query?: never;
@@ -2264,6 +2951,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Omit to inherit session choice; null skips the session and uses model/engine defaults; string overrides this turn only. */
+                        thinking_option_id?: string | null;
                         /** @description Image and file delivery: reference (default) emits asset://ID; client_proxy substitutes an HTTPS url_template containing exactly one {asset_id} in the path or query. Images use ![alt](URL); other files use [filename](URL). The caller implements and authenticates the proxy; ZAI does not fetch or upload to it. Fixed for the turn, including streaming, replay and history. */
                         asset_delivery?: {
                             /** @enum {string} */
@@ -2350,6 +3039,17 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description Goal control result (no inference turn) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            goal?: unknown;
+                        };
+                    };
+                };
                 /** @description Accepted */
                 202: {
                     headers: {
@@ -2357,6 +3057,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            /** @enum {string} */
+                            kind?: "message" | "goal" | "compact";
                             id: string;
                             session_id: string;
                             status: string;
@@ -2376,13 +3078,18 @@ export interface paths {
                                 mode: "client_proxy";
                                 url_template: string;
                             };
+                            thinking_option_id?: string | null;
+                            /** @enum {string} */
+                            thinking_source?: "turn" | "session" | "model" | "supplier" | "engine";
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
                             provider_session_id: string | null;
+                            superseded_at: string | null;
                             usage: {
                                 [key: string]: unknown;
                             } | null;
+                            usage_metrics?: components["schemas"]["ConversationUsage"];
                             summary: {
                                 [key: string]: unknown;
                             } | null;
@@ -2526,7 +3233,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a turn */
+        /**
+         * Get a turn
+         * @description Returns a turn by ID, including one removed from the current conversation by Rewind. Check superseded_at before showing it in the active conversation.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -2546,6 +3256,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            /** @enum {string} */
+                            kind?: "message" | "goal" | "compact";
                             id: string;
                             session_id: string;
                             status: string;
@@ -2565,13 +3277,18 @@ export interface paths {
                                 mode: "client_proxy";
                                 url_template: string;
                             };
+                            thinking_option_id?: string | null;
+                            /** @enum {string} */
+                            thinking_source?: "turn" | "session" | "model" | "supplier" | "engine";
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
                             provider_session_id: string | null;
+                            superseded_at: string | null;
                             usage: {
                                 [key: string]: unknown;
                             } | null;
+                            usage_metrics?: components["schemas"]["ConversationUsage"];
                             summary: {
                                 [key: string]: unknown;
                             } | null;
@@ -2742,6 +3459,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            /** @enum {string} */
+                            kind?: "message" | "goal" | "compact";
                             id: string;
                             session_id: string;
                             status: string;
@@ -2761,13 +3480,18 @@ export interface paths {
                                 mode: "client_proxy";
                                 url_template: string;
                             };
+                            thinking_option_id?: string | null;
+                            /** @enum {string} */
+                            thinking_source?: "turn" | "session" | "model" | "supplier" | "engine";
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
                             provider_session_id: string | null;
+                            superseded_at: string | null;
                             usage: {
                                 [key: string]: unknown;
                             } | null;
+                            usage_metrics?: components["schemas"]["ConversationUsage"];
                             summary: {
                                 [key: string]: unknown;
                             } | null;
@@ -2915,7 +3639,7 @@ export interface paths {
         put?: never;
         /**
          * Steer the running turn
-         * @description 把追加指令发给正在跑这一轮的 agent（paseo steer），不新开 turn。只对 running 的 turn 有效；steer 文本会作为 `steer.accepted` 事件进入会话时间线。
+         * @description 把追加指令发给正在跑这一轮的 Codex 会话，不新开 turn。只对 running 的 turn 有效；steer 文本会作为 `steer.accepted` 事件进入会话时间线。
          */
         post: {
             parameters: {
@@ -2942,6 +3666,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            /** @enum {string} */
+                            kind?: "message" | "goal" | "compact";
                             id: string;
                             session_id: string;
                             status: string;
@@ -2961,13 +3687,18 @@ export interface paths {
                                 mode: "client_proxy";
                                 url_template: string;
                             };
+                            thinking_option_id?: string | null;
+                            /** @enum {string} */
+                            thinking_source?: "turn" | "session" | "model" | "supplier" | "engine";
                             finish_reason: string | null;
                             model: string | null;
                             repo_key: string | null;
                             provider_session_id: string | null;
+                            superseded_at: string | null;
                             usage: {
                                 [key: string]: unknown;
                             } | null;
+                            usage_metrics?: components["schemas"]["ConversationUsage"];
                             summary: {
                                 [key: string]: unknown;
                             } | null;
@@ -3104,6 +3835,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/coding/sessions/{session_id}/turns/{turn_id}/rewind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rewind the current conversation before a turn
+         * @description Mark the selected and later turns outside the current ZAI context. The next turn creates a new agent with the retained history. Workspace files remain unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    turn_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        mode: "conversation";
+                    };
+                };
+            };
+            responses: {
+                /** @description Conversation rewound */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            target_turn_id: string;
+                            /** @enum {string} */
+                            mode: "conversation";
+                            rewound_turn_ids: string[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/coding/sessions/{session_id}/events": {
         parameters: {
             query?: never;
@@ -3113,13 +4014,14 @@ export interface paths {
         };
         /**
          * List session events
-         * @description Replay persisted events after a given seq. Used for history browsing and gap recovery.
+         * @description Replay persisted events after a given seq. Events belonging to turns removed by Rewind are omitted by default. Set include_superseded=true for the complete audit log. A session.rewound event remains visible so live clients can remove previously received turns.
          */
         get: {
             parameters: {
                 query?: {
                     after_seq?: string;
                     limit?: string;
+                    include_superseded?: "true" | "false";
                 };
                 header?: never;
                 path: {
@@ -3137,6 +4039,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             events: {
+                                usage_metrics?: components["schemas"]["ConversationUsage"];
                                 seq: number;
                                 /** @description Event name; session.updated carries {turn_id, plan_mode} for actual Codex plan-mode changes. turn.completed is final task completion. */
                                 type: string;
@@ -3285,12 +4188,13 @@ export interface paths {
         };
         /**
          * Stream session events as server-sent events
-         * @description Replays persisted events after after_seq (or the Last-Event-ID header), then follows live events. Each SSE message carries the event sequence as its id; `: keep-alive` comments are sent every 20 seconds and the stream closes after about 60 seconds, so reconnect with the last received ID.
+         * @description Replays current-conversation events after after_seq (or the Last-Event-ID header), then follows live events. Events from turns removed by Rewind are omitted by default; include_superseded=true selects the complete audit log. session.rewound remains visible so live clients can remove previously received turns. Each SSE message carries the event sequence as its id; `: keep-alive` comments are sent every 20 seconds and the stream closes after about 60 seconds, so reconnect with the last received ID.
          */
         get: {
             parameters: {
                 query?: {
                     after_seq?: string;
+                    include_superseded?: "true" | "false";
                 };
                 header?: never;
                 path: {
@@ -3371,6 +4275,175 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/repository-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create or replace a repository file
+         * @description Upload binary content up to 50 MiB. repo_key explicitly selects a registered repository; path includes the filename relative to that repository. Creates parent directories and atomically replaces existing regular files, preserving their permissions. Rejects symlinks and .git paths. Does not create a message attachment or commit changes. Requires an updated Runner.
+         */
+        post: {
+            parameters: {
+                query: {
+                    repo_key: string;
+                    path: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            responses: {
+                /** @description Repository file written */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repo_key: string;
+                            path: string;
+                            name: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4368,7 +5441,7 @@ export interface paths {
         };
         /**
          * List interactions
-         * @description List pending (or historical) interactions of a coding session. Payload mirrors the paseo permission request.
+         * @description List pending (or historical) interactions of a coding session. Payload mirrors the runner approval request.
          */
         get: {
             parameters: {
@@ -4546,7 +5619,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve an interaction
-         * @description Answer a pending interaction. The body is the paseo permission response: { behavior: allow | deny, selectedActionId?, updatedInput?, message? }. Success means the decision was accepted and queued, not that implementation finished. Observe session.updated for actual plan mode and turn.completed for completion.
+         * @description Answer a pending interaction. The body is the approval response: { behavior: allow | deny, selectedActionId?, updatedInput?, message? }. Success means the decision was accepted and queued, not that implementation finished. Observe session.updated for actual plan mode and turn.completed for completion.
          */
         post: {
             parameters: {
@@ -5244,6 +6317,14 @@ export interface paths {
                     content: {
                         "application/json": {
                             repositories: {
+                                sync: {
+                                    task_id: string | null;
+                                    status: string;
+                                    /** @description Last observed local availability; null means unknown. Independent of synchronization success. */
+                                    available: boolean | null;
+                                    error: string | null;
+                                    completed_at: string | null;
+                                };
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
@@ -5299,7 +6380,7 @@ export interface paths {
         put?: never;
         /**
          * Add a repository
-         * @description Add a repository to the workspace. `url` empty means a platform-managed empty repository materialized by the runner.
+         * @description Add a repository to the workspace. A remote URL can be registered only once per workspace, even with a different repo_key. `url` empty means a platform-managed empty repository materialized by the runner.
          */
         post: {
             parameters: {
@@ -5337,6 +6418,14 @@ export interface paths {
                     content: {
                         "application/json": {
                             repository: {
+                                sync: {
+                                    task_id: string | null;
+                                    status: string;
+                                    /** @description Last observed local availability; null means unknown. Independent of synchronization success. */
+                                    available: boolean | null;
+                                    error: string | null;
+                                    completed_at: string | null;
+                                };
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
@@ -5368,6 +6457,14 @@ export interface paths {
                     content: {
                         "application/json": {
                             repository: {
+                                sync: {
+                                    task_id: string | null;
+                                    status: string;
+                                    /** @description Last observed local availability; null means unknown. Independent of synchronization success. */
+                                    available: boolean | null;
+                                    error: string | null;
+                                    completed_at: string | null;
+                                };
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
@@ -5485,6 +6582,14 @@ export interface paths {
                     content: {
                         "application/json": {
                             repository: {
+                                sync: {
+                                    task_id: string | null;
+                                    status: string;
+                                    /** @description Last observed local availability; null means unknown. Independent of synchronization success. */
+                                    available: boolean | null;
+                                    error: string | null;
+                                    completed_at: string | null;
+                                };
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
@@ -5575,6 +6680,14 @@ export interface paths {
                     content: {
                         "application/json": {
                             repository: {
+                                sync: {
+                                    task_id: string | null;
+                                    status: string;
+                                    /** @description Last observed local availability; null means unknown. Independent of synchronization success. */
+                                    available: boolean | null;
+                                    error: string | null;
+                                    completed_at: string | null;
+                                };
                                 id: string;
                                 workspace_id: string | null;
                                 repo_key: string;
@@ -5686,6 +6799,108 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry repository preparation
+         * @description Asynchronously clone a missing repository or configure an existing one. Preserves local files; does not pull, reset or merge. Reuses an in-progress task. Query the repository for completion and sanitized errors. Chat remains available during synchronization.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    agent_id: string;
+                    workspace_id: string;
+                    repository_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Synchronization accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repository: {
+                                sync: {
+                                    task_id: string | null;
+                                    status: string;
+                                    /** @description Last observed local availability; null means unknown. Independent of synchronization success. */
+                                    available: boolean | null;
+                                    error: string | null;
+                                    completed_at: string | null;
+                                };
+                                id: string;
+                                workspace_id: string | null;
+                                repo_key: string;
+                                /**
+                                 * @description Repository directory relative to the workspace root (currently repo_key). Available before materialization; not an absolute host path.
+                                 * @example project-a
+                                 */
+                                relative_path: string;
+                                name: string;
+                                description: string | null;
+                                default_branch: string;
+                                source_type: string;
+                                status: string;
+                                is_default: boolean;
+                                url?: string | null;
+                                created_at: string;
+                                updated_at: string;
+                            };
+                            /** @enum {string} */
+                            runner_status?: "materialization_pending";
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6174,7 +7389,7 @@ export interface paths {
                                 id: string;
                                 name: string;
                                 /** @enum {string} */
-                                runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                                runner_adapter: "codex";
                                 model: string;
                                 image_policy_id: string;
                                 idle_stop_seconds: number;
@@ -6199,7 +7414,7 @@ export interface paths {
                                 id: string;
                                 name: string;
                                 /** @enum {string} */
-                                runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                                runner_adapter: "codex";
                                 model: string;
                                 image_policy_id: string;
                                 idle_stop_seconds: number;
@@ -6224,7 +7439,7 @@ export interface paths {
                                 id: string;
                                 name: string;
                                 /** @enum {string} */
-                                runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                                runner_adapter: "codex";
                                 model: string;
                                 image_policy_id: string;
                                 idle_stop_seconds: number;
@@ -6310,7 +7525,10 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create an application runner profile */
+        /**
+         * Create an application runner profile
+         * @description Legacy profile creation is no longer supported; returns 503 runner_legacy_policy_unsupported. Use application Coding settings.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -6325,7 +7543,7 @@ export interface paths {
                     "application/json": {
                         name: string;
                         /** @enum {string} */
-                        runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                        runner_adapter: "codex";
                         model: string;
                         image_policy_id: string;
                         is_default?: boolean;
@@ -6344,7 +7562,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6367,7 +7585,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6390,7 +7608,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6487,7 +7705,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List allowed runner image policies */
+        /**
+         * List allowed runner image policies
+         * @description Legacy policy-file deployment has been removed. Returns 503 runner_legacy_policy_unsupported. Use application Coding settings.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -6649,7 +7870,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6675,7 +7896,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6701,7 +7922,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6911,7 +8132,10 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Update an application runner profile */
+        /**
+         * Update an application runner profile
+         * @description Existing profile metadata can be maintained. Supplying image_policy_id returns 503 runner_legacy_policy_unsupported; configure images through application Coding settings.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -6947,7 +8171,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6970,7 +8194,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -6993,7 +8217,7 @@ export interface paths {
                             id: string;
                             name: string;
                             /** @enum {string} */
-                            runner_adapter: "codex" | "pi" | "opencode" | "claude";
+                            runner_adapter: "codex";
                             model: string;
                             image_policy_id: string;
                             idle_stop_seconds: number;
@@ -8668,6 +9892,7 @@ export interface paths {
                             /** @enum {string} */
                             status: "ready" | "starting" | "unavailable";
                             reason: string | null;
+                            failure_reason: string | null;
                             updated_at: string | null;
                         };
                     };
@@ -8684,6 +9909,7 @@ export interface paths {
                             /** @enum {string} */
                             status: "ready" | "starting" | "unavailable";
                             reason: string | null;
+                            failure_reason: string | null;
                             updated_at: string | null;
                         };
                     };
@@ -8700,6 +9926,7 @@ export interface paths {
                             /** @enum {string} */
                             status: "ready" | "starting" | "unavailable";
                             reason: string | null;
+                            failure_reason: string | null;
                             updated_at: string | null;
                         };
                     };
@@ -8802,6 +10029,183 @@ export interface paths {
                 };
                 path: {
                     agent_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, unknown>;
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            runner_profile_id: string;
+                            /** Format: uuid */
+                            agent_id: string | null;
+                            external_user_id: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            desired_state: "running" | "stopped";
+                            status: string;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Administrator token required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found in this application */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Deployment unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/runner-instance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ensure the current session's bound runner instance
+         * @description Requests startup of the authenticated user's existing session-bound instance without creating a turn or changing its workspace. Reuses pending recovery and preserves backoff. Disabled/deleted instances and credential repair blockers remain blocked.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "idempotency-key": string;
+                };
+                path: {
+                    session_id: string;
                 };
                 cookie?: never;
             };
@@ -9070,6 +10474,10 @@ export interface paths {
             parameters: {
                 query?: {
                     repo_key?: string;
+                    offset?: number | null;
+                    limit?: number;
+                    path?: string;
+                    include_diff?: "true" | "false";
                 };
                 header?: never;
                 path: {
@@ -9097,6 +10505,12 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "added" | "modified" | "deleted" | "renamed";
                                 diff: string;
+                                truncated?: boolean;
+                            }[];
+                            pages?: {
+                                repo_key: string | null;
+                                next_offset: number | null;
+                                total: number;
                             }[];
                         };
                     };
@@ -10633,13 +12047,14 @@ export interface paths {
         };
         /**
          * List models available on the runner
-         * @description List application-authorized models compatible with the agent engine, without creating or starting an instance. Models can change per turn; provider switching is not supported.
+         * @description List application-authorized models compatible with the agent engine, without creating or starting an instance. Optional session_id uses its pinned engine/profile and is scoped to the same application, agent and user. Models can change per turn; provider switching is not supported.
          */
         get: {
             parameters: {
                 query: {
                     provider?: string;
                     agent_id: string;
+                    session_id?: string;
                     refresh?: string;
                 };
                 header?: never;
@@ -10665,12 +12080,26 @@ export interface paths {
                                 provider: string;
                                 is_default: boolean;
                                 context_window_max_tokens?: number | null;
+                                /**
+                                 * @description Model reasoning capability; shared channel parameters do not imply support.
+                                 * @enum {string}
+                                 */
+                                thinking_support?: "unknown" | "unsupported" | "supported";
+                                /** @description Whether a parameter template and compatible engine provide adjustable reasoning. */
+                                thinking_adjustable?: boolean;
+                                /** @description Compatibility with the known Runner, or null before runtime discovery. */
+                                thinking_runner_compatible?: boolean | null;
+                                thinking_unavailable_reason?: string | null;
+                                /** @enum {string} */
+                                thinking_configuration_source?: "model" | "supplier" | "unknown";
                                 default_thinking_option_id?: string | null;
                                 description?: string | null;
                                 thinking_options?: {
                                     id: string;
                                     label: string;
                                     is_default?: boolean;
+                                    /** @description Whether the known Runner can apply this option; absent before runtime discovery. */
+                                    available?: boolean;
                                     description?: string | null;
                                 }[];
                             }[];
@@ -10803,6 +12232,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available skill commands */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Skill commands */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            commands: {
+                                name: string;
+                                description: string;
+                                /** @enum {string} */
+                                kind: "skill";
+                                /** @enum {string} */
+                                source: "app";
+                                /** @enum {string} */
+                                scope: "app" | "personal";
+                                version: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Session not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/{session_id}/messages": {
         parameters: {
             query?: never;
@@ -10833,6 +12319,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             messages: {
+                                reasoning_content?: string;
                                 id: string;
                                 app_id: string;
                                 session_id: string;
@@ -10848,6 +12335,7 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                                 execution_summary?: {
+                                    usage_metrics?: components["schemas"]["ConversationUsage"];
                                     /** @enum {string} */
                                     runtime?: "pi_coding_agent" | "runner";
                                     /** @enum {string} */
@@ -10956,6 +12444,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Override Chat thinking for this turn; null skips the session choice. */
+                        thinking_option_id?: string | null;
                         content?: ({
                             /** @enum {string} */
                             type: "input_text";
@@ -11045,6 +12535,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            reasoning_content?: string;
                             content?: string | null;
                             model?: string;
                             finish_reason?: string | null;
@@ -11057,7 +12548,9 @@ export interface paths {
                                 };
                             }[];
                             usage?: unknown;
+                            usage_metrics?: components["schemas"]["ConversationUsage"];
                             execution_summary?: {
+                                usage_metrics?: components["schemas"]["ConversationUsage"];
                                 /** @enum {string} */
                                 runtime?: "pi_coding_agent" | "runner";
                                 /** @enum {string} */
@@ -11206,6 +12699,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             message: {
+                                reasoning_content?: string;
                                 id: string;
                                 app_id: string;
                                 session_id: string;
@@ -11221,6 +12715,7 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                                 execution_summary?: {
+                                    usage_metrics?: components["schemas"]["ConversationUsage"];
                                     /** @enum {string} */
                                     runtime?: "pi_coding_agent" | "runner";
                                     /** @enum {string} */
@@ -11553,6 +13048,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @description Set a Chat thinking level, or null to clear the override. Omit to keep it. */
+                        thinking_option_id?: string | null;
                         /** @description Optional session title. */
                         title?: string | null;
                         /** @description Optional model id override. Persisted as settings.model. */
@@ -12172,11 +13669,14 @@ export interface paths {
         };
         /**
          * List skills
-         * @description List all skills under the current app.
+         * @description List accessible application and personal skills under the current app. Filters do not grant access to another owner.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    scope?: "app" | "personal";
+                    owner_id?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -12192,6 +13692,12 @@ export interface paths {
                         "application/json": {
                             id: string;
                             app_id: string;
+                            /**
+                             * @default app
+                             * @enum {string}
+                             */
+                            scope?: "app" | "personal";
+                            owner_id?: string | null;
                             key: string;
                             name: string;
                             description?: string | null;
@@ -12221,6 +13727,14 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /**
+                         * @description Application-shared or personal. Personal skills require an explicit owner_id.
+                         * @default app
+                         * @enum {string}
+                         */
+                        scope?: "app" | "personal";
+                        /** @description External user ID within this app. Required for personal skills; null or omitted for app skills. Non-admin callers may only name themselves. */
+                        owner_id?: string | null;
                         /** @description Unique skill key. Lowercase letters, numbers, underscore and dash only. */
                         key: string;
                         /** @description Skill display name. */
@@ -12245,6 +13759,12 @@ export interface paths {
                             skill: {
                                 id: string;
                                 app_id: string;
+                                /**
+                                 * @default app
+                                 * @enum {string}
+                                 */
+                                scope?: "app" | "personal";
+                                owner_id?: string | null;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -12398,6 +13918,12 @@ export interface paths {
                         "application/json": {
                             id: string;
                             app_id: string;
+                            /**
+                             * @default app
+                             * @enum {string}
+                             */
+                            scope?: "app" | "personal";
+                            owner_id?: string | null;
                             key: string;
                             name: string;
                             description?: string | null;
@@ -12453,6 +13979,12 @@ export interface paths {
                             skill: {
                                 id: string;
                                 app_id: string;
+                                /**
+                                 * @default app
+                                 * @enum {string}
+                                 */
+                                scope?: "app" | "personal";
+                                owner_id?: string | null;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -12500,6 +14032,13 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /**
+                         * @description Immutable; supplying this field is rejected.
+                         * @enum {string}
+                         */
+                        scope?: "app" | "personal";
+                        /** @description Immutable; supplying this field is rejected. */
+                        owner_id?: string | null;
                         name?: string;
                         description?: string | null;
                         /** @enum {string} */
@@ -12518,6 +14057,12 @@ export interface paths {
                             skill: {
                                 id: string;
                                 app_id: string;
+                                /**
+                                 * @default app
+                                 * @enum {string}
+                                 */
+                                scope?: "app" | "personal";
+                                owner_id?: string | null;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -12583,6 +14128,12 @@ export interface paths {
                             skill: {
                                 id: string;
                                 app_id: string;
+                                /**
+                                 * @default app
+                                 * @enum {string}
+                                 */
+                                scope?: "app" | "personal";
+                                owner_id?: string | null;
                                 key: string;
                                 name: string;
                                 description?: string | null;
@@ -12876,10 +14427,22 @@ export interface paths {
                         "application/json": components["schemas"]["MemoryCollection"][];
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
             };
         };
         put?: never;
-        /** Create a memory collection (admin only) */
+        /**
+         * Create a memory collection (admin only)
+         * @description Only name is required; omitted optional parameters use creation defaults. The app must have a default embedding model configured.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -12887,7 +14450,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemoryCollectionCreateRequest"];
                 };
@@ -12913,6 +14476,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Forbidden: requires an app admin token (ak-*) */
                 403: {
                     headers: {
@@ -12922,6 +14494,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Embedding model unavailable or collection creation failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
                     };
                 };
             };
@@ -12974,6 +14555,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Memory collection not found */
                 404: {
                     headers: {
@@ -12997,13 +14587,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemoryCollectionUpdateRequest"];
                 };
             };
             responses: {
-                /** @description Updated collection */
+                /** @description Updated collection; empty body if no collection matches this app and ID */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -13021,6 +14611,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
                     };
                 };
                 /** @description Forbidden: requires an app admin token (ak-*) */
@@ -13049,7 +14648,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Deleted collection */
+                /** @description Deleted collection; empty body if no collection matches this app and ID */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -13067,6 +14666,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
                     };
                 };
                 /** @description Forbidden: requires an app admin token (ak-*) */
@@ -13098,7 +14706,7 @@ export interface paths {
         put?: never;
         /**
          * Rebuild memory collection embeddings (admin only)
-         * @description Atomically clears only this collection's old embedding jobs and vectors/chunks, preserves source contents, and queues new jobs. Allows rebuilding with the same model. Poll GET /memories/{id} for completion; embedding calls may incur charges. Send {} to keep the current model.
+         * @description All parameters are optional; omitted parameters keep the current configuration. Send {} to rebuild without changing configuration. Clears this collection's old jobs/history and vectors/chunks, preserves source contents, and queues all non-deleted contents, including disabled ones. Repeated requests restart the rebuild; retrieval may be incomplete while rebuilding. Poll GET /memories/{id} for completion; calls may incur charges.
          */
         post: {
             parameters: {
@@ -13133,6 +14741,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
                     };
                 };
                 /** @description Forbidden: requires an app admin token (ak-*) */
@@ -13185,7 +14802,7 @@ export interface paths {
         };
         /**
          * List failed memory contents and embedding reasons
-         * @description Available to regular app user tokens and admin tokens. Returns paginated failed, non-deleted contents with redacted latest embedding job diagnostics. Disabled collections and contents remain observable. Successful or retrying contents are not listed; rebuilding clears previous errors.
+         * @description Available to app user and admin tokens. Lists current failed, non-deleted contents with redacted latest embedding reasons, including disabled contents/collections. Queued retries leave this list. Manual retry preserves old job history; rebuilding clears it.
          */
         get: {
             parameters: {
@@ -13221,6 +14838,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Memory collection not found */
                 404: {
                     headers: {
@@ -13242,6 +14868,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/memories/{id}/retry-failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry only failed memory contents (admin only)
+         * @description Select content_ids or all_failed: true. Queues only failed, non-deleted contents without active jobs, including disabled contents/collections. Keeps source text, configuration, current vectors and old job history; does not rebuild successful contents. Repeated/concurrent requests do not create duplicate active embedding jobs. All-failed covers current failures, not future ones. New jobs keep the existing automatic retry policy. Poll collection status and failures for completion; calls may incur charges.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MemoryCollectionRetryFailedRequest"];
+                };
+            };
+            responses: {
+                /** @description Retry accepted; not yet completed */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryCollectionRetryFailedResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
+                /** @description Forbidden: requires an app admin token (ak-*) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Collection or a selected content is missing, deleted or outside this app/collection; no contents are queued */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+                /** @description Retry failed; transaction rolled back */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/memories/{id}/contents": {
         parameters: {
             query?: never;
@@ -13249,7 +14973,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List memory contents */
+        /**
+         * List memory contents
+         * @description Returns non-deleted contents, including disabled ones, newest first. Does not check collection status; an unknown collection returns an empty array.
+         */
         get: {
             parameters: {
                 query?: {
@@ -13284,12 +15011,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
             };
         };
         put?: never;
         /**
          * Create or update memory content (admin only)
-         * @description When `key` is supplied and content with that key already exists, the existing content is updated instead of creating a new one.
+         * @description Writes source content and starts asynchronous embedding; 200 is not embedding completion and can still be returned if enqueueing fails. An existing matching key updates that content and clears its previous vectors; it does not restore deleted content. Poll collection status and failures for embedding results.
          */
         post: {
             parameters: {
@@ -13300,7 +15036,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemoryContentRequest"];
                 };
@@ -13326,6 +15062,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Forbidden: requires an app admin token (ak-*) */
                 403: {
                     headers: {
@@ -13335,6 +15080,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Content creation or keyed update failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
                     };
                 };
             };
@@ -13364,7 +15118,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemoryContentsFilterRequest"];
                 };
@@ -13390,6 +15144,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -13405,7 +15168,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get memory content */
+        /**
+         * Get memory content
+         * @description Returns matching content without filtering its status, including logically deleted content. Missing content returns 200 with an empty body, not 404.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -13418,7 +15184,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Memory content */
+                /** @description Memory content, or empty body if none matches */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -13438,9 +15204,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
             };
         };
-        /** Update memory content (admin only) */
+        /**
+         * Update memory content (admin only)
+         * @description Updates source content, clears its previous vectors and queues embedding again. Omitted content_type/key/attrs use their defaults rather than preserving old values. 200 is not embedding completion and can still be returned if enqueueing fails; poll collection status and failures. Missing content currently returns 500, not 404.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -13451,7 +15229,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemoryContentRequest"];
                 };
@@ -13477,6 +15255,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Forbidden: requires an app admin token (ak-*) */
                 403: {
                     headers: {
@@ -13488,12 +15275,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Content update failed, including missing content */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
+                    };
+                };
             };
         };
         post?: never;
         /**
          * Delete memory content (admin only)
-         * @description When `{content_id}` starts with `_`, the remainder is treated as a content key instead of an id.
+         * @description Logically deletes content, removes its vectors and cancels active embedding jobs. A content_id prefixed with _ selects by key instead of ID. Missing content or key returns the same 200 success response.
          */
         delete: {
             parameters: {
@@ -13527,6 +15323,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Forbidden: requires an app admin token (ak-*) */
                 403: {
                     headers: {
@@ -13554,7 +15359,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create memory contents in batch (admin only) */
+        /**
+         * Create memory contents in batch (admin only)
+         * @description Creates 1–500 source contents and their embedding jobs in one transaction. Keys do not perform upserts or deduplication. Returned IDs follow request order. 200 accepts the source write; embeddings complete asynchronously.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -13564,7 +15372,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemoryContentBatchRequest"];
                 };
@@ -13590,6 +15398,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Forbidden: requires an app admin token (ak-*) */
                 403: {
                     headers: {
@@ -13599,6 +15416,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Content/job transaction failed; all batch writes rolled back */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
                     };
                 };
             };
@@ -13616,7 +15442,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List content chunks (admin only) */
+        /**
+         * List content chunks (admin only)
+         * @description Returns chunks only for enabled contents whose embedding_status is completed. Missing, disabled, deleted or unfinished contents return an empty array. Chunk order is unspecified; indices and token counts are in payload.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -13649,6 +15478,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
                 /** @description Forbidden: requires an app admin token (ak-*) */
                 403: {
                     headers: {
@@ -13679,7 +15517,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Search memory chunks by embedding */
+        /**
+         * Search memory chunks by embedding
+         * @description Embeds the query and returns enabled, completed content chunks in descending similarity order. Uses the model of an enabled collection, otherwise the app default; does not reject disabled/deleted collections. May incur embedding charges. Upstream embedding failures/timeouts return 500.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -13689,7 +15530,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemorySearchRequest"];
                 };
@@ -13715,6 +15556,24 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
+                /** @description Query embedding or search failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
+                    };
+                };
             };
         };
         delete?: never;
@@ -13732,7 +15591,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Search memory contents by embedding */
+        /**
+         * Search memory contents by embedding
+         * @description Embeds the query and returns enabled, completed contents, using each content's highest matching chunk similarity. Results are ordered and limited by content ID, not globally by similarity. Uses the enabled collection's model, otherwise the app default. May incur charges; upstream failures/timeouts return 500.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -13742,7 +15604,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": components["schemas"]["MemorySearchRequest"];
                 };
@@ -13768,6 +15630,24 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
+                    };
+                };
+                /** @description Query embedding or search failed */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
+                    };
+                };
             };
         };
         delete?: never;
@@ -13783,7 +15663,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get embedding queue status (admin only) */
+        /**
+         * Get embedding queue status (admin only)
+         * @description Queue-wide counts across all apps and target types, plus this process's worker state. Counts also return all zero if the statistics query fails. Use collection status for completion; these counts do not prove a specific content has finished.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -13800,6 +15683,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["EmbeddingQueueStatusResponse"];
+                    };
+                };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
                     };
                 };
                 /** @description Forbidden: requires an app admin token (ak-*) */
@@ -13830,7 +15722,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List content embedding jobs (admin only) */
+        /**
+         * List content embedding jobs (admin only)
+         * @description Returns stored memory jobs newest first, including failed jobs retained by manual retry; rebuild removes previous jobs. Errors are raw stored diagnostics, unlike redacted failures. Lookup failures also return an empty array. Legacy limitation: lookup uses content_id only and does not validate the collection path or app ownership; use collection failures for app-scoped diagnostics.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -13861,6 +15756,15 @@ export interface paths {
                         "application/json": {
                             error: string;
                         };
+                    };
+                };
+                /** @description Unauthorized: missing or invalid app token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemoryAuthenticationError"];
                     };
                 };
                 /** @description Forbidden: requires an app admin token (ak-*) */
@@ -15713,14 +17617,32 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ConversationUsage: {
+            input_tokens: number | null;
+            output_tokens: number | null;
+            cached_input_tokens: number | null;
+            /**
+             * @description turn: sum of this Chat turn's model calls; provider: latest Coding provider snapshot, not necessarily a turn total
+             * @enum {string}
+             */
+            token_scope: "turn" | "provider";
+            context: {
+                used_tokens: number | null;
+                max_tokens: number | null;
+                /** @description used_tokens / max_tokens; 0.5 means 50%. Not clamped. Null when unknown. */
+                utilization: number | null;
+                /** @enum {string} */
+                source: "reported" | "estimated" | "unknown";
+            };
+        };
         MemoryCollection: {
             id: string;
             app_id: string;
-            external_user_id?: string;
-            external_username?: string;
+            external_user_id?: string | null;
+            external_username?: string | null;
             name: string;
-            description?: string;
-            embedding_model?: string;
+            description?: string | null;
+            embedding_model?: string | null;
             max_tokens_per_chunk: number;
             overlap_tokens: number;
             /**
@@ -15732,18 +17654,35 @@ export interface components {
                 [key: string]: unknown;
             };
             created_at: string;
-            updated_at?: string;
+            updated_at?: string | null;
         };
+        MemoryAuthenticationError: {
+            error: {
+                message: string;
+                type: string;
+                param: string | null;
+                code: string | null;
+            };
+        } | {
+            error: string;
+        };
+        /** @description Only name is required. Omitted optional parameters use creation defaults, not an existing collection's settings. Chunk size is a token budget, not a strict final-length or model-compatibility guarantee. */
         MemoryCollectionCreateRequest: {
-            /** @description 必填。集合名称, 缺失时返回 400 `{"error":"name is required"}` */
-            name?: string;
-            /** @description 可选。集合描述, 不传时落库为 null */
+            /** @description Collection name; must not be empty. */
+            name: string;
+            /** @description Collection description; defaults to null. */
             description?: string | null;
-            /** @description 可选。不传时使用应用默认向量模型; 应用未配置向量模型时返回 400 */
+            /** @description Embedding model available to this app; defaults to the app's default embedding model. An app default must be configured. */
             embedding_model?: string;
-            /** @description 可选。默认 1024 */
+            /**
+             * @description Chunk token budget, integer 1–8192; defaults to 1024. Accepts numbers and integer strings; empty or whitespace-only strings use the default. Null is rejected.
+             * @default 1024
+             */
             max_tokens_per_chunk?: number | string;
-            /** @description 可选。默认 0 */
+            /**
+             * @description Overlap token count, integer 0–floor(max_tokens_per_chunk / 4); defaults to 0. Accepts numbers and integer strings; empty or whitespace-only strings use the default. Null is rejected.
+             * @default 0
+             */
             overlap_tokens?: number | string;
         };
         MemoryCollectionDetails: components["schemas"]["MemoryCollection"] & {
@@ -15767,12 +17706,17 @@ export interface components {
         MemoryCollectionRebuildResponse: {
             /** @enum {boolean} */
             success: true;
-            /** @description Number of non-deleted contents queued for embedding; acceptance does not mean embedding has completed. */
+            /** @description Non-deleted contents queued for embedding, including disabled contents; 0 for an empty collection. Acceptance is not completion. */
             requeued: number;
         };
+        /** @description All parameters are optional. Omitted parameters keep the current configuration, including legacy chunk settings; send {} to rebuild without changing configuration. */
         MemoryCollectionRebuildRequest: {
-            /** @description Optional model override; defaults to the collection model, then app default. The same model can be rebuilt. */
+            /** @description Embedding model available to this app. If omitted, uses the current collection model, falling back to the app default. Empty strings and null are rejected. */
             embedding_model?: string;
+            /** @description Chunk token budget, integer 1–8192. Accepts numbers and integer strings; empty or whitespace-only strings keep the current value. Null is rejected. */
+            max_tokens_per_chunk?: number | string;
+            /** @description Overlap token count, integer 0–floor(effective max_tokens_per_chunk / 4). Accepts numbers and integer strings; empty or whitespace-only strings keep the current value. Null is rejected. Changing chunk size also checks the retained overlap. */
+            overlap_tokens?: number | string;
         };
         MemoryCollectionFailures: {
             collection_id: string;
@@ -15797,23 +17741,42 @@ export interface components {
                 } | null;
             }[];
         };
+        MemoryCollectionRetryFailedResponse: {
+            /** @enum {boolean} */
+            success: true;
+            /** @description Distinct selected contents queued as new jobs. 0 means no new job was queued; acceptance is not completion. */
+            requeued: number;
+            /** @description Distinct selected contents already successful, pending/processing, or with an active job. Existing jobs are not modified. */
+            skipped: number;
+        };
+        /** @description Choose exactly one: non-empty content_ids (duplicates ignored), or all_failed: true for the current failed set. An empty request never means all. */
+        MemoryCollectionRetryFailedRequest: {
+            /** @description Content UUIDs in this collection; duplicates are ignored. Missing, deleted or other-collection/App IDs reject the entire request with 404. */
+            content_ids: string[];
+        } | {
+            /**
+             * @description Retry all current non-deleted failed contents, including disabled contents, regardless of failure-list pagination.
+             * @enum {boolean}
+             */
+            all_failed: true;
+        };
         MemoryCollectionUpdateRequest: {
             /** @description 必填。缺失时返回 400 `{"error":"name is required"}` */
-            name?: string;
+            name: string;
             /** @description 可选。不传时落库为 null */
             description?: string | null;
             /**
              * @description 必填。缺失时返回 400 `{"error":"status is required"}`
              * @enum {string}
              */
-            status?: "enabled" | "disabled" | "deleted";
+            status: "enabled" | "disabled" | "deleted";
         };
         MemoryContent: {
             id: string;
             collection_id: string;
             app_id: string;
-            external_user_id?: string;
-            external_username?: string;
+            external_user_id?: string | null;
+            external_username?: string | null;
             key?: string | null;
             attrs?: {
                 [key: string]: unknown;
@@ -15856,33 +17819,36 @@ export interface components {
             content_keywords?: string;
         };
         MemoryContentActionResponse: {
+            /** @description Whether the content command was accepted; does not indicate embedding completion. */
             success: boolean;
             message: string;
             content_id?: string;
         };
         MemoryContentRequest: {
-            /** @description 必填。缺失时返回 400 `{"error":"content is required"}` */
-            content?: string;
+            /** @description Content text; must not be empty. */
+            content: string;
             /**
-             * @description 可选。默认 `text`
+             * @description Content format; defaults to text, including on update.
+             * @default text
              * @enum {string}
              */
             content_type?: "text" | "markdown";
-            /** @description 可选。提供时按 key 做 upsert: 同 key 内容已存在则更新 */
+            /** @description Content key; defaults to null, including on update. Only single-content POST performs an upsert for an existing matching key. */
             key?: string | null;
-            /** @description 可选。内容属性, 可用于高级过滤 */
+            /** @description Content attributes for filtering; defaults to null, including on update. */
             attrs?: {
                 [key: string]: unknown;
             } | null;
         };
         MemoryBatchCreateResponse: {
+            /** @description Whether source contents and jobs were created; embedding completes asynchronously. */
             success: boolean;
             message: string;
             content_ids: string[];
         };
         MemoryContentBatchRequest: {
             /** @description 必填。1 到 500 项; 非数组/空数组/超过 500 项分别返回 400 */
-            contents?: components["schemas"]["MemoryContentRequest"][];
+            contents: components["schemas"]["MemoryContentRequest"][];
         };
         MemoryContentChunk: {
             id: string;
@@ -15899,18 +17865,24 @@ export interface components {
             content_key: string | null;
             content_attrs: {
                 [key: string]: unknown;
-            };
+            } | null;
             chunk_id: string;
             chunk_index: number;
             chunk_content: string;
             similarity: number;
         };
         MemorySearchRequest: {
-            /** @description 必填。检索文本, 缺失时返回 400 `{"error":"query is required"}` */
-            query?: string;
-            /** @description 可选。最低相似度, 默认 0.7 */
+            /** @description Search text; must not be empty. */
+            query: string;
+            /**
+             * @description Similarity threshold, default 0.7. Results must have similarity strictly greater than this value.
+             * @default 0.7
+             */
             min_similarity?: number | string;
-            /** @description 可选。返回条数, 默认 10 */
+            /**
+             * @description Maximum results, default 10. Accepts a number or an integer string.
+             * @default 10
+             */
             limit?: number | string;
             /** @description 可选。支持 `content_type`、`content_keywords`、`attrs` */
             content_filter?: {
@@ -16124,6 +18096,8 @@ export interface components {
         ConversationSettings: {
             /** @description Model id used by this conversation */
             model: string;
+            /** @description Explicit Chat thinking level; absent means legacy behavior */
+            thinking_option_id?: string | null;
             /** @description Sampling temperature */
             temperature: number;
             /** @description Maximum completion tokens */
@@ -16211,12 +18185,14 @@ export interface components {
             message: string;
         };
         ConversationUpdateRequest: {
+            thinking_option_id?: string | null;
             title?: string | null;
             custom_data?: {
                 [key: string]: unknown;
             } | null;
         };
         ChatMessageResult: {
+            reasoning_content?: string;
             content?: string | null;
             model?: string;
             finish_reason?: string | null;
@@ -16227,11 +18203,13 @@ export interface components {
             usage?: {
                 [key: string]: unknown;
             } | null;
+            usage_metrics?: components["schemas"]["ConversationUsage"];
             execution_summary?: {
                 [key: string]: unknown;
             } | null;
         };
         ChatMessageCreateRequest: {
+            thinking_option_id?: string | null;
             /** @description 用户消息文本; 与 attachments / messages 至少提供一个 */
             content?: string | null;
             /** @description 附件数组, 例如 `{ type: "image", url: "..." }` */
@@ -16272,6 +18250,7 @@ export interface components {
             agent_id?: string;
         };
         ChatMessage: {
+            reasoning_content?: string;
             /** @description Message id */
             id: string;
             conversation_id: string;
@@ -16363,6 +18342,23 @@ export interface components {
             chat_features?: {
                 /** @enum {string} */
                 function_calling?: "supported" | "unsupported" | "unknown";
+                /**
+                 * @description Whether the model supports reasoning.
+                 * @enum {string}
+                 */
+                reasoning_support?: "supported" | "unsupported" | "unknown";
+                /** @description Deprecated compatibility input. The value is normalized into reasoning.default_option_id; null clears it and omission preserves it. */
+                reasoning_default_option_id?: string | null;
+                /** @description Model-owned reasoning options and default. Null means supported without configurable levels; omission preserves the current value. */
+                reasoning?: {
+                    /** @enum {string} */
+                    support: "unknown" | "unsupported" | "supported";
+                    options?: {
+                        id: string;
+                        label: string;
+                    }[];
+                    default_option_id?: string;
+                } | null;
             };
         };
         ModelTestProbe: {
@@ -16388,7 +18384,7 @@ export interface components {
              * @description Capability the probe was resolved against; null when the model has no probeable capability. Determines the upstream path: text.chat via /chat/completions (or /responses when the model declares Native Responses API), text.embeddings via /embeddings.
              * @enum {string|null}
              */
-            capability: "text.chat" | "text.embeddings" | "image.generate" | "image.edit" | "image.variation" | "audio.transcribe" | "audio.translate" | "audio.speech" | null;
+            capability: "text.chat" | "text.embeddings" | "text.decisions" | "image.generate" | "image.edit" | "image.variation" | "audio.transcribe" | "audio.translate" | "audio.speech" | null;
             /**
              * @description Authorization state, checked before any billable request. 'ok' = the app may call this model; 'not_configured' = the request carried an empty model id; 'model_not_found' = no such model exists; 'unauthorized' = no enabled ability for the app owner's user group, no enabled channel, or the model is not available to this app. A non-'ok' value short-circuits: no upstream request is sent and charged_calls is not incremented.
              * @enum {string}

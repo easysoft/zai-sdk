@@ -52,7 +52,7 @@ describe('OpenAPI generation safeguards', () => {
     expect(() => validateOperationMappings(spec, changed(0, {0: 'agents', 1: 'create'}))).toThrow('Duplicate public method');
     expect(() => validateOperationMappings(spec, changed(0, {0: 'agents.create', 1: 'child'}))).toThrow('namespace');
     expect(() => validateOperationMappings(spec, changed(0, {0: 'invalid-name'}))).toThrow('Invalid public method');
-    expect(() => validateOperationMappings(spec, changed(0, {6: 'create'}))).toThrow('Duplicate public method');
+    expect(() => validateOperationMappings(spec, changed(0, {6: operations[0][1]}))).toThrow('Duplicate public method');
   });
 
   it('generates unambiguous nested type names', () => {
