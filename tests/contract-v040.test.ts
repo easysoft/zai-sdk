@@ -37,7 +37,7 @@ it.each([undefined, null, 'high'])('preserves the thinking override %j without f
 
 it('sends repository bytes and explicit repository-relative paths without creating attachments', async () => {
   const result = {repo_key: 'main', path: '目录/a + b.bin', name: 'a + b.bin', size: 3};
-  const {client, requests} = setup(result);
+  const {client, requests, getToken} = setup(result);
   const bytes = Uint8Array.of(0, 255, 42);
   expect(await client.coding.sessions.writeRepositoryFile('session', {repo_key: 'main', path: result.path}, new Blob([bytes]))).toEqual(result);
   expect(new URL(requests[0]!.url).pathname).toBe('/v1/zai/coding/sessions/session/repository-files');
@@ -45,6 +45,10 @@ it('sends repository bytes and explicit repository-relative paths without creati
   expect(requests[0]!.headers.get('content-type')).toBe('application/octet-stream');
   expect(new Uint8Array(await requests[0]!.arrayBuffer())).toEqual(bytes);
   expect(requests).toHaveLength(1);
+  expect(getToken).toHaveBeenCalledWith(expect.objectContaining({purpose: 'user'}));
+  await expect(client.coding.sessions.writeRepositoryFile('session', {repo_key: 'main', path: result.path}, new Blob([bytes]), {tokenType: 'admin'})).rejects.toMatchObject({code: 'invalid-input'});
+  expect(requests).toHaveLength(1);
+  expect(getToken).toHaveBeenCalledTimes(1);
 });
 
 it('retains diff pagination and truncation without fetching further pages', async () => {

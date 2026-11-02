@@ -80,6 +80,8 @@ test('documentation explains the 0.4.0 permissions, empty responses and retry ch
   await page.goto('/docs/index.html#api-coding-sessions-ensureRunnerInstance');
   await expect(page.locator('#api-coding-sessions-ensureRunnerInstance .operation-auth')).toContainText('仅 ak');
   await expect(page.locator('#api-coding-sessions-ensureRunnerInstance')).toContainText('重试须复用原键');
+  await page.goto('/docs/index.html#api-coding-sessions-writeRepositoryFile');
+  await expect(page.locator('#api-coding-sessions-writeRepositoryFile .operation-auth')).toContainText('仅 ek');
   await page.goto('/docs/index.html#api-memories-getContent');
   await expect(page.locator('#api-memories-getContent')).toContainText('SDK 返回 undefined');
   await page.goto('/docs/index.html#api-memories-retryFailed');

@@ -170,7 +170,7 @@ export const operationNotes: Record<string, string> = {
   'coding.turns.start': 'HTTP 202 返回 Turn，HTTP 200 返回目标控制结果且不创建 Turn。使用 id 前须缩小联合类型；thinking_option_id 省略继承会话，null 使用模型或引擎默认值。',
   'coding.turns.rewind': '只回退对话上下文，工作区文件不变。被回退 Turn 仍可单独读取，检查 superseded_at 后再展示。',
   'coding.sessions.controlGoal': 'action 仅支持 get、pause、clear；不创建或恢复推理。goal 内部结构未定义，返回 unknown。',
-  'coding.sessions.writeRepositoryFile': '显式提供 repo_key 和包含文件名的相对 path，发送 Blob 原始字节，最多 50 MiB。可覆盖普通文件，不创建消息附件或 Git 提交；需新版 Runner。',
+  'coding.sessions.writeRepositoryFile': '仅 ek。显式提供 repo_key 和包含文件名的相对 path，发送 Blob 原始字节，最多 50 MiB。可覆盖普通文件，不创建消息附件或 Git 提交；需新版 Runner。',
   'coding.repositories.sync': '异步准备仓库，重用进行中的任务，不执行 pull/reset/merge；通过仓库 sync 字段检查完成，available 与同步成功分别判断。',
   'coding.git.diff': '支持 offset/limit/path/include_diff；include_diff 使用字符串 true/false。返回 pages 游标和 truncated 标记，SDK 不自动翻页。',
   'chat.send': '输入 content 是文本，返回值未声明 conversation ID。需要继续对话时优先显式创建并保存会话 ID。',

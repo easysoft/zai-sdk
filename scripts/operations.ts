@@ -128,7 +128,8 @@ export const operations = [
   ['coding.sessions', 'generateTitle', 'post', `${codingSession}/generate-title`, 'user', codingAPISource],
   ['coding.sessions', 'listFiles', 'get', `${codingSession}/files`, 'user', codingAPISource],
   ['coding.sessions', 'uploadFile', 'post', `${codingSession}/files`, 'user', codingAPISource],
-  ['coding.sessions', 'writeRepositoryFile', 'post', `${codingSession}/repository-files`, 'user', specificationSource('post', `${codingSession}/repository-files`)],
+  // User-token restriction confirmed by the maintainer and live tests; see docs/MIGRATION.md.
+  ['coding.sessions', 'writeRepositoryFile', 'post', `${codingSession}/repository-files`, 'user-only', specificationSource('post', `${codingSession}/repository-files`)],
   ['coding.sessions', 'readFile', 'get', `${codingSession}/files/content`, 'user', codingAPISource],
   ['coding.sessions', 'downloadFile', 'get', `${codingSession}/files/download`, 'user-only', codingAPISource],
   ['coding.sessions', 'createDownloadLink', 'post', `${codingSession}/files/download-link`, 'user', codingAPISource],

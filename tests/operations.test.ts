@@ -28,6 +28,7 @@ const adminOperations = new Set([
 ]);
 const userOnlyOperations = new Set([
   'post /coding/agents/{agent_id}/runner-instance',
+  'post /coding/sessions/{session_id}/repository-files',
   'get /coding/agents/{agent_id}/git/identity', 'put /coding/agents/{agent_id}/git/identity',
   'get /coding/agents/{agent_id}/keys/public', 'post /coding/agents/{agent_id}/keys', 'post /coding/agents/{agent_id}/keys/rotate',
   'get /coding/sessions/{session_id}/files/download', 'post /coding/sessions/{session_id}/tool-calls/{tool_call_id}/result',
@@ -64,8 +65,8 @@ it('covers exactly 110 paths, 163 operations, 166 public methods and every expli
   expect(new Set(methods).size).toBe(166);
   expect(ZAI_OPERATIONS.map(operation => `${operation.method} ${operation.path}`).sort()).toEqual(operations.map(operation => `${operation.method} ${operation.path}`).sort());
   expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'admin')).toHaveLength(38);
-  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(117);
-  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user-only')).toHaveLength(8);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(116);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user-only')).toHaveLength(9);
   expect(ZAI_OPERATIONS.filter(operation => operation.idempotencyRequired)).toHaveLength(12);
   for (const operation of ZAI_OPERATIONS) {
     const key = `${operation.method} ${operation.path}`;

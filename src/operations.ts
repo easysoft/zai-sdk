@@ -2498,7 +2498,7 @@ export const ZAI_OPERATIONS = [
     "name": "writeRepositoryFile",
     "method": "post",
     "path": "/coding/sessions/{session_id}/repository-files",
-    "auth": "user",
+    "auth": "user-only",
     "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1repository-files/post",
     "streamName": null,
     "streamKind": null,

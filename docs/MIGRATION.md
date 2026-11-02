@@ -38,12 +38,12 @@ Memory 请求按新版 `required` 收紧：集合创建需要 `name`，更新需
 | `coding.sessions.controlGoal()` | `get/pause/clear`，不创建推理轮次，ak/ek |
 | `coding.sessions.getForkHistory()` | 冻结的继承历史，ak/ek |
 | `coding.turns.rewind()` | 仅 `mode: 'conversation'`，回退上下文，ak/ek |
-| `coding.sessions.writeRepositoryFile()` | 二进制写入注册仓库，ak/ek |
+| `coding.sessions.writeRepositoryFile()` | 二进制写入注册仓库，仅 ek |
 | `coding.repositories.sync()` | 异步重试仓库准备，ak/ek |
 | `coding.sessions.ensureRunnerInstance()` | 仅 ak；恢复已有会话绑定实例，需要幂等键 |
 | `memories.retryFailed()` | 仅 ak；重试当前失败内容，202 表示受理 |
 
-会话级实例恢复的仅 ak 权限已由维护者确认，与既有 Agent 级 `coding.agents.ensureRunnerInstance` 的仅 ek 权限不同。SDK 共映射 38 个仅 ak、117 个共享 ak/ek、8 个仅 ek 操作；12 个操作要求幂等键。自动模式按映射选令牌，鉴权失败不升级权限或重放请求。
+会话级实例恢复的仅 ak 权限已由维护者确认，与既有 Agent 级 `coding.agents.ensureRunnerInstance` 的仅 ek 权限不同。仓库文件写入仅 ek，已由真实服务验证并经维护者确认；显式选择 ak 会在获取凭据和发出请求前被拒绝。SDK 共映射 38 个仅 ak、116 个共享 ak/ek、9 个仅 ek 操作；12 个操作要求幂等键。自动模式按映射选令牌，鉴权失败不升级权限或重放请求。
 
 ## 思考配置、推理内容与用量
 

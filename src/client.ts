@@ -574,10 +574,10 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          */
         uploadFile(sessionId: string, query: CodingSessionsUploadFileQuery, input?: CodingSessionsUploadFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsUploadFileResponse> { return transport.request<CodingSessionsUploadFileResponse>({method: "post", path: "/coding/sessions/{session_id}/files", auth: "user", successStatuses: [201], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
         /** Create or replace a repository file
-         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * Authentication: ek-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1repository-files/post
          */
-        writeRepositoryFile(sessionId: string, query: CodingSessionsWriteRepositoryFileQuery, input?: CodingSessionsWriteRepositoryFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsWriteRepositoryFileResponse> { return transport.request<CodingSessionsWriteRepositoryFileResponse>({method: "post", path: "/coding/sessions/{session_id}/repository-files", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
+        writeRepositoryFile(sessionId: string, query: CodingSessionsWriteRepositoryFileQuery, input?: CodingSessionsWriteRepositoryFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsWriteRepositoryFileResponse> { return transport.request<CodingSessionsWriteRepositoryFileResponse>({method: "post", path: "/coding/sessions/{session_id}/repository-files", auth: "user-only", successStatuses: [200], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
         /** Preview a session workspace file (up to 128 KiB)
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
