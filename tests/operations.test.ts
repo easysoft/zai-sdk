@@ -120,9 +120,10 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
       else expect(request.headers.get('authorization')).toMatch(requiresAdmin ? /^Bearer ak-/ : /^Bearer ek-/);
       expect(request.headers.get('x-client')).toBe('base');
       expect(request.headers.get('x-call')).toBe('operation');
-      const idempotent = parameters.some(value => value.in === 'header' && value.name === 'idempotency-key' && value.required);
-      expect(operation.idempotencyRequired).toBe(idempotent);
-      if (idempotent) expect(request.headers.get('idempotency-key')).toMatch(/^[a-f0-9]{32}$/);
+      const requiresHeader = parameters.some(value => value.in === 'header' && value.name === 'idempotency-key' && value.required);
+      const createsWorkspace = method === 'post' && path === '/coding/agents/{agent_id}/workspaces';
+      expect(operation.idempotencyRequired).toBe(requiresHeader || createsWorkspace);
+      if (requiresHeader) expect(request.headers.get('idempotency-key')).toMatch(/^[a-f0-9]{32}$/);
       else expect(request.headers.has('idempotency-key')).toBe(false);
       expect(request.headers.get('accept')).toBe(stream ? 'text/event-stream' : binary ? 'application/octet-stream' : 'application/json');
       expect(request.signal.aborted).toBe(false);

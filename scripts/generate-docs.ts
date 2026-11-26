@@ -195,7 +195,8 @@ function renderOperation(meta: (typeof ZAI_OPERATIONS)[number], stream = false):
 <summary><span class="method method-${meta.method}">${meta.method.toUpperCase()}</span><span class="operation-label"><code>${key}()</code><span>${name}</span></span><span class="disclosure" aria-hidden="true">＋</span></summary>
 <div class="operation-body"><div class="endpoint"><code>${escape(meta.path)}</code><a href="#${apiID(key)}" class="permalink" aria-label="${escape(key)} 的永久链接">#</a></div>
 <p class="operation-auth"><strong>令牌：${meta.auth === 'admin' ? '仅 ak（管理员）' : meta.auth === 'user-only' ? '仅 ek（当前用户）' : 'ak 或 ek'}</strong> · 自动模式默认使用 <code>${meta.auth === 'admin' ? 'ak' : 'ek'}</code> · <a href="${escape(meta.source)}">权限与协议来源</a></p>
-${meta.idempotencyRequired ? '<p>需要幂等键；SDK 优先使用 options.idempotencyKey，其次使用合并后的同名请求头，均未提供时自动生成。重试须复用原键。</p>' : ''}
+${key === 'coding.workspaces.create' ? '<p>SDK 只在 JSON 字段 <code>idempotency_key</code> 中发送幂等键。可直接传入该字段，也可沿用请求选项或请求头。省略时自动生成，重试时请复用原键和相同的业务参数。</p>'
+  : meta.idempotencyRequired ? '<p>需要幂等键；SDK 优先使用 options.idempotencyKey，其次使用合并后的同名请求头，均未提供时自动生成。重试须复用原键。</p>' : ''}
 ${op.description ? `<p>${inline(op.description)}</p>` : ''}${operationNotes[key] ? `<aside class="note"><p>${inline(operationNotes[key])}</p></aside>` : ''}
 <h4>调用签名</h4>${code(signature)}<p class="muted">所有方法最后均可传入 <a href="#type-ZAIRequestOptions">ZAIRequestOptions</a>；示例中的 ID 请替换为真实值。</p>
 ${parameterHTML}${queryHTML}${bodyHTML}<h4>调用示例</h4>${operationExample(key, op, meta.pathParams, isStream, meta.streamKind)}${responseHTML}

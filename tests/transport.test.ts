@@ -18,6 +18,44 @@ const deferred = <T>() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('transport configuration and request construction', () => {
+  it('moves workspace keys from client headers, call headers and request options into JSON', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json({}, {status: 201}));
+    const client = createZAIClient({...defaults, headers: {'Idempotency-Key': 'client'}, fetch: fetcher});
+    const input = Object.freeze({name: 'workspace', custom_data: {project: 1}});
+    const create = client.coding.workspaces.create;
+    await create('agent', input);
+    await create('agent', input, {headers: {'Idempotency-Key': 'call'}});
+    await create('agent', input, {idempotencyKey: ' retry '});
+    await create('agent', {...input, idempotency_key: 'retry'}, {idempotencyKey: 'retry'});
+    const requests = fetcher.mock.calls.map(([request]) => request as Request);
+    expect(requests.every(request => !request.headers.has('idempotency-key'))).toBe(true);
+    expect(await Promise.all(requests.map(request => request.json()))).toEqual(
+      ['client', 'call', 'retry', 'retry'].map(key => ({...input, idempotency_key: key})),
+    );
+  });
+
+  it.each([' ', '  工作区  '])('preserves the exact JSON workspace key %j', async key => {
+    const input = {name: 'workspace', idempotency_key: key};
+    const client = createZAIClient({...defaults, fetch: async request => {
+      expect(await (request as Request).json()).toEqual(input);
+      return Response.json({}, {status: 201});
+    }});
+    await client.coding.workspaces.create('agent', input);
+  });
+
+  it.each([
+    ['', undefined], ['x'.repeat(129), undefined], [null, undefined], [123, undefined],
+    ['body', {idempotencyKey: 'option'}], ['body', {headers: {'Idempotency-Key': 'header'}}],
+  ] as const)('rejects an invalid or conflicting workspace key %j before authentication', async (key, options) => {
+    const getToken = vi.fn(() => 'token');
+    const fetcher = vi.fn<typeof fetch>();
+    const client = createZAIClient({...defaults, getToken, fetch: fetcher});
+    await expect(client.coding.workspaces.create('agent', {name: 'workspace', idempotency_key: key as string}, options))
+      .rejects.toMatchObject({code: 'invalid-input'});
+    expect(getToken).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it.each([undefined, {}, {baseUrl: '', getToken: () => 'token'}, {baseUrl, getToken: 'token'}])(
     'rejects incomplete client options', input => {
       expect(() => createZAIClient(input as CreateZAIClientOptions)).toThrow(expect.objectContaining({code: 'invalid-input'}));

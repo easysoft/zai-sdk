@@ -5907,12 +5907,15 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a workspace */
+        /**
+         * Create a workspace
+         * @description Provide an idempotency key in the JSON body or the Idempotency-Key header (1–128 characters). If both are provided, they must match. Use a new key for each creation and reuse it for retries; changing business fields with the same key returns 409 idempotency_conflict.
+         */
         post: {
             parameters: {
                 query?: never;
-                header: {
-                    "idempotency-key": string;
+                header?: {
+                    "idempotency-key"?: string;
                 };
                 path: {
                     agent_id: string;
@@ -5923,6 +5926,8 @@ export interface paths {
                 content: {
                     "application/json": {
                         name: string;
+                        /** @description Idempotency key for workspace creation; alternatively use the Idempotency-Key header. */
+                        idempotency_key?: string;
                         description?: string | null;
                         is_default?: boolean;
                         custom_data?: {
@@ -5995,6 +6000,35 @@ export interface paths {
                 };
                 /** @description Agent not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Idempotency key reused with different business fields */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };

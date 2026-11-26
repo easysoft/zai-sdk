@@ -383,7 +383,8 @@ test('uploads raw Blob bytes and consumes native Runner status snapshots to EOF'
 test('generates and reuses idempotency keys and downloads Coding attachments with user tokens', async ({page}) => {
   const keys: string[] = [];
   await page.route('**/v1/zai/coding/agents/agent/workspaces', async route => {
-    keys.push((await route.request().headerValue('idempotency-key'))!);
+    expect(await route.request().headerValue('idempotency-key')).toBeNull();
+    keys.push(route.request().postDataJSON().idempotency_key);
     expect(await route.request().headerValue('authorization')).toBe('Bearer ek-browser');
     await route.fulfill({status: 201, json: {id: 'workspace'}});
   });
@@ -394,10 +395,11 @@ test('generates and reuses idempotency keys and downloads Coding attachments wit
   });
   const bytes = await page.evaluate(async () => {
     const client = window.zai.createZAIClient({baseUrl: '/v1/zai', getToken: ({purpose}) => purpose === 'admin' ? 'ak-browser' : 'ek-browser'});
-    await client.coding.workspaces.create('agent', {name: 'first'});
-    await client.coding.workspaces.create('agent', {name: 'second'});
+    const input = Object.freeze({name: 'workspace'});
+    await client.coding.workspaces.create('agent', input);
+    await client.coding.workspaces.create('agent', input);
     await client.coding.workspaces.create('agent', {name: 'retry'}, {idempotencyKey: 'workspace-retry', headers: {'Idempotency-Key': 'ignored'}});
-    await client.coding.workspaces.create('agent', {name: 'retry'}, {idempotencyKey: 'workspace-retry'});
+    await client.coding.workspaces.create('agent', {name: 'retry', idempotency_key: 'workspace-retry'});
     const blob = await client.coding.sessions.downloadFile('session', {file_id: 'attachment'});
     return Array.from(new Uint8Array(await blob.arrayBuffer()));
   });

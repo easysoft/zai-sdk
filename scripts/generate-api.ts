@@ -46,9 +46,11 @@ for (const [group, name, method, path, auth, source, streamName, streamKind] of 
   const fields = [`method: ${q(method)}`, `path: ${q(path)}`, `auth: ${q(auth)}`, `successStatuses: [${statuses.join(', ')}]`];
   if (allowEmptyResponse) fields.push('allowEmptyResponse: true');
   const validation = validations[`${group}.${name}`];
-  const idempotencyRequired = parameters.some(parameter => parameter.in === 'header' && parameter.name.toLowerCase() === 'idempotency-key' && parameter.required);
+  const keyHeader = parameters.find(parameter => parameter.in === 'header' && parameter.name.toLowerCase() === 'idempotency-key');
+  const keyInBody = !!keyHeader && !keyHeader.required && !!resolveSchema(content?.['application/json']?.schema, spec).properties?.idempotency_key;
+  const idempotencyRequired = !!keyHeader?.required || keyInBody;
   if (validation) fields.push(`validation: ${q(validation)}`);
-  if (idempotencyRequired) fields.push('idempotencyRequired: true');
+  if (idempotencyRequired) fields.push(`idempotencyKeyLocation: '${keyInBody ? 'body' : 'header'}'`);
   if (pathParams.length) fields.push(`pathParams: {${pathParams.map(param => `${q(param)}: ${camel(param)}`).join(', ')}}`);
   if (query.length) {
     aliases.push(`export type ${publicType}Query = ${validation === 'file-query' ? fileSelector : `NonNullable<${ref}['parameters']['query']>`};`);

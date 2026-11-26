@@ -437,7 +437,8 @@ try {
   // 在错误处理章节中按 error.code 处理取消。
 }`, 'typescript', true)}
 <p>请求级 headers 覆盖同名默认 headers。SDK 根据返回模式和请求体设置 <code>Accept</code>、<code>Content-Type</code>，并用自动选择或 <code>getToken</code> 提供的令牌设置 <code>Authorization: Bearer …</code>。无需手动设置这些协议头。</p>
-<p>请求选项 <code>idempotencyKey</code> 优先于同名请求头。对于契约要求幂等键的 12 个写操作，两者都未提供时使用 Web Crypto 自动生成。显式键必须非空且为 1–128 字符；每次独立调用生成新键。业务重试须自行保存并复用原键，SDK 不自动重试。</p>
+<p>12 个写操作要求幂等键，省略时 SDK 使用 Web Crypto 为每次调用生成新键。显式键长为 1–128 个字符。SDK 每次只发送一次业务请求，重试时请复用原键和相同的业务参数。</p>
+<p>创建工作区通过 JSON 字段 <code>idempotency_key</code> 传键。已有的 <code>options.idempotencyKey</code> 或 <code>Idempotency-Key</code> 请求头也会转入 JSON，选项优先于请求头。正文字段与选用的键须一致。其他要求幂等键的操作继续使用请求头。</p>
 <p>列表每次只读取一页，保留服务端分页结构。会话列表的 <code>page</code> 从 1 开始，<code>page_size</code> 默认为 20、最大 100。分页循环、缓存和重试由应用决定。</p>`,
     },
     {
@@ -513,7 +514,8 @@ ${code(`const agent = await client.coding.agents.create({name: '开发助手'});
 const key = await client.coding.keys.ensure(agent.id); // ek
 console.log(key.public_key); // 将公钥授权给需要访问的 Git 仓库。
 await client.coding.git.updateIdentity(agent.id, {name: '小明', email: 'user@example.com'});
-const workspace = await client.coding.workspaces.create(agent.id, {name: '示例项目'});
+const workspaceKey = crypto.randomUUID(); // 保存此键，重试创建工作区时复用。
+const workspace = await client.coding.workspaces.create(agent.id, {name: '示例项目', idempotency_key: workspaceKey});
 const idempotencyKey = crypto.randomUUID(); // 保存到业务请求，重试创建会话时复用。
 const session = await client.coding.sessions.create(agent.id, {
   workspace_id: workspace.id,

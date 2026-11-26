@@ -368,7 +368,9 @@ await client.coding.toolCalls.resolve('coding-session-id', 'tool-call-id', {outp
 
 这些规则只处理认证边界。普通业务 HTTP 错误（含 401/403）的 `body/errorInfo/headers` 诊断和业务 `AbortSignal.reason` 保持原行为，不能据此将所有错误对象直接写入公开日志。原先依赖认证回调异常的 `cause` 或对象引用的代码，应改按返回的安全 `code` 处理。
 
-规范要求的 12 个写操作自动生成幂等键。`options.idempotencyKey` 优先于合并后的同名请求头；显式键必须非空且为 1–128 字符。每次独立调用生成新键，业务重试必须复用原键；SDK 不自动重试。
+12 个写操作要求幂等键。省略时 SDK 为每次调用生成新键。显式键长为 1–128 个字符。SDK 每次只发送一次业务请求，重试时请复用原键和相同的业务参数。
+
+`coding.workspaces.create(agentId, {name, idempotency_key: key})` 通过 JSON 传键。已有的 `options.idempotencyKey` 或 `Idempotency-Key` 请求头也会转入 JSON，选项优先于请求头。同时传入正文字段时，其值须与选用的键相同。升级前可在目标实例的 `GET /v1/zai/openapi.json` 确认工作区创建已包含该字段。其他要求幂等键的操作继续使用请求头。
 
 ## OpenAPI 规范
 

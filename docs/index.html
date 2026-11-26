@@ -567,7 +567,8 @@ controller.<span class="hljs-title function_">abort</span>();
   <span class="hljs-comment">// 在错误处理章节中按 error.code 处理取消。</span>
 }</code></pre></div>
 <p>请求级 headers 覆盖同名默认 headers。SDK 根据返回模式和请求体设置 <code>Accept</code>、<code>Content-Type</code>，并用自动选择或 <code>getToken</code> 提供的令牌设置 <code>Authorization: Bearer …</code>。无需手动设置这些协议头。</p>
-<p>请求选项 <code>idempotencyKey</code> 优先于同名请求头。对于契约要求幂等键的 12 个写操作，两者都未提供时使用 Web Crypto 自动生成。显式键必须非空且为 1–128 字符；每次独立调用生成新键。业务重试须自行保存并复用原键，SDK 不自动重试。</p>
+<p>12 个写操作要求幂等键，省略时 SDK 使用 Web Crypto 为每次调用生成新键。显式键长为 1–128 个字符。SDK 每次只发送一次业务请求，重试时请复用原键和相同的业务参数。</p>
+<p>创建工作区通过 JSON 字段 <code>idempotency_key</code> 传键。已有的 <code>options.idempotencyKey</code> 或 <code>Idempotency-Key</code> 请求头也会转入 JSON，选项优先于请求头。正文字段与选用的键须一致。其他要求幂等键的操作继续使用请求头。</p>
 <p>列表每次只读取一页，保留服务端分页结构。会话列表的 <code>page</code> 从 1 开始，<code>page_size</code> 默认为 20、最大 100。分页循环、缓存和重试由应用决定。</p></section><section class="guide-section" id="doctor" data-search-entry data-search-title="连接与功能检查" data-search-kind="指南"><header><p class="eyebrow">使用指南</p><h2>连接与功能检查<a class="heading-anchor" href="#doctor" aria-label="连接与功能检查的永久链接">#</a></h2><p class="section-description">逐项诊断配置、协议、鉴权与 Agent，可选验证真实对话。</p></header><p><code>client.doctor(options?)</code> 返回 <code>Promise&lt;ZAIDoctorResult&gt;</code>。默认只读取 Agent 列表，不查询管理员模型目录、不创建会话，也不调用模型测试、标题生成或记忆重建。<code>onChange</code> 在每项检查完成后接收 <code>ZAIDoctorDetail</code>，可用于展示诊断进度。</p>
 <div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> client.<span class="hljs-title function_">doctor</span>({
   <span class="hljs-attr">onChange</span>: <span class="hljs-function"><span class="hljs-params">detail</span> =&gt;</span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(detail.<span class="hljs-property">type</span>, detail.<span class="hljs-property">pass</span>, detail.<span class="hljs-property">message</span>),
@@ -627,7 +628,8 @@ controller.<span class="hljs-title function_">abort</span>();
 <span class="hljs-keyword">const</span> key = <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">keys</span>.<span class="hljs-title function_">ensure</span>(agent.<span class="hljs-property">id</span>); <span class="hljs-comment">// ek</span>
 <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key.<span class="hljs-property">public_key</span>); <span class="hljs-comment">// 将公钥授权给需要访问的 Git 仓库。</span>
 <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">git</span>.<span class="hljs-title function_">updateIdentity</span>(agent.<span class="hljs-property">id</span>, {<span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;小明&#x27;</span>, <span class="hljs-attr">email</span>: <span class="hljs-string">&#x27;user@example.com&#x27;</span>});
-<span class="hljs-keyword">const</span> workspace = <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">workspaces</span>.<span class="hljs-title function_">create</span>(agent.<span class="hljs-property">id</span>, {<span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;示例项目&#x27;</span>});
+<span class="hljs-keyword">const</span> workspaceKey = crypto.<span class="hljs-title function_">randomUUID</span>(); <span class="hljs-comment">// 保存此键，重试创建工作区时复用。</span>
+<span class="hljs-keyword">const</span> workspace = <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">workspaces</span>.<span class="hljs-title function_">create</span>(agent.<span class="hljs-property">id</span>, {<span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;示例项目&#x27;</span>, <span class="hljs-attr">idempotency_key</span>: workspaceKey});
 <span class="hljs-keyword">const</span> idempotencyKey = crypto.<span class="hljs-title function_">randomUUID</span>(); <span class="hljs-comment">// 保存到业务请求，重试创建会话时复用。</span>
 <span class="hljs-keyword">const</span> session = <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">sessions</span>.<span class="hljs-title function_">create</span>(agent.<span class="hljs-property">id</span>, {
   <span class="hljs-attr">workspace_id</span>: workspace.<span class="hljs-property">id</span>,
@@ -8385,24 +8387,25 @@ controller.<span class="hljs-title function_">abort</span>();
 <summary><span class="method method-post">POST</span><span class="operation-label"><code>coding.workspaces.create()</code><span>创建工作区</span></span><span class="disclosure" aria-hidden="true">＋</span></summary>
 <div class="operation-body"><div class="endpoint"><code>/coding/agents/{agent_id}/workspaces</code><a href="#api-coding-workspaces-create" class="permalink" aria-label="coding.workspaces.create 的永久链接">#</a></div>
 <p class="operation-auth"><strong>令牌：ak 或 ek</strong> · 自动模式默认使用 <code>ek</code> · <a href="https://zai-dev.sh.oop.cc/docs/authentication/app-api">权限与协议来源</a></p>
-<p>需要幂等键；SDK 优先使用 options.idempotencyKey，其次使用合并后的同名请求头，均未提供时自动生成。重试须复用原键。</p>
-
+<p>SDK 只在 JSON 字段 <code>idempotency_key</code> 中发送幂等键。可直接传入该字段，也可沿用请求选项或请求头。省略时自动生成，重试时请复用原键和相同的业务参数。</p>
+<p>Provide an idempotency key in the JSON body or the Idempotency-Key header (1–128 characters). If both are provided, they must match. Use a new key for each creation and reuse it for retries; changing business fields with the same key returns 409 idempotency_conflict.</p>
 <h4>调用签名</h4><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript">client.<span class="hljs-property">coding</span>.<span class="hljs-property">workspaces</span>.<span class="hljs-title function_">create</span>(
   <span class="hljs-attr">agentId</span>: <span class="hljs-built_in">string</span>,
   <span class="hljs-attr">input</span>: <span class="hljs-title class_">CodingWorkspacesCreateInput</span>,
   <span class="hljs-attr">options</span>?: <span class="hljs-title class_">ZAIRequestOptions</span>
 ): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">CodingWorkspacesCreateResponse</span>&gt;</code></pre></div><p class="muted">所有方法最后均可传入 <a href="#type-ZAIRequestOptions">ZAIRequestOptions</a>；示例中的 ID 请替换为真实值。</p>
-<h4>路径参数</h4><div class="table-wrap" tabindex="0" role="region" aria-label="参数、类型、要求、说明"><table><thead><tr><th scope="col">参数</th><th scope="col">类型</th><th scope="col">要求</th><th scope="col">说明</th></tr></thead><tbody><tr><td><code>agentId</code></td><td><code>string</code></td><td><span class="required">必填</span></td><td>第 1 个位置参数，对应 <code>agent_id</code>。</td></tr></tbody></table></div><h4>请求体 <a class="type-link" href="#type-CodingWorkspacesCreateInput">CodingWorkspacesCreateInput</a></h4><p class="muted">application/json · SDK input 参数必填</p><p class="schema-type">结构：<code>object</code></p><div class="table-wrap" tabindex="0" role="region" aria-label="字段、类型、要求、说明 / 约束"><table><thead><tr><th scope="col">字段</th><th scope="col">类型</th><th scope="col">要求</th><th scope="col">说明 / 约束</th></tr></thead><tbody><tr><td><code class="field-path">name</code></td><td><code>string</code></td><td><span class="required">必填</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">description</code></td><td><code>string | null</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">is_default</code></td><td><code>boolean</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">custom_data</code></td><td><code>object</code></td><td><span class="optional">可选</span></td><td>允许额外属性。</td></tr><tr><td><code class="field-path">custom_data[key]</code></td><td><code>unknown</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories</code></td><td><code>Array&lt;object&gt;</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[]</code></td><td><code>object</code></td><td><span class="required">必填</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].repo_key</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].name</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].url</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].default_branch</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].is_default</code></td><td><code>boolean</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr></tbody></table></div><h4>调用示例</h4><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">workspaces</span>.<span class="hljs-title function_">create</span>(<span class="hljs-string">&quot;your-agent-id&quot;</span>, {
+<h4>路径参数</h4><div class="table-wrap" tabindex="0" role="region" aria-label="参数、类型、要求、说明"><table><thead><tr><th scope="col">参数</th><th scope="col">类型</th><th scope="col">要求</th><th scope="col">说明</th></tr></thead><tbody><tr><td><code>agentId</code></td><td><code>string</code></td><td><span class="required">必填</span></td><td>第 1 个位置参数，对应 <code>agent_id</code>。</td></tr></tbody></table></div><h4>请求体 <a class="type-link" href="#type-CodingWorkspacesCreateInput">CodingWorkspacesCreateInput</a></h4><p class="muted">application/json · SDK input 参数必填</p><p class="schema-type">结构：<code>object</code></p><div class="table-wrap" tabindex="0" role="region" aria-label="字段、类型、要求、说明 / 约束"><table><thead><tr><th scope="col">字段</th><th scope="col">类型</th><th scope="col">要求</th><th scope="col">说明 / 约束</th></tr></thead><tbody><tr><td><code class="field-path">name</code></td><td><code>string</code></td><td><span class="required">必填</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">idempotency_key</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td>Idempotency key for workspace creation; alternatively use the Idempotency-Key header.<br><span class="constraint">最小长度：<code>1</code></span></td></tr><tr><td><code class="field-path">description</code></td><td><code>string | null</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">is_default</code></td><td><code>boolean</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">custom_data</code></td><td><code>object</code></td><td><span class="optional">可选</span></td><td>允许额外属性。</td></tr><tr><td><code class="field-path">custom_data[key]</code></td><td><code>unknown</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories</code></td><td><code>Array&lt;object&gt;</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[]</code></td><td><code>object</code></td><td><span class="required">必填</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].repo_key</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].name</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].url</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].default_branch</code></td><td><code>string</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">repositories[].is_default</code></td><td><code>boolean</code></td><td><span class="optional">可选</span></td><td><span class="muted">—</span></td></tr></tbody></table></div><h4>调用示例</h4><div class="code-block"><div class="code-bar"><span>TypeScript</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-typescript"><span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> client.<span class="hljs-property">coding</span>.<span class="hljs-property">workspaces</span>.<span class="hljs-title function_">create</span>(<span class="hljs-string">&quot;your-agent-id&quot;</span>, {
   <span class="hljs-string">&quot;name&quot;</span>: <span class="hljs-string">&quot;示例名称&quot;</span>
 });
 <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(result);</code></pre></div><h4>返回值 <a class="type-link" href="#type-CodingWorkspacesCreateResponse">CodingWorkspacesCreateResponse</a></h4><p class="response-status">HTTP 201 · application/json</p><p class="schema-type">结构：<code>object</code></p><div class="table-wrap" tabindex="0" role="region" aria-label="字段、类型、存在性、说明 / 约束"><table><thead><tr><th scope="col">字段</th><th scope="col">类型</th><th scope="col">存在性</th><th scope="col">说明 / 约束</th></tr></thead><tbody><tr><td><code class="field-path">id</code></td><td><code>string</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">agent_id</code></td><td><code>string</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">name</code></td><td><code>string</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">description</code></td><td><code>string | null</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">is_default</code></td><td><code>boolean</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">status</code></td><td><code>string</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">custom_data</code></td><td><code>object</code></td><td><span class="optional">可能省略</span></td><td>允许额外属性。</td></tr><tr><td><code class="field-path">custom_data[key]</code></td><td><code>unknown</code></td><td><span class="optional">可能省略</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">created_at</code></td><td><code>string</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">updated_at</code></td><td><code>string</code></td><td><span class="required">保证存在</span></td><td><span class="muted">—</span></td></tr><tr><td><code class="field-path">runner_instance_id</code></td><td><code>string</code></td><td><span class="optional">可能省略</span></td><td><span class="constraint">格式：<code>&quot;uuid&quot;</code></span></td></tr><tr><td><code class="field-path">runner_status</code></td><td><code>&quot;ready&quot; | &quot;starting&quot;</code></td><td><span class="optional">可能省略</span></td><td><span class="muted">—</span></td></tr></tbody></table></div>
-<details class="response-details"><summary>HTTP 状态与原始接口定义</summary><div class="table-wrap" tabindex="0" role="region" aria-label="状态、规范说明、SDK 行为"><table><thead><tr><th scope="col">状态</th><th scope="col">规范说明</th><th scope="col">SDK 行为</th></tr></thead><tbody><tr><td><code>201</code></td><td>Created</td><td>正常返回</td></tr><tr><td><code>400</code></td><td>Bad request</td><td>抛出 ZAIClientError，保留可用的 status 和 body</td></tr><tr><td><code>404</code></td><td>Agent not found</td><td>抛出 ZAIClientError，保留可用的 status 和 body</td></tr></tbody></table></div><p>下方保留完整 HTTP 规范，包含嵌套字段、联合类型、默认值、约束及所有响应。SDK 的文件上传与流式开关以上方说明为准。</p><div class="code-block"><div class="code-bar"><span>JSON / OpenAPI</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-json">{
+<details class="response-details"><summary>HTTP 状态与原始接口定义</summary><div class="table-wrap" tabindex="0" role="region" aria-label="状态、规范说明、SDK 行为"><table><thead><tr><th scope="col">状态</th><th scope="col">规范说明</th><th scope="col">SDK 行为</th></tr></thead><tbody><tr><td><code>201</code></td><td>Created</td><td>正常返回</td></tr><tr><td><code>400</code></td><td>Bad request</td><td>抛出 ZAIClientError，保留可用的 status 和 body</td></tr><tr><td><code>404</code></td><td>Agent not found</td><td>抛出 ZAIClientError，保留可用的 status 和 body</td></tr><tr><td><code>409</code></td><td>Idempotency key reused with different business fields</td><td>抛出 ZAIClientError，保留可用的 status 和 body</td></tr></tbody></table></div><p>下方保留完整 HTTP 规范，包含嵌套字段、联合类型、默认值、约束及所有响应。SDK 的文件上传与流式开关以上方说明为准。</p><div class="code-block"><div class="code-bar"><span>JSON / OpenAPI</span><button class="copy-button" type="button" data-copy aria-label="复制代码">复制</button></div><pre tabindex="0"><code class="hljs language-json">{
   <span class="hljs-attr">&quot;method&quot;</span>: <span class="hljs-string">&quot;POST&quot;</span>,
   <span class="hljs-attr">&quot;path&quot;</span>: <span class="hljs-string">&quot;/coding/agents/{agent_id}/workspaces&quot;</span>,
   <span class="hljs-attr">&quot;tags&quot;</span>: [
     <span class="hljs-string">&quot;Coding Workspaces&quot;</span>
   ],
   <span class="hljs-attr">&quot;summary&quot;</span>: <span class="hljs-string">&quot;Create a workspace&quot;</span>,
+  <span class="hljs-attr">&quot;description&quot;</span>: <span class="hljs-string">&quot;Provide an idempotency key in the JSON body or the Idempotency-Key header (1–128 characters). If both are provided, they must match. Use a new key for each creation and reuse it for retries; changing business fields with the same key returns 409 idempotency_conflict.&quot;</span>,
   <span class="hljs-attr">&quot;parameters&quot;</span>: [
     {
       <span class="hljs-attr">&quot;schema&quot;</span>: {
@@ -8418,7 +8421,7 @@ controller.<span class="hljs-title function_">abort</span>();
         <span class="hljs-attr">&quot;minLength&quot;</span>: <span class="hljs-number">1</span>,
         <span class="hljs-attr">&quot;maxLength&quot;</span>: <span class="hljs-number">128</span>
       },
-      <span class="hljs-attr">&quot;required&quot;</span>: <span class="hljs-literal"><span class="hljs-keyword">true</span></span>,
+      <span class="hljs-attr">&quot;required&quot;</span>: <span class="hljs-literal"><span class="hljs-keyword">false</span></span>,
       <span class="hljs-attr">&quot;name&quot;</span>: <span class="hljs-string">&quot;idempotency-key&quot;</span>,
       <span class="hljs-attr">&quot;in&quot;</span>: <span class="hljs-string">&quot;header&quot;</span>
     }
@@ -8431,6 +8434,12 @@ controller.<span class="hljs-title function_">abort</span>();
           <span class="hljs-attr">&quot;properties&quot;</span>: {
             <span class="hljs-attr">&quot;name&quot;</span>: {
               <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+            },
+            <span class="hljs-attr">&quot;idempotency_key&quot;</span>: {
+              <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>,
+              <span class="hljs-attr">&quot;minLength&quot;</span>: <span class="hljs-number">1</span>,
+              <span class="hljs-attr">&quot;maxLength&quot;</span>: <span class="hljs-number">128</span>,
+              <span class="hljs-attr">&quot;description&quot;</span>: <span class="hljs-string">&quot;Idempotency key for workspace creation; alternatively use the Idempotency-Key header.&quot;</span>
             },
             <span class="hljs-attr">&quot;description&quot;</span>: {
               <span class="hljs-attr">&quot;type&quot;</span>: [
@@ -8619,6 +8628,82 @@ controller.<span class="hljs-title function_">abort</span>();
     },
     <span class="hljs-attr">&quot;404&quot;</span>: {
       <span class="hljs-attr">&quot;description&quot;</span>: <span class="hljs-string">&quot;Agent not found&quot;</span>,
+      <span class="hljs-attr">&quot;content&quot;</span>: {
+        <span class="hljs-attr">&quot;application/json&quot;</span>: {
+          <span class="hljs-attr">&quot;schema&quot;</span>: {
+            <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;object&quot;</span>,
+            <span class="hljs-attr">&quot;properties&quot;</span>: {
+              <span class="hljs-attr">&quot;error_info&quot;</span>: {
+                <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;object&quot;</span>,
+                <span class="hljs-attr">&quot;properties&quot;</span>: {
+                  <span class="hljs-attr">&quot;code&quot;</span>: {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                  },
+                  <span class="hljs-attr">&quot;message&quot;</span>: {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                  },
+                  <span class="hljs-attr">&quot;reason_code&quot;</span>: {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                  },
+                  <span class="hljs-attr">&quot;user_message&quot;</span>: {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                  },
+                  <span class="hljs-attr">&quot;retryable&quot;</span>: {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;boolean&quot;</span>
+                  },
+                  <span class="hljs-attr">&quot;details&quot;</span>: {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;object&quot;</span>,
+                    <span class="hljs-attr">&quot;additionalProperties&quot;</span>: {}
+                  }
+                },
+                <span class="hljs-attr">&quot;required&quot;</span>: [
+                  <span class="hljs-string">&quot;code&quot;</span>,
+                  <span class="hljs-string">&quot;message&quot;</span>,
+                  <span class="hljs-string">&quot;reason_code&quot;</span>,
+                  <span class="hljs-string">&quot;user_message&quot;</span>,
+                  <span class="hljs-string">&quot;details&quot;</span>
+                ],
+                <span class="hljs-attr">&quot;description&quot;</span>: <span class="hljs-string">&quot;Additive diagnostics; the legacy error field keeps its original type and code.&quot;</span>
+              },
+              <span class="hljs-attr">&quot;error&quot;</span>: {
+                <span class="hljs-attr">&quot;anyOf&quot;</span>: [
+                  {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                  },
+                  {
+                    <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;object&quot;</span>,
+                    <span class="hljs-attr">&quot;properties&quot;</span>: {
+                      <span class="hljs-attr">&quot;code&quot;</span>: {
+                        <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                      },
+                      <span class="hljs-attr">&quot;message&quot;</span>: {
+                        <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;string&quot;</span>
+                      },
+                      <span class="hljs-attr">&quot;retryable&quot;</span>: {
+                        <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;boolean&quot;</span>
+                      },
+                      <span class="hljs-attr">&quot;details&quot;</span>: {
+                        <span class="hljs-attr">&quot;type&quot;</span>: <span class="hljs-string">&quot;object&quot;</span>,
+                        <span class="hljs-attr">&quot;additionalProperties&quot;</span>: {}
+                      }
+                    },
+                    <span class="hljs-attr">&quot;required&quot;</span>: [
+                      <span class="hljs-string">&quot;code&quot;</span>,
+                      <span class="hljs-string">&quot;message&quot;</span>
+                    ]
+                  }
+                ]
+              }
+            },
+            <span class="hljs-attr">&quot;required&quot;</span>: [
+              <span class="hljs-string">&quot;error&quot;</span>
+            ]
+          }
+        }
+      }
+    },
+    <span class="hljs-attr">&quot;409&quot;</span>: {
+      <span class="hljs-attr">&quot;description&quot;</span>: <span class="hljs-string">&quot;Idempotency key reused with different business fields&quot;</span>,
       <span class="hljs-attr">&quot;content&quot;</span>: {
         <span class="hljs-attr">&quot;application/json&quot;</span>: {
           <span class="hljs-attr">&quot;schema&quot;</span>: {

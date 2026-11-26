@@ -70,8 +70,7 @@ function appendFile(form: FormData, key: string, value: ZAIUploadFile): void {
   form.append(key, file, filename);
 }
 
-function serializeBody(input: ZAIOperationRequest): string | FormData | Blob | undefined {
-  const {body, encoding} = input;
+function serializeBody(body: unknown, encoding: ZAIOperationRequest['encoding']): string | FormData | Blob | undefined {
   if (body === undefined) return undefined;
   if (encoding === 'binary') {
     if (!isBlob(body)) throw new ZAIClientError('invalid-input', 'Binary uploads require a Blob or File.');
@@ -152,21 +151,30 @@ function selectTokenType(input: ZAIOperationRequest, automatic: boolean): 'admin
   return selected ?? (input.auth === 'admin' ? 'admin' : 'user');
 }
 
-function setIdempotencyKey(headers: Headers, input: ZAIOperationRequest): void {
-  const explicit = input.options?.idempotencyKey;
-  if (explicit !== undefined && typeof explicit !== 'string') {
-    throw new ZAIClientError('invalid-input', 'An idempotency key must contain 1 to 128 characters.');
-  }
-  let key = explicit ?? headers.get('idempotency-key');
-  if (key == null && input.idempotencyRequired) {
+function applyIdempotencyKey(headers: Headers, {body, options, idempotencyKeyLocation}: ZAIOperationRequest): unknown {
+  const optionKey = options?.idempotencyKey;
+  const headerKey = optionKey === undefined ? headers.get('idempotency-key') ?? undefined : optionKey;
+  const jsonBody = idempotencyKeyLocation === 'body' && isRecord(body) ? body : undefined;
+  const bodyKey = jsonBody?.idempotency_key;
+  let key = headerKey === undefined ? bodyKey : headerKey;
+  if (key === undefined) {
+    if (!idempotencyKeyLocation) return body;
     key = Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
   }
-  if (explicit !== undefined || key !== null) {
-    if (typeof key !== 'string' || !key.trim() || key.length > 128) {
-      throw new ZAIClientError('invalid-input', 'An idempotency key must contain 1 to 128 characters.');
-    }
-    headers.set('idempotency-key', key);
+  if (typeof key !== 'string' || key.length < 1 || key.length > 128 || (headerKey !== undefined && !key.trim())) {
+    throw new ZAIClientError('invalid-input', 'An idempotency key must contain 1 to 128 characters.');
   }
+  if (idempotencyKeyLocation === 'body') {
+    // Preserve the value Headers used to send for retries through the legacy option.
+    const jsonKey = optionKey === undefined ? key : key.replace(/^[\t\n\r ]+|[\t\n\r ]+$/g, '');
+    if (bodyKey !== undefined && bodyKey !== jsonKey) {
+      throw new ZAIClientError('invalid-input', 'The request body and the selected idempotency key must match.');
+    }
+    headers.delete('idempotency-key');
+    return {...jsonBody, idempotency_key: jsonKey};
+  }
+  headers.set('idempotency-key', key);
+  return body;
 }
 
 function errorMessage(body: unknown, status: number): string {
@@ -255,11 +263,10 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
             throw new ZAIClientError('invalid-input', 'Administrator requests require external_user_id; user requests cannot override it.');
           }
         }
-        body = serializeBody(input);
-        if (input.validation === 'file-body' || input.validation === 'tool-result' || input.validation === 'memory-retry') validateJSONBody(body, input.validation);
         headers = new Headers(options.headers);
         new Headers(input.options?.headers).forEach((value, key) => headers.set(key, value));
-        setIdempotencyKey(headers, input);
+        body = serializeBody(applyIdempotencyKey(headers, input), input.encoding);
+        if (input.validation === 'file-body' || input.validation === 'tool-result' || input.validation === 'memory-retry') validateJSONBody(body, input.validation);
         headers.delete('content-type');
         if (input.encoding === 'binary') headers.set('content-type', 'application/octet-stream');
         else if (typeof body === 'string') headers.set('content-type', 'application/json');

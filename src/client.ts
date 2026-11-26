@@ -342,7 +342,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        create(agentId: string, input: CodingWorkspacesCreateInput, options?: ZAIRequestOptions): Promise<CodingWorkspacesCreateResponse> { return transport.request<CodingWorkspacesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces", auth: "user", successStatuses: [201], idempotencyRequired: true, pathParams: {"agent_id": agentId}, body: input, options}); },
+        create(agentId: string, input: CodingWorkspacesCreateInput, options?: ZAIRequestOptions): Promise<CodingWorkspacesCreateResponse> { return transport.request<CodingWorkspacesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces", auth: "user", successStatuses: [201], idempotencyKeyLocation: 'body', pathParams: {"agent_id": agentId}, body: input, options}); },
         /** Get a workspace
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
@@ -369,7 +369,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        create(agentId: string, workspaceId: string, input?: CodingRepositoriesCreateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesCreateResponse> { return transport.request<CodingRepositoriesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos", auth: "user", successStatuses: [201, 202], idempotencyRequired: true, pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, body: input, options}); },
+        create(agentId: string, workspaceId: string, input?: CodingRepositoriesCreateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesCreateResponse> { return transport.request<CodingRepositoriesCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos", auth: "user", successStatuses: [201, 202], idempotencyKeyLocation: 'header', pathParams: {"agent_id": agentId, "workspace_id": workspaceId}, body: input, options}); },
         /** Get a repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
@@ -379,7 +379,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        update(agentId: string, workspaceId: string, repositoryId: string, input?: CodingRepositoriesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesUpdateResponse> { return transport.request<CodingRepositoriesUpdateResponse>({method: "put", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}", auth: "user", successStatuses: [202], idempotencyRequired: true, pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, body: input, options}); },
+        update(agentId: string, workspaceId: string, repositoryId: string, input?: CodingRepositoriesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRepositoriesUpdateResponse> { return transport.request<CodingRepositoriesUpdateResponse>({method: "put", path: "/coding/agents/{agent_id}/workspaces/{workspace_id}/repos/{repository_id}", auth: "user", successStatuses: [202], idempotencyKeyLocation: 'header', pathParams: {"agent_id": agentId, "workspace_id": workspaceId, "repository_id": repositoryId}, body: input, options}); },
         /** Delete a repository
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
@@ -416,7 +416,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1runners/post
          */
-        create(input: CodingRunnersCreateInput, options?: ZAIRequestOptions): Promise<CodingRunnersCreateResponse> { return transport.request<CodingRunnersCreateResponse>({method: "post", path: "/coding/runners", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, body: input, options}); },
+        create(input: CodingRunnersCreateInput, options?: ZAIRequestOptions): Promise<CodingRunnersCreateResponse> { return transport.request<CodingRunnersCreateResponse>({method: "post", path: "/coding/runners", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', body: input, options}); },
         /** Get an application runner profile
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/get
@@ -426,12 +426,12 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/patch
          */
-        update(profileId: string, input: CodingRunnersUpdateInput, options?: ZAIRequestOptions): Promise<CodingRunnersUpdateResponse> { return transport.request<CodingRunnersUpdateResponse>({method: "patch", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId}, body: input, options}); },
+        update(profileId: string, input: CodingRunnersUpdateInput, options?: ZAIRequestOptions): Promise<CodingRunnersUpdateResponse> { return transport.request<CodingRunnersUpdateResponse>({method: "patch", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"profile_id": profileId}, body: input, options}); },
         /** Delete an unused runner profile
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}/delete
          */
-        delete(profileId: string, options?: ZAIRequestOptions): Promise<CodingRunnersDeleteResponse> { return transport.request<CodingRunnersDeleteResponse>({method: "delete", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId}, options}); },
+        delete(profileId: string, options?: ZAIRequestOptions): Promise<CodingRunnersDeleteResponse> { return transport.request<CodingRunnersDeleteResponse>({method: "delete", path: "/coding/runners/{profile_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"profile_id": profileId}, options}); },
         /** List allowed runner image policies
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1runner-image-policies/get
@@ -447,7 +447,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
            * Authentication: ak-* required.
            * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances/post
            */
-          create(profileId: string, input: CodingRunnersInstancesCreateInput, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesCreateResponse> { return transport.request<CodingRunnersInstancesCreateResponse>({method: "post", path: "/coding/runners/{profile_id}/instances", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId}, body: input, options}); },
+          create(profileId: string, input: CodingRunnersInstancesCreateInput, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesCreateResponse> { return transport.request<CodingRunnersInstancesCreateResponse>({method: "post", path: "/coding/runners/{profile_id}/instances", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"profile_id": profileId}, body: input, options}); },
           /** Get user runner instance
            * Authentication: ak-* required.
            * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/get
@@ -457,12 +457,12 @@ export function createZAIClient(options: CreateZAIClientOptions) {
            * Authentication: ak-* required.
            * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/patch
            */
-          update(profileId: string, instanceId: string, input: CodingRunnersInstancesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesUpdateResponse> { return transport.request<CodingRunnersInstancesUpdateResponse>({method: "patch", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId, "instance_id": instanceId}, body: input, options}); },
+          update(profileId: string, instanceId: string, input: CodingRunnersInstancesUpdateInput, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesUpdateResponse> { return transport.request<CodingRunnersInstancesUpdateResponse>({method: "patch", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"profile_id": profileId, "instance_id": instanceId}, body: input, options}); },
           /** Soft delete an instance and retain its volume
            * Authentication: ak-* required.
            * @see ../zai-openapi.json#/paths/~1coding~1runners~1{profile_id}~1instances~1{instance_id}/delete
            */
-          delete(profileId: string, instanceId: string, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesDeleteResponse> { return transport.request<CodingRunnersInstancesDeleteResponse>({method: "delete", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"profile_id": profileId, "instance_id": instanceId}, options}); }
+          delete(profileId: string, instanceId: string, options?: ZAIRequestOptions): Promise<CodingRunnersInstancesDeleteResponse> { return transport.request<CodingRunnersInstancesDeleteResponse>({method: "delete", path: "/coding/runners/{profile_id}/instances/{instance_id}", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"profile_id": profileId, "instance_id": instanceId}, options}); }
         }
       },
       agents: {
@@ -500,7 +500,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ek-* required.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        ensureRunnerInstance(agentId: string, input?: CodingAgentsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingAgentsEnsureRunnerInstanceResponse> { return transport.request<CodingAgentsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/agents/{agent_id}/runner-instance", auth: "user-only", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"agent_id": agentId}, body: input, options}); },
+        ensureRunnerInstance(agentId: string, input?: CodingAgentsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingAgentsEnsureRunnerInstanceResponse> { return transport.request<CodingAgentsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/agents/{agent_id}/runner-instance", auth: "user-only", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"agent_id": agentId}, body: input, options}); },
         /** Stream the current user runner availability
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
@@ -512,7 +512,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
          */
-        create(agentId: string, input: CodingSessionsCreateInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateResponse> { return transport.request<CodingSessionsCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/sessions", auth: "user", successStatuses: [201], idempotencyRequired: true, pathParams: {"agent_id": agentId}, body: input, options}); },
+        create(agentId: string, input: CodingSessionsCreateInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateResponse> { return transport.request<CodingSessionsCreateResponse>({method: "post", path: "/coding/agents/{agent_id}/sessions", auth: "user", successStatuses: [201], idempotencyKeyLocation: 'header', pathParams: {"agent_id": agentId}, body: input, options}); },
         /** List coding sessions
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
@@ -557,7 +557,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1runner-instance/post
          */
-        ensureRunnerInstance(sessionId: string, input?: CodingSessionsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingSessionsEnsureRunnerInstanceResponse> { return transport.request<CodingSessionsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/sessions/{session_id}/runner-instance", auth: "admin", successStatuses: [200, 201, 202], idempotencyRequired: true, pathParams: {"session_id": sessionId}, body: input, options}); },
+        ensureRunnerInstance(sessionId: string, input?: CodingSessionsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingSessionsEnsureRunnerInstanceResponse> { return transport.request<CodingSessionsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/sessions/{session_id}/runner-instance", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Generate a coding session title
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api

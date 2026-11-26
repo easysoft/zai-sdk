@@ -487,7 +487,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
     }
     assert.ok(!(await client.coding.workspaces.list(agent.id, options())).workspaces.some(w => codingResources.workspaceIds.includes(w.id)));
   });
-  const workspace = await client.coding.workspaces.create(agent.id, workspaceInput, {...options(), idempotencyKey: workspaceKey});
+  const workspace = await client.coding.workspaces.create(agent.id, {...workspaceInput, idempotency_key: workspaceKey}, options());
   track(codingResources.workspaceIds, workspace.id);
   const repeatedWorkspace = await client.coding.workspaces.create(agent.id, workspaceInput, {...options(), idempotencyKey: workspaceKey});
   track(codingResources.workspaceIds, repeatedWorkspace.id);

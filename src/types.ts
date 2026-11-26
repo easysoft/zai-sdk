@@ -61,7 +61,7 @@ export interface ZAIOperationRequest {
   body?: unknown;
   encoding?: 'json' | 'multipart' | 'file' | 'bundle' | 'binary';
   auth?: ZAIOperationAuth;
-  idempotencyRequired?: boolean;
+  idempotencyKeyLocation?: 'header' | 'body';
   validation?: 'file-query' | 'file-body' | 'tool-result' | 'user-scope' | 'memory-retry';
   responseType?: 'json' | 'blob' | 'stream';
   successStatuses?: readonly number[];

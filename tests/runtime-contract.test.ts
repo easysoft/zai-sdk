@@ -18,8 +18,8 @@ const setup = (options: Partial<CreateZAIClientOptions> = {}) => {
 describe('idempotent writes', () => {
   it('generates a fresh key per marked call, preserves it in flight, and leaves reads alone', async () => {
     const {transport, requests} = setup();
-    await transport.request({...operation, idempotencyRequired: true});
-    await transport.request({...operation, idempotencyRequired: true});
+    await transport.request({...operation, idempotencyKeyLocation: 'header'});
+    await transport.request({...operation, idempotencyKeyLocation: 'header'});
     await transport.request({...operation, method: 'get'});
     const keys = requests.map(request => request.headers.get('idempotency-key'));
     expect(keys[0]).toMatch(/^[a-f0-9]{32}$/);
@@ -30,7 +30,7 @@ describe('idempotent writes', () => {
 
   it('prefers the explicit option over call headers over client headers and supports replay keys', async () => {
     const {transport, requests} = setup({headers: {'idempotency-key': 'client'}});
-    await transport.request({...operation, idempotencyRequired: true});
+    await transport.request({...operation, idempotencyKeyLocation: 'header'});
     await transport.request({...operation, options: {headers: {'Idempotency-Key': 'call'}}});
     for (let attempt = 0; attempt < 2; attempt++) {
       await transport.request({...operation, options: {idempotencyKey: 'retry', headers: {'idempotency-key': 'call'}}});
@@ -40,7 +40,7 @@ describe('idempotent writes', () => {
 
   it.each(['', ' ', 'x'.repeat(129), null, 1])('rejects an invalid explicit key %j before authentication', async value => {
     const {transport, getToken, fetch} = setup();
-    await expect(transport.request({...operation, idempotencyRequired: true, options: {idempotencyKey: value} as ZAIRequestOptions}))
+    await expect(transport.request({...operation, idempotencyKeyLocation: 'header', options: {idempotencyKey: value} as ZAIRequestOptions}))
       .rejects.toMatchObject({code: 'invalid-input'});
     expect(getToken).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
@@ -48,14 +48,14 @@ describe('idempotent writes', () => {
 
   it.each(['', ' ', 'x'.repeat(129)])('rejects an invalid existing header %j instead of replacing it', async value => {
     const {transport, getToken} = setup({headers: {'idempotency-key': value}});
-    await expect(transport.request({...operation, idempotencyRequired: true})).rejects.toMatchObject({code: 'invalid-input'});
+    await expect(transport.request({...operation, idempotencyKeyLocation: 'header'})).rejects.toMatchObject({code: 'invalid-input'});
     expect(getToken).not.toHaveBeenCalled();
   });
 
   it('does not retry a failed idempotent request', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({error: 'unavailable'}, {status: 503}));
     const {transport} = setup({fetch});
-    await expect(transport.request({...operation, idempotencyRequired: true})).rejects.toMatchObject({status: 503});
+    await expect(transport.request({...operation, idempotencyKeyLocation: 'header'})).rejects.toMatchObject({status: 503});
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
