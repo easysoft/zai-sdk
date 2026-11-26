@@ -115,10 +115,25 @@ function validateFileSelector(value: unknown): void {
   }
 }
 
-function validateJSONBody(body: string | FormData | Blob | undefined, validation: 'file-body' | 'tool-result' | 'memory-retry'): void {
+function validateJSONBody(body: string | FormData | Blob | undefined, validation: 'file-body' | 'tool-result' | 'memory-retry' | 'model-update'): void {
   const value: unknown = typeof body === 'string' ? JSON.parse(body) : undefined;
   if (validation === 'file-body') {
     validateFileSelector(value);
+    return;
+  }
+  if (validation === 'model-update') {
+    if (!isRecord(value) || Object.keys(value).some(key => !['capabilities', 'coding_enabled', 'features', 'chat_features'].includes(key))
+      || (value.coding_enabled !== undefined && typeof value.coding_enabled !== 'boolean')) {
+      throw new ZAIClientError('invalid-input', 'Provide model configuration fields and a boolean coding_enabled when specified.');
+    }
+    const {capabilities} = value;
+    if (capabilities !== undefined && (!Array.isArray(capabilities) || capabilities.length !== 1
+      || (capabilities[0] !== 'text.chat' && capabilities[0] !== 'text.embeddings'))) {
+      throw new ZAIClientError('invalid-input', 'Provide exactly one model purpose: text.chat or text.embeddings.');
+    }
+    if (value.coding_enabled === true && capabilities?.[0] === 'text.embeddings') {
+      throw new ZAIClientError('invalid-input', 'Coding requires a chat model.');
+    }
     return;
   }
   if (validation === 'memory-retry') {
@@ -266,7 +281,7 @@ export function createTransport(options: CreateZAIClientOptions): ZAITransport {
         headers = new Headers(options.headers);
         new Headers(input.options?.headers).forEach((value, key) => headers.set(key, value));
         body = serializeBody(applyIdempotencyKey(headers, input), input.encoding);
-        if (input.validation === 'file-body' || input.validation === 'tool-result' || input.validation === 'memory-retry') validateJSONBody(body, input.validation);
+        if (input.validation && input.validation !== 'file-query' && input.validation !== 'user-scope') validateJSONBody(body, input.validation);
         headers.delete('content-type');
         if (input.encoding === 'binary') headers.set('content-type', 'application/octet-stream');
         else if (typeof body === 'string') headers.set('content-type', 'application/json');

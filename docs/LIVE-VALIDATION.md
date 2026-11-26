@@ -1,3 +1,19 @@
+# 最新 API 实例验收（2026-11-26）
+
+在 `https://zai-dev.sh.oop.cc/v1/zai` 使用独立测试用户验证了以下调用。
+
+| 调用 | 实测结果 |
+| --- | --- |
+| 应用和 Coding Agent | ak、ek 均可读取当前应用、Coding Agent 列表及详情。两种令牌返回相同的应用默认模型和 Coding 配置 |
+| 普通 Agent | SDK 自动使用 ak 创建、更新和删除临时非默认 Agent，依次返回 201、200、200 |
+| Coding 会话 | ek 成功恢复会话绑定的 Runner，列出和读取工作区文件、上传附件并创建下载链接 |
+| 静态预览和单文件下载 | 两种令牌均可创建和列出预览。同一登记返回相同的 `preview_id`，停止后列表为空 |
+| 客户端工具 | 临时 Turn 请求一个返回固定值的工具。会话所属用户的 ak 回填结果后，Turn 正常完成 |
+| Chat | 同一条响应的 `usage_metrics.token_scope` 为 `session`，`turn_usage_metrics.token_scope` 为 `turn` |
+| Memory | 新建空集合的列表项和详情都返回 `content_count: 0` 和相同的 `content_sync`，包括排队数及本轮同步时间字段 |
+
+两种预览均已停止，Coding 会话已归档，临时仓库、工作区、Runner 实例、Chat 对话和 Memory 集合均已通过相应接口清理。
+
 # ZAI SDK 0.4.0 真实环境验证（2026-11-02）
 
 目标环境为 `https://zai-dev.sh.oop.cc/v1/zai`，使用本地 `.env.local` 的应用凭据。Coding 实测模型为 `deepseek-v4-flash`，Memory 集合默认嵌入模型为 `qwen3-embedding`。测试覆盖 JSON、三类 SSE、二进制文件和 multipart 提取；请求追踪记录方法、模板路径、令牌种类、状态、耗时与请求 ID，不记录凭据。

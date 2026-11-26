@@ -10,29 +10,7 @@ const operations = Object.entries(specification.paths).flatMap(([path, item]) =>
   Object.entries(item).filter(([method]) => verbs.has(method)).map(([method, spec]) => ({path, method, spec})),
 );
 const successCases = operations.flatMap(operation => Object.keys(operation.spec.responses).filter(status => /^2\d\d$/.test(status)).map(status => ({...operation, status: Number(status)})));
-// Independently maintained permission expectation: never infer admin privileges from the HTTP verb.
-const adminOperations = new Set([
-  'post /models', 'get /models/{id}', 'patch /models/{id}', 'delete /models/{id}', 'post /models/test',
-  'get /channels', 'put /channels/{id}', 'get /signing_secret', 'post /signing_secret/generate',
-  'post /memories', 'put /memories/{id}', 'delete /memories/{id}',
-  'post /memories/{id}/contents', 'put /memories/{id}/contents/{content_id}', 'delete /memories/{id}/contents/{content_id}',
-  'post /memories/{id}/contents/batch', 'get /memories/{id}/contents/{content_id}/chunks',
-  'get /memories/{id}/contents/{content_id}/jobs', 'get /memories/queue/stats', 'get /coding/runners',
-  'post /memories/{id}/rebuild', 'get /coding/runner-image-policies', 'post /coding/runners',
-  'post /memories/{id}/retry-failed',
-  'post /coding/sessions/{session_id}/runner-instance',
-  'get /coding/runners/{profile_id}', 'patch /coding/runners/{profile_id}', 'delete /coding/runners/{profile_id}',
-  'get /coding/runners/{profile_id}/instances', 'post /coding/runners/{profile_id}/instances',
-  'get /coding/runners/{profile_id}/instances/{instance_id}', 'patch /coding/runners/{profile_id}/instances/{instance_id}', 'delete /coding/runners/{profile_id}/instances/{instance_id}',
-  'get /coding/agents', 'post /coding/agents', 'get /coding/agents/{agent_id}', 'patch /coding/agents/{agent_id}', 'delete /coding/agents/{agent_id}',
-]);
-const userOnlyOperations = new Set([
-  'post /coding/agents/{agent_id}/runner-instance',
-  'post /coding/sessions/{session_id}/repository-files',
-  'get /coding/agents/{agent_id}/git/identity', 'put /coding/agents/{agent_id}/git/identity',
-  'get /coding/agents/{agent_id}/keys/public', 'post /coding/agents/{agent_id}/keys', 'post /coding/agents/{agent_id}/keys/rotate',
-  'get /coding/sessions/{session_id}/files/download', 'post /coding/sessions/{session_id}/tool-calls/{tool_call_id}/result',
-]);
+const securitySchemes = {admin: 'appAdminAuth', user: 'bearerAuth', 'user-only': 'externalUserAuth'} as const;
 
 /** Exercise all declared fields independently of the generated method table. */
 function fixture(input: Schema = {}, depth = 0): unknown {
@@ -57,20 +35,20 @@ function methodAt(client: unknown, group: string, name: string): (...args: unkno
   return (resource as Record<string, (...args: unknown[]) => Promise<unknown>>)[name]!;
 }
 
-it('covers exactly 110 paths, 163 operations, 166 public methods and every explicit permission', () => {
-  expect(Object.keys(specification.paths)).toHaveLength(110);
-  expect(operations).toHaveLength(163);
-  expect(ZAI_OPERATIONS).toHaveLength(163);
+it('covers exactly 113 paths, 167 operations, 170 public methods and every explicit permission', () => {
+  expect(Object.keys(specification.paths)).toHaveLength(113);
+  expect(operations).toHaveLength(167);
+  expect(ZAI_OPERATIONS).toHaveLength(167);
   const methods = ZAI_OPERATIONS.flatMap(operation => [`${operation.group}.${operation.name}`, ...(operation.streamName ? [`${operation.group}.${operation.streamName}`] : [])]);
-  expect(new Set(methods).size).toBe(166);
+  expect(new Set(methods).size).toBe(170);
   expect(ZAI_OPERATIONS.map(operation => `${operation.method} ${operation.path}`).sort()).toEqual(operations.map(operation => `${operation.method} ${operation.path}`).sort());
   expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'admin')).toHaveLength(38);
   expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user')).toHaveLength(116);
-  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user-only')).toHaveLength(9);
+  expect(ZAI_OPERATIONS.filter(operation => operation.auth === 'user-only')).toHaveLength(13);
   expect(ZAI_OPERATIONS.filter(operation => operation.idempotencyRequired)).toHaveLength(12);
   for (const operation of ZAI_OPERATIONS) {
-    const key = `${operation.method} ${operation.path}`;
-    expect(operation.auth).toBe(adminOperations.has(key) ? 'admin' : userOnlyOperations.has(key) ? 'user-only' : 'user');
+    const security = specification.paths[operation.path]![operation.method]!.security ?? specification.security;
+    expect(security, `${operation.method} ${operation.path}`).toEqual([{[securitySchemes[operation.auth]]: []}]);
     expect(operation.source).toMatch(/^(https:\/\/zai-dev\.sh\.oop\.cc\/docs\/|\.\.\/zai-openapi\.json#\/paths\/)/);
   }
 });
@@ -97,7 +75,7 @@ for (const mode of ['explicit', 'auto'] as const) describe(`${mode} authenticati
     const event = path.endsWith('/status/stream') ? {agent_id: 'agent', status: 'ready', future: true}
       : {seq: 2, type: 'turn.completed', turn_id: 'turn', payload: {future: 'kept'}, created_at: '2026-09-29T00:00:00Z'};
     const result = binary ? 'binary result' : fixture(responseMediaTypes['application/json']?.schema);
-    const requiresAdmin = adminOperations.has(`${method} ${path}`);
+    const requiresAdmin = (spec.security ?? specification.security)?.some(requirement => 'appAdminAuth' in requirement);
     const getToken = vi.fn(({purpose}: ZAIAuthContext) => purpose === 'admin' ? 'ak-contract-token' : 'ek-contract-token');
     let secretFetched = false;
     const fetcher = vi.fn<typeof fetch>(async requestInput => {

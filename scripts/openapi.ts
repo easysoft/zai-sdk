@@ -27,6 +27,7 @@ export interface Parameter {name: string; in: string; required?: boolean; descri
 export interface Operation {
   summary?: string;
   description?: string;
+  security?: Record<string, string[]>[];
   parameters?: Parameter[];
   requestBody?: {required?: boolean; content: Record<string, {schema: Schema}>};
   responses: Record<string, {description?: string; content?: Record<string, {schema?: Schema}>}>;
@@ -34,6 +35,7 @@ export interface Operation {
 export interface Specification {
   openapi: string;
   info: {title: string; version: string};
+  security?: Record<string, string[]>[];
   paths: Record<string, Record<string, Operation>>;
   components?: {schemas?: Record<string, Schema>};
 }
@@ -52,9 +54,16 @@ export async function loadSpecification(): Promise<Specification> {
   return mergeSpecifications(original!, supplement!);
 }
 
-/** Expand required-only attachment branches that openapi-typescript otherwise widens to unknown. */
+/** Express documented constraints that would otherwise be lost in the generated types. */
 export function specificationForTypes(spec: Specification): Specification {
   const copy = structuredClone(spec);
+  const capabilities = copy.components?.schemas?.UpdateSettingsModelRequest?.properties?.capabilities;
+  if (capabilities?.items) {
+    // The PATCH contract describes exactly one purpose, even though it declares an array.
+    capabilities.prefixItems = [capabilities.items];
+    capabilities.minItems = 1;
+    capabilities.maxItems = 1;
+  }
   const attachments = copy.paths['/sessions/{session_id}/messages']?.post?.requestBody?.content['application/json']?.schema.properties?.content?.items?.oneOf;
   for (const attachment of attachments ?? []) {
     if (!attachment.properties || !attachment.anyOf?.every(branch => Object.keys(branch).length === 1 && branch.required)) continue;

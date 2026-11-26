@@ -11,6 +11,7 @@ hljs.registerLanguage('typescript', typescript);
 const codeLanguages = {typescript: 'typescript', Shell: 'bash', 'JSON / OpenAPI': 'json'} as const;
 
 export const groups: Record<string, {title: string; description: string}> = {
+  app: {title: '当前应用', description: '查询应用信息、默认模型和 Coding 配置。'},
   me: {title: '当前用户', description: '查询令牌所属用户的额度、使用量和有效期。'},
   agents: {title: 'Agent', description: '管理 AI 助手，配置 custom、runner 或平台预置的 system 类型。'},
   sessions: {title: '普通会话', description: '管理 Agent 会话、上下文、文件与图片生成。'},
@@ -25,6 +26,7 @@ export const groups: Record<string, {title: string; description: string}> = {
   'coding.runners.instances': {title: 'Runner 实例', description: '应用管理员管理用户 Runner 实例；接受请求不等于实例已就绪。'},
   'coding.agents': {title: 'Coding Agent', description: '应用管理员管理 Coding Agent；用户查询状态、确保实例并订阅状态流。'},
   'coding.sessions': {title: 'Coding 会话', description: '创建绑定工作区和 Runner 实例的编码会话，管理附件、标题、工具并归档。'},
+  'coding.previews': {title: 'Coding 预览', description: '为会话工作区创建、列出和停止静态预览或单文件下载。'},
   'coding.toolCalls': {title: 'Coding 客户端工具', description: '由当前用户回填客户端工具的执行结果或错误。'},
   'coding.turns': {title: 'Coding Turn', description: '异步启动编码任务，查询、取消或插话。'},
   'coding.events': {title: 'Coding 事件', description: '读取历史事件，或通过持续 SSE 接收会话事件。'},
@@ -43,6 +45,8 @@ export const groups: Record<string, {title: string; description: string}> = {
 };
 
 export const operationTitles: Record<string, string> = {
+  'app.get': '读取当前应用',
+  'coding.previews.create': '创建或复用预览', 'coding.previews.list': '列出会话预览', 'coding.previews.stop': '停止预览',
   'me.getQuota': '查询当前用户额度',
   'sessions.listCommands': '列出会话技能命令',
   'coding.sessions.listCommands': '列出 Coding 命令',
@@ -104,7 +108,7 @@ export const operationTitles: Record<string, string> = {
   'coding.sessions.archive': '归档编码会话', 'coding.sessions.getTools': '获取编码会话工具',
   'coding.sessions.generateTitle': '生成编码会话标题', 'coding.sessions.listFiles': '列出编码会话文件',
   'coding.sessions.uploadFile': '上传编码附件', 'coding.sessions.readFile': '读取编码会话文件',
-  'coding.sessions.downloadFile': '下载编码文件原件', 'coding.sessions.createDownloadLink': '创建单次下载链接',
+  'coding.sessions.downloadFile': '下载工作区文件或附件原件', 'coding.sessions.createDownloadLink': '创建单次下载链接',
   'coding.toolCalls.resolve': '回填客户端工具结果',
   'coding.turns.start': '发送指令或启动 Turn', 'coding.turns.get': '读取 Turn',
   'coding.turns.cancel': '取消 Turn', 'coding.turns.steer': '向 Turn 插话',
@@ -140,6 +144,9 @@ export const operationNotes: Record<string, string> = {
   'skills.validateBundle': '支持 JSON 文本文件列表或 ZIP 包。包内必须恰好有一个 SKILL.md；二进制文件使用 ZIP。ok: false 属于业务结果，不会自动抛出异常。',
   'skills.publishRevision': '支持 JSON 文件列表或 ZIP 包；版本号由服务端返回。二进制文件使用 ZIP。',
   'settings.models.list': '默认使用 ek 获取应用可用目录；传 {tokenType: "admin"} 使用 ak 获取自有管理目录。调用模型使用 model_id，不使用数字记录 id。',
+  'settings.models.update': '传入 capabilities 时，数组只接受一个元素，取值为 text.chat 或 text.embeddings。省略时沿用现有配置。coding_enabled 控制对话模型的 Coding 和原生 Responses 支持。',
+  'memories.list': 'content_count 包含已禁用但未删除的内容。content_sync.total 只统计启用的内容，queued 是 pending 与 processing 之和。',
+  'coding.previews.create': 'root 和 entry 使用工作区内的原始相对路径。static 的空 entry 表示预览目录，download 需要指定文件。持有返回地址即可在到期前访问登记的目录或文件，stop 可提前撤销。',
   'settings.models.test': '此操作会实际调用模型并消耗额度，仅在明确需要验证时调用；doctor() 默认不调用它。',
   'coding.events.stream': '此端点已纳入正式 OpenAPI。约每 20 秒发送心跳，连接约 60 秒关闭；EOF 不表示任务完成，使用 after_seq 或 options.headers 中的 Last-Event-ID 手动恢复。合法 error 事件不是终态，后续仍可收到 turn.failed；turn 终态不主动结束会话流。',
   'coding.interactions.resolve': '成功只表示决策已接收并排队。session.updated 的 payload 包含 turn_id 和 plan_mode，表示实际计划模式变化；对应 Turn 的 turn.completed 才表示任务完成。',
@@ -147,13 +154,13 @@ export const operationNotes: Record<string, string> = {
   'coding.agents.getStatus': '默认以 ek 查询当前用户；使用 {tokenType: "admin"} 时必须提供 external_user_id。用户令牌不能覆盖用户范围。',
   'coding.agents.streamStatus': '权限与 getStatus 相同。状态 SSE 返回 ZAIRunnerStatusStreamEvent，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。',
   'coding.agents.ensureRunnerInstance': '仅使用 ek 确保当前用户实例；202 表示已接受，仍需查询状态确认就绪。',
-  'coding.sessions.ensureRunnerInstance': '仅 ak，恢复指定会话绑定的既有实例，不创建 Turn。必须携带幂等键；SDK 在省略时生成，重试须复用原键。与仅 ek 的 coding.agents.ensureRunnerInstance 权限不同。',
+  'coding.sessions.ensureRunnerInstance': '使用会话所属用户的 ek 恢复已绑定的实例。SDK 会生成幂等键，重试须复用原键。',
   'coding.sessions.create': '不再接受 provider 或 runner_id；通过 mode、plan_mode、system_prompt 和 primary_repo_key 配置会话行为。system_prompt 已移除规范中的 16,000 字符限制，不代表模型上下文或服务资源无限制。',
   'coding.sessions.generateTitle': '生成标题可能调用模型并消耗额度，保持显式调用。',
   'coding.sessions.uploadFile': 'input 接受 Blob（包含 File），文件名通过 name 查询参数传递；按 application/octet-stream 发送原始内容，允许零字节。返回 id 用于 attachment_ids。',
-  'coding.sessions.downloadFile': '原件下载只允许 ek；file_id 与 path 必须恰好提供一个，返回 Blob。',
+  'coding.sessions.downloadFile': '使用 ek 下载。传 file_id 获取已存储的附件原件，传 path 获取工作区文件，两者恰好提供一个，返回 Blob。',
   'coding.sessions.createDownloadLink': 'file_id 与 path 必须恰好提供一个；链接最多有效十分钟且仅可使用一次，不要持久化到消息中。',
-  'coding.toolCalls.resolve': '仅使用 ek；input 必填且 output/error 恰好一项。output: null 合法；error 需要 code 和 message。SDK 检查实际序列化内容后再获取令牌。',
+  'coding.toolCalls.resolve': 'ak、ek 均按会话所属应用和外部用户校验。input 必须恰好包含 output 或 error，output 可为 null，error 需要 code 和 message。',
   'coding.runners.create': '已停用，返回 503 / runner_legacy_policy_unsupported；通过控制台保存应用级 Coding 配置。',
   'coding.runners.listImagePolicies': '旧镜像策略文件部署已移除，返回 503 / runner_legacy_policy_unsupported。',
   'coding.runners.update': '可维护既有 Profile 元数据；提交 image_policy_id 返回 503 / runner_legacy_policy_unsupported，镜像通过应用 Coding 配置维护。',
@@ -567,7 +574,7 @@ for await (const snapshot of statusStream) {
 const status = await client.coding.agents.getStatus('your-agent-id', {
   external_user_id: 'your-user-id',
 }, {tokenType: 'admin'});`, 'typescript', true)}
-<p>getStatus 和 streamStatus 默认使用 ek 查询当前用户，用户令牌不可覆盖 external_user_id；ak 查询必须提供该字段。coding.agents.ensureRunnerInstance 只允许 ek；coding.sessions.ensureRunnerInstance 仅允许 ak 恢复既有会话绑定实例，重试时复用幂等键。状态 SSE 保留 event、id、rawData，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。</p>
+<p>getStatus 和 streamStatus 默认使用 ek 查询当前用户，用户令牌不可覆盖 external_user_id；ak 查询必须提供该字段。准备用户实例和恢复会话绑定实例都使用 ek，重试时复用幂等键。状态 SSE 保留 event、id、rawData，data 为 unknown；正常 EOF 结束，不要求 [DONE]，不自动重连。</p>
 <h3>附件与客户端工具</h3>
 ${code(`const uploaded = await client.coding.sessions.uploadFile('your-session-id', {name: 'report.txt'}, new Blob(['报告正文']));
 await client.coding.turns.start('your-session-id', {
@@ -576,7 +583,7 @@ await client.coding.turns.start('your-session-id', {
 const blob = await client.coding.sessions.downloadFile('your-session-id', {file_id: uploaded.id});
 console.log(await blob.text());
 await client.coding.toolCalls.resolve('your-session-id', 'your-tool-call-id', {output: null});`, 'typescript', true)}
-<p>Coding 上传按 application/octet-stream 发送原始 Blob，返回 id 供 attachment_ids 引用。原件下载只允许 ek；下载和创建单次链接时，file_id/path 恰好提供一个。单次链接不要持久化到消息中。工具回填只允许当前用户，output/error 恰好一项；output: null 合法，error 必须包含 code/message。</p>
+<p>Coding 会话文件的列举、上传、读取、下载和创建单次链接均使用 ek。上传按 application/octet-stream 发送原始 Blob，返回 id 供 attachment_ids 引用。下载或创建链接时，file_id 和 path 恰好提供一个。单次下载链接不要保存到消息中。会话所属用户可用 ak 或 ek 回填工具结果。output 和 error 恰好提供一项，output 可为 null，error 必须包含 code 和 message。</p>
 <h3>分叉、回退与目标控制</h3>
 ${code(`const fork = await client.coding.sessions.create('your-agent-id', {
   workspace_id: 'your-workspace-id',
@@ -612,7 +619,7 @@ await client.coding.sessions.update('your-session-id', {thinking_option_id: null
 const result = await client.coding.turns.start('your-session-id', {content: '分析项目', thinking_option_id: null});
 if ('id' in result) console.log(result.usage_metrics);`, 'typescript', true)}
 <p>Coding 创建会话时省略或 null 使用模型/引擎默认值；更新时省略保持原值，null 清除覆盖；启动 Turn 时省略继承会话，null 跳过会话选择，字符串只覆盖本轮。普通消息与 Chat 同样提供 thinking_option_id，返回 reasoning_content 和 usage_metrics。</p>
-<p>token_scope: turn 表示本轮调用总和，provider 表示提供方最新快照，不能反复累加当作本轮总量。未知数值为 null；context.utilization 是比例，0.5 表示 50%，可大于 1。额度耗尽或过期仍可查询；额度中的 null 表示无限，不是零。</p>`,
+<p>token_scope 的 turn 表示本轮总量，provider 表示提供方快照，session 表示引擎累计的会话用量。Chat 的 turn_usage_metrics 提供单轮用量。未知数值为 null；context.utilization 是比例，0.5 表示 50%，可大于 1。额度耗尽或过期仍可查询；额度中的 null 表示无限，不是零。</p>`,
     },
     {
       id: 'settings-guide', title: '应用管理员配置', description: '管理模型、渠道与签名密钥。',
@@ -626,13 +633,13 @@ console.log(models, channels);`, 'typescript', true)}
     {
       id: 'migration', title: '升级到 0.4.0', description: '技能查询签名、Turn 联合响应、Memory 必填项与新增接口。',
       body: `<h3>从 0.3.x 升级</h3><p>skills.list 新增 query，请求选项移到第二个参数；无过滤时使用 skills.list(undefined, options)。coding.turns.start 可能返回不带 id 的目标控制结果，先判断是否存在 id 再观察或取消 Turn。Memory 补齐 name、status、content、contents、query 等必填要求，带默认值的可选字段仍可省略；getContent 的空体 HTTP 200 返回 undefined。</p>
-<p>新增思考选项、用量、用户额度、命令目录、Fork/Rewind、仓库文件写入与同步、会话实例恢复及 Memory 失败重试。会话恢复仅 ak，Agent 恢复仍仅 ek；当前共 12 个操作要求幂等键。旧 Runner Profile 创建和镜像策略列表返回 503 / runner_legacy_policy_unsupported。响应新增必填字段，消费方的类型化测试数据也需要更新。</p>
+<p>新增思考选项、用量、用户额度、命令目录、Fork/Rewind、仓库文件写入与同步、会话实例恢复及 Memory 失败重试。当前规范要求实例准备和会话恢复都使用 ek，共 12 个操作要求幂等键。旧 Runner Profile 创建和镜像策略列表返回 503 / runner_legacy_policy_unsupported。响应新增必填字段，消费方的类型化测试数据也需要更新。</p>
 <h3>从 0.2.x 升级的历史变化</h3><p>0.3.0 调整了 Coding 会话的 provider/runner_id 覆盖，响应新增 Profile、Instance 和版本信息；创建 Agent 仅需 name。模型列表默认使用 ek，管理目录显式传 tokenType: "admin"。密钥轮换需要 fingerprint，Coding 模型查询需要 agent_id。</p>
 <p>0.3.0 当时的 11 个写操作自动生成幂等键；重试应复用原键。仓库更新与 Turn 的 202 表示接受，不表示就绪或完成。普通附件可用 file_id/path，Coding 上传后以 attachment_ids 引用；原件下载仅允许 ek，单次链接不持久化到消息。合法 Coding error 事件继续传递，仍需读取 turn.failed；只拼接 message.delta，空文本事件也推进游标。</p>
 <p>模型测试、标题生成和记忆重建可能消耗额度，均保持显式调用；doctor 默认不增加这些行为。完整迁移说明和 0.1→0.2 历史保留在随包提供的 MIGRATION.md。</p>
 <h3>从 0.1.x 升级的历史变化</h3><p>根地址从 /v8 改为 /v1/zai；旧顶层 executor、workspaces、repositories、models 已移除。工作区、仓库和公钥进入 coding；models 改为 settings.models。实体字段 integration_id 改为 app_id，Agent 类型 executor 改为 runner；普通会话不再使用 executor_provider。</p>
 <p>工作区和仓库更新使用 PUT；仓库文件列表返回 entries，内容可能是 base64 或被截断，旧仓库下载无替代端点。模型管理不支持 all，也不再归一化旧模型数组。同步管理员签发保留位置参数并改用 UTF-8；用户令牌可通过应用 API Key 获取密钥，也可直接使用可信后端的 signing secret 签发。</p>
-<p>当前原始规范已包含 Coding SSE，共 110 条路径、163 个 HTTP 操作、166 个资源方法。新增用户额度、命令目录、目标控制、分叉与回退、仓库文件写入、仓库准备、会话实例恢复和记忆失败重试。supplement 当前为空并保留包导出。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
+<p>当前原始规范已包含 Coding SSE，共 113 条路径、167 个 HTTP 操作、170 个资源方法，包含应用信息和会话预览。另有用户额度、命令目录、目标控制、分叉与回退、仓库文件写入、仓库准备、会话实例恢复和记忆失败重试。supplement 当前为空并保留包导出。三个消息发送端点各有 send/stream 两种方法；doctor 是额外的辅助方法。完整迁移说明随包提供 MIGRATION.md。</p>
 <h3>保留的规范缺口</h3><ul>
 <li>QA、文件提取的部分描述写“必填”，但 Schema 未设置 required；类型遵循正式 Schema，示例仍提供业务必需值。Memory 本次已补齐相关必填项。</li>
 <li>Goal 内部响应结构保持 unknown；Memory 内容查询按空体成功描述单独支持 undefined。个人技能 owner_id 的条件必填和 scope/owner_id 不可变规则需遵循接口说明。</li>

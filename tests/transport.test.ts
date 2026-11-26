@@ -1,5 +1,5 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {createZAIClient} from '../src/client.js';
+import {createZAIClient, type SettingsModelsUpdateInput} from '../src/client.js';
 import {createZAITokenProvider, type ZAIToken} from '../src/auth.js';
 import {ZAIClientError} from '../src/errors.js';
 import {createTransport} from '../src/transport.js';
@@ -18,6 +18,27 @@ const deferred = <T>() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('transport configuration and request construction', () => {
+  it('sends partial model configuration without reading or filling the existing model', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json({model: {id: 1}}));
+    const client = createZAIClient({...defaults, fetch: fetcher});
+    await client.settings.models.update('1', {coding_enabled: false});
+    await client.settings.models.update('1', {capabilities: ['text.embeddings']});
+    expect(await Promise.all(fetcher.mock.calls.map(([request]) => (request as Request).json())))
+      .toEqual([{coding_enabled: false}, {capabilities: ['text.embeddings']}]);
+  });
+
+  it.each([
+    {capabilities: []}, {capabilities: ['text.chat', 'text.embeddings']}, {capabilities: ['other']},
+    {capabilities: 'text.chat'}, {capabilities: ['text.embeddings'], coding_enabled: true}, {coding_enabled: 'yes'}, {unknown: true},
+  ])('rejects an invalid model patch %j before acquiring a token', async input => {
+    const getToken = vi.fn(() => 'token');
+    const fetcher = vi.fn<typeof fetch>();
+    const client = createZAIClient({...defaults, getToken, fetch: fetcher});
+    await expect(client.settings.models.update('1', input as unknown as SettingsModelsUpdateInput)).rejects.toMatchObject({code: 'invalid-input'});
+    expect(getToken).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('moves workspace keys from client headers, call headers and request options into JSON', async () => {
     const fetcher = vi.fn<typeof fetch>(async () => Response.json({}, {status: 201}));
     const client = createZAIClient({...defaults, headers: {'Idempotency-Key': 'client'}, fetch: fetcher});
@@ -143,6 +164,31 @@ describe('transport configuration and request construction', () => {
 });
 
 describe('explicit token permission callbacks', () => {
+  it('allows the session owner to select either token for a client tool result', async () => {
+    const getToken = vi.fn(({purpose}: ZAIAuthContext) => purpose);
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json({id: 'call', status: 'resolved'}));
+    const client = createZAIClient({...defaults, getToken, fetch: fetcher});
+    for (const tokenType of ['user', 'admin'] as const) {
+      await client.coding.toolCalls.resolve('session', 'call', {output: null}, {tokenType});
+    }
+    expect(fetcher.mock.calls.map(([request]) => (request as Request).headers.get('authorization')))
+      .toEqual(['Bearer user', 'Bearer admin']);
+  });
+
+  it('rejects admin tokens for Coding session file operations before fetching credentials', async () => {
+    const getToken = vi.fn(() => 'token');
+    const fetcher = vi.fn<typeof fetch>();
+    const client = createZAIClient({...defaults, getToken, fetch: fetcher});
+    const options = {tokenType: 'admin'} as const;
+    const files = client.coding.sessions;
+    for (const call of [
+      () => files.listFiles('s', undefined, options), () => files.uploadFile('s', {name: 'a.txt'}, new Blob(), options),
+      () => files.readFile('s', {path: 'a.txt'}, options), () => files.createDownloadLink('s', {path: 'a.txt'}, options),
+    ]) await expect(call()).rejects.toMatchObject({code: 'invalid-input'});
+    expect(getToken).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('routes concurrent requests through independent cached admin and user providers', async () => {
     const expiresAt = Math.floor(Date.now() / 1000) + 1000;
     const fetchAdminToken = vi.fn(async () => ({token: 'ak-backend', expiresAt}));

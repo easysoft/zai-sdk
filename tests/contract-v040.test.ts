@@ -79,14 +79,14 @@ it('returns repository synchronization acceptance without polling or retrying', 
   expect(await requests[0]!.json()).toEqual({});
 });
 
-it('uses admin credentials and a reusable idempotency key for session-bound runner recovery', async () => {
+it('uses user credentials and a reusable idempotency key for session-bound runner recovery', async () => {
   const {client, requests, getToken} = setup({status: 'starting'}, 202);
   await client.coding.sessions.ensureRunnerInstance('session', {}, {idempotencyKey: 'recover-session'});
-  expect(getToken).toHaveBeenCalledWith(expect.objectContaining({purpose: 'admin'}));
+  expect(getToken).toHaveBeenCalledWith(expect.objectContaining({purpose: 'user'}));
   expect(requests[0]!.headers.get('idempotency-key')).toBe('recover-session');
   expect(new URL(requests[0]!.url).pathname).toBe('/v1/zai/coding/sessions/session/runner-instance');
   expect(await requests[0]!.json()).toEqual({});
-  await expect(client.coding.sessions.ensureRunnerInstance('session', {}, {tokenType: 'user'})).rejects.toMatchObject({code: 'invalid-input'});
+  await expect(client.coding.sessions.ensureRunnerInstance('session', {}, {tokenType: 'admin'})).rejects.toMatchObject({code: 'invalid-input'});
   expect(requests).toHaveLength(1);
   expect(getToken).toHaveBeenCalledTimes(1);
   await client.coding.agents.ensureRunnerInstance('agent', {});

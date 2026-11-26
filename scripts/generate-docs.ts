@@ -148,6 +148,7 @@ function operationExample(key: string, op: Operation, params: readonly string[],
     else if (key === 'files.extract') args.push(`{\n  file: {blob: new Blob(['报告正文'], {type: 'text/plain'}), filename: 'report.txt'},\n}`);
     else if (key.startsWith('chat.') && (key.endsWith('.send') || key.endsWith('.stream'))) args.push(`{\n  content: '你好，请介绍一下自己。',\n  tool_execution_mode: 'schema-only',\n}`);
     else if (key === 'coding.toolCalls.resolve') args.push(`{output: null}`);
+    else if (key === 'coding.previews.create') args.push(`{kind: 'static', root: 'docs', entry: 'index.html'}`);
     else if (key === 'qa.create' || key === 'qa.update') args.push(`{\n  question: '如何开始使用？',\n  answer: '先创建会话，再发送消息。',\n}`);
     else if (key === 'messages.send' || key === 'messages.stream') args.push(`{\n  content: [{type: 'input_text', text: '你好，请介绍一下自己。'}],\n}`);
     else if (key === 'skills.validateBundle' || key === 'skills.publishRevision') args.push(`{\n  files: [{path: 'SKILL.md', media_type: 'text/markdown', content: '# Example\\nSummarize a report.'}],\n}`);

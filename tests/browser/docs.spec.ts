@@ -11,7 +11,7 @@ test('documentation links, resource methods and exported APIs are complete', asy
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/docs/index.html');
   await expect(page).toHaveTitle('ZAI SDK · 使用指南与接口参考');
-  await expect(page.locator('.operation')).toHaveCount(166);
+  await expect(page.locator('.operation')).toHaveCount(170);
   expect(await page.locator('.type-entry').count()).toBeGreaterThan(126);
   const broken = await page.locator('a[href^="#"]').evaluateAll(links => links
     .map(link => link.getAttribute('href')!.slice(1))
@@ -78,7 +78,7 @@ test('documentation distinguishes stream protocols, binary uploads and user perm
 
 test('documentation explains the 0.4.0 permissions, empty responses and retry choices', async ({page}) => {
   await page.goto('/docs/index.html#api-coding-sessions-ensureRunnerInstance');
-  await expect(page.locator('#api-coding-sessions-ensureRunnerInstance .operation-auth')).toContainText('仅 ak');
+  await expect(page.locator('#api-coding-sessions-ensureRunnerInstance .operation-auth')).toContainText('仅 ek');
   await expect(page.locator('#api-coding-sessions-ensureRunnerInstance')).toContainText('重试须复用原键');
   await page.goto('/docs/index.html#api-coding-sessions-writeRepositoryFile');
   await expect(page.locator('#api-coding-sessions-writeRepositoryFile .operation-auth')).toContainText('仅 ek');

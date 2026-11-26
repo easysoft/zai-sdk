@@ -124,7 +124,7 @@ export interface paths {
         put?: never;
         /**
          * Create agent
-         * @description Create a new agent definition with business fields and prompts. If the new agent is the only agent under the app, it will still become the default agent. Optionally provide `skills` to mount multiple existing skills during creation.
+         * @description Create a new agent definition with business fields and prompts. If the new agent is the only agent under the app, it will still become the default agent. Optionally provide `skills` to mount multiple existing skills during creation. Requires an ak-* app admin token for every agent type.
          */
         post: {
             parameters: {
@@ -216,7 +216,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description An application administrator token is required to manage coding agents */
+                /** @description An application administrator token is required to manage agents */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -317,7 +317,7 @@ export interface paths {
         };
         /**
          * Update agent
-         * @description Update an existing agent by id.
+         * @description Update an existing agent by id. Requires an ak-* app admin token for every agent type.
          */
         put: {
             parameters: {
@@ -405,7 +405,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description An application administrator token is required to manage coding agents */
+                /** @description An application administrator token is required to manage agents */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -432,7 +432,7 @@ export interface paths {
         post?: never;
         /**
          * Delete agent
-         * @description Delete an agent. If needed, provide a replacement default agent id in the request body.
+         * @description Delete an agent. If needed, provide a replacement default agent id in the request body. Requires an ak-* app admin token for every agent type.
          */
         delete: {
             parameters: {
@@ -520,7 +520,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description An application administrator token is required to manage coding agents */
+                /** @description An application administrator token is required to manage agents */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2365,6 +2365,487 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List workspace previews and downloads for a session */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Previews */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            previews: {
+                                preview_id: string;
+                                url: string;
+                                expires_at: string;
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {string} */
+                                kind: "static" | "download";
+                                root: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create or reuse a workspace preview or download
+         * @description Requires the session bearer. kind static returns an unauthenticated site for the selected root. A non-empty static entry must be Markdown, HTML, or a png, jpeg, gif, or webp image; other types return preview_type_unsupported and create no registration. kind download returns an unauthenticated stream of one file and does not reject by type. Both use the same runner data connection. HTTP service forwarding is not available.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        kind: "static" | "download";
+                        root: string;
+                        entry: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Preview */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            preview_id: string;
+                            url: string;
+                            expires_at: string;
+                            /** @enum {string} */
+                            status: "available";
+                            /** @enum {string} */
+                            kind: "static" | "download";
+                            root: string;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/coding/sessions/{session_id}/previews/{preview_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Stop a workspace preview or download */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    preview_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stopped */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            stopped: boolean;
+                        };
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Runner offline */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Additive diagnostics; the legacy error field keeps its original type and code. */
+                            error_info?: {
+                                code: string;
+                                message: string;
+                                reason_code: string;
+                                user_message: string;
+                                retryable?: boolean;
+                                details: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                            error: string | {
+                                code: string;
+                                message: string;
+                                retryable?: boolean;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4940,7 +5421,7 @@ export interface paths {
         };
         /**
          * Download a workspace file or an immutable attachment as a binary stream
-         * @description Use file_id (the ID in asset://ID) to download a stored original without starting the Runner. Use path for a workspace file. Exactly one is required.
+         * @description Use file_id (the ID in asset://ID) to download a stored original without starting the Runner. Use path for a workspace file; when the preview data connection is available the bytes stream from the Runner without a control-plane copy. Exactly one is required.
          */
         get: {
             parameters: {
@@ -5100,7 +5581,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Prepare a single-use browser download */
+        /**
+         * Prepare a single-use browser download
+         * @description Returns /v1/zai/file-downloads/{id}?token=&name=. A workspace file streams from the Runner preview data connection when that connection is available. A stored attachment original is copied into the transfer first. The link lasts up to ten minutes and works once.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -9258,7 +9742,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Administrator token required */
+                /** @description Forbidden for the requested user scope */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -9560,7 +10044,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Administrator token required */
+                /** @description Forbidden for the requested user scope */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -9979,7 +10463,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Administrator token required */
+                /** @description Forbidden for the requested user scope */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -10155,7 +10639,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Administrator token required */
+                /** @description User token required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -10332,7 +10816,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Administrator token required */
+                /** @description User token required */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -14442,7 +14926,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List memory collections */
+        /**
+         * List memory collections
+         * @description Returns collections with content synchronization counts and the latest continuous vectorization period.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -14452,13 +14939,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Memory collections */
+                /** @description Memory collections with synchronization state */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["MemoryCollection"][];
+                        "application/json": components["schemas"]["MemoryCollectionSummary"][];
                     };
                 };
                 /** @description Unauthorized: missing or invalid app token */
@@ -14556,7 +15043,7 @@ export interface paths {
         };
         /**
          * Get a memory collection
-         * @description Includes model availability and content synchronization counts. Use GET /memories/{id}/failures for failed content IDs and redacted Worker reasons.
+         * @description Includes model availability and content synchronization counts for enabled, non-deleted contents, plus the latest continuous vectorization period. Use GET /memories/{id}/failures for failed content IDs and redacted Worker reasons.
          */
         get: {
             parameters: {
@@ -14569,7 +15056,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Memory collection and current model/content synchronization status */
+                /** @description Memory collection and current content synchronization status */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -16861,6 +17348,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the current app
+         * @description Returns the current app's basic information and default model settings. Accepts ak-* or ek-*. Coding default_model uses the configured Coding model, then the default chat model, or null when neither is set. Use GET /coding/models?agent_id=... for an agent's available Coding models and effective default.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current app information */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            app: {
+                                id: string;
+                                name: string;
+                                description: string | null;
+                                /** Format: date-time */
+                                created_at: string;
+                                /** @description Explicit application chat model; null when unset. Availability is not checked. */
+                                default_chat_model: string | null;
+                                /** @description Explicit application embedding model; null when unset. Availability is not checked. */
+                                default_embedding_model: string | null;
+                                coding: {
+                                    /** @description Application Coding switch; does not indicate model or Runner readiness. */
+                                    enabled: boolean;
+                                    /** @description Application Coding model, falling back to the default chat model; null when both are unset. */
+                                    default_model: string | null;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Missing or invalid application token, or application disabled */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Failed to read current application settings */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/models": {
         parameters: {
             query?: never;
@@ -17176,7 +17736,7 @@ export interface paths {
         head?: never;
         /**
          * Update model capability configuration
-         * @description Merges capabilities / features / chat_features into the existing config: omitted fields keep their current value and unrelated config keys are preserved. Requires an app admin token (ak-*).
+         * @description Exactly one purpose, text.chat or text.embeddings, is required in the resulting configuration. Coding and native Responses are enabled together for chat models. Native Messages is unavailable. Chat models use the function-calling contract; reasoning support, levels and defaults remain configurable. Merges capabilities / features / chat_features into the existing config: omitted fields keep their current value and unrelated config keys are preserved. Requires an app admin token (ak-*).
          */
         patch: {
             parameters: {
@@ -17656,10 +18216,10 @@ export interface components {
             output_tokens: number | null;
             cached_input_tokens: number | null;
             /**
-             * @description turn: sum of this Chat turn's model calls; provider: latest Coding provider snapshot, not necessarily a turn total
+             * @description turn: sum of this Chat turn's model calls; provider: latest Coding provider snapshot, not necessarily a turn total; session: native engine session cumulative usage
              * @enum {string}
              */
-            token_scope: "turn" | "provider";
+            token_scope: "turn" | "provider" | "session";
             context: {
                 used_tokens: number | null;
                 max_tokens: number | null;
@@ -17668,6 +18228,32 @@ export interface components {
                 /** @enum {string} */
                 source: "reported" | "estimated" | "unknown";
             };
+        };
+        /** @description Vectorization progress for this collection; same shape as GET /memories/{id}. */
+        MemoryContentSync: {
+            /**
+             * @description Overall synchronization state; error takes precedence if any content has failed.
+             * @enum {string}
+             */
+            status: "empty" | "syncing" | "synced" | "error";
+            /** @description Enabled, non-deleted contents in the collection; disabled contents are excluded. */
+            total: number;
+            /** @description Contents waiting for an embedding worker. */
+            pending: number;
+            /** @description Contents currently being embedded. */
+            processing: number;
+            /** @description Pending plus processing contents, matching the console's processing count. */
+            queued: number;
+            /** @description Contents with embeddings. */
+            completed: number;
+            /** @description Failed enabled content count. GET /memories/{id}/failures also includes disabled contents. */
+            error: number;
+            /** @description Earliest enqueue time of the latest continuous period of overlapping embedding jobs. Null if unavailable or job and content states disagree. */
+            round_started_at: string | null;
+            /** @description Latest job completion time in the period; null while work is active or the period cannot be determined. */
+            round_finished_at: string | null;
+            /** @description Elapsed seconds of the period, computed at request time; null if the period is unavailable, job and content states disagree, or it is shorter than one second. */
+            round_seconds: number | null;
         };
         MemoryCollection: {
             id: string;
@@ -17689,6 +18275,11 @@ export interface components {
             };
             created_at: string;
             updated_at?: string | null;
+        };
+        MemoryCollectionSummary: components["schemas"]["MemoryCollection"] & {
+            /** @description Non-deleted contents, including disabled contents; matches the console content count. */
+            content_count: number;
+            content_sync: components["schemas"]["MemoryContentSync"];
         };
         MemoryAuthenticationError: {
             error: {
@@ -17720,22 +18311,11 @@ export interface components {
             overlap_tokens?: number | string;
         };
         MemoryCollectionDetails: components["schemas"]["MemoryCollection"] & {
+            /** @description Non-deleted contents, including disabled contents; matches the console content count. */
+            content_count: number;
             /** @description Whether the effective embedding model (collection model, otherwise app default) is available to this app, with an app default configured. Checks embedding capability, app access, owner group, and enabled channels/abilities; does not probe upstream health. */
             embedding_model_available: boolean;
-            /** @description Embedding synchronization counts for this app and collection's non-deleted contents, including disabled contents; independent of model availability. */
-            content_sync: {
-                /**
-                 * @description Overall synchronization state; error takes precedence if any content has failed.
-                 * @enum {string}
-                 */
-                status: "empty" | "syncing" | "synced" | "error";
-                total: number;
-                pending: number;
-                processing: number;
-                completed: number;
-                /** @description Failed content count. GET /memories/{id}/failures returns the paginated failed content IDs and redacted reasons. */
-                error: number;
-            };
+            content_sync: components["schemas"]["MemoryContentSync"] & unknown;
         };
         MemoryCollectionRebuildResponse: {
             /** @enum {boolean} */
@@ -18238,6 +18818,7 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             usage_metrics?: components["schemas"]["ConversationUsage"];
+            turn_usage_metrics?: components["schemas"]["ConversationUsage"];
             execution_summary?: {
                 [key: string]: unknown;
             } | null;
@@ -18329,6 +18910,10 @@ export interface components {
             /** @description Generated conversation title */
             title: string;
         };
+        SettingsError: {
+            /** @description Error message */
+            error: string;
+        };
         SettingsModel: {
             /** @description Model record id in llm_models */
             id: number;
@@ -18343,10 +18928,6 @@ export interface components {
             model_type: "chat" | "embeddings" | null;
             /** @description Creation timestamp */
             created_at: string;
-        };
-        SettingsError: {
-            /** @description Error message */
-            error: string;
         };
         CreateSettingsModelRequest: {
             /** @description Model identifier. Must match the real upstream model name and only contain letters, digits, '.', '_', ':' and '-' */
@@ -18369,8 +18950,12 @@ export interface components {
             api_key: string;
         };
         UpdateSettingsModelRequest: {
-            /** @description Model capabilities, e.g. text.chat / text.embeddings */
-            capabilities?: string[];
+            /** @description Exactly one model purpose: text.chat or text.embeddings. Empty, combined and other model types are rejected. */
+            capabilities?: [
+                "text.chat" | "text.embeddings"
+            ];
+            /** @description Allow a chat model to use Coding and native Responses together. Requires upstream native Responses support. */
+            coding_enabled?: boolean;
             /** @description Model features, e.g. chat / reasoning / function-calling */
             features?: string[];
             chat_features?: {

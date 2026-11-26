@@ -19,6 +19,7 @@ const validations: Record<string, string> = {
   'coding.agents.getStatus': 'user-scope',
   'coding.agents.streamStatus': 'user-scope',
   'memories.retryFailed': 'memory-retry',
+  'settings.models.update': 'model-update',
 };
 const fileSelector = '{file_id: string; path?: never} | {path: string; file_id?: never}';
 

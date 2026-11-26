@@ -163,7 +163,7 @@ live('live 0.4.0 quota, personal skills and ordinary commands', async (t, cleanu
     const result = await client.messages.send(session.id, {content: [{type: 'input_text', text: 'Reply with exactly OK. Do not use tools.'}], thinking_option_id: null, tools: [], tool_execution_mode: 'schema-only'}, options(90_000));
     assert.ok(result.content?.trim());
     if (result.reasoning_content !== undefined) assert.equal(typeof result.reasoning_content, 'string');
-    if (result.usage_metrics) assert.ok(['turn', 'provider'].includes(result.usage_metrics.token_scope));
+    if (result.usage_metrics) assert.ok(['turn', 'provider', 'session'].includes(result.usage_metrics.token_scope));
     t.diagnostic(`Ordinary response: reasoning=${result.reasoning_content !== undefined}, usage_metrics=${!!result.usage_metrics}; content omitted.`);
   });
 });
@@ -177,6 +177,14 @@ live('live 0.4.0 Memory defaults, content semantics and failed retries', async (
   await independentCheck('Memory defaults and missing content empty 200', async () => {
     assert.equal(collection.max_tokens_per_chunk, 1024);
     assert.equal(collection.overlap_tokens, 0);
+    const summary = (await client.memories.list(options())).find(item => item.id === collection.id);
+    const detail = await client.memories.get(collection.id, options());
+    assert.ok(summary);
+    assert.equal(summary.content_count, 0);
+    assert.equal(detail.content_count, 0);
+    assert.deepEqual(summary.content_sync, detail.content_sync);
+    assert.equal(detail.content_sync.status, 'empty');
+    assert.equal(detail.content_sync.queued, 0);
     assert.equal(await client.memories.getContent(collection.id, randomUUID(), options()), undefined);
     await client.memories.update(collection.id, {name: `${marker}-updated`, status: 'enabled'}, options());
     await assert.rejects(client.memories.rebuild(collection.id, {max_tokens_per_chunk: 8193}, options()), error => error instanceof ZAIClientError && error.status === 400);
@@ -246,6 +254,8 @@ live('live 0.4.0 Memory defaults, content semantics and failed retries', async (
 
 live('live read-only ak/ek permissions and getToken(context)', async t => {
   const shared: [string, (c: ZAIClient) => Promise<unknown>][] = [
+    ['current app', c => c.app.get(options())],
+    ['coding agents', c => c.coding.agents.list(options())],
     ['agents', c => c.agents.list(options())],
     ['sessions', c => c.sessions.list({page_size: 1}, options())],
     ['chat.conversations', c => c.chat.conversations.list({page_size: 1}, options())],
@@ -259,7 +269,6 @@ live('live read-only ak/ek permissions and getToken(context)', async t => {
     ['channels', c => c.settings.channels.list(options())],
     ['signing secret', c => c.settings.signingSecret.get(options())],
     ['runners', c => c.coding.runners.list(options())],
-    ['coding agents', c => c.coding.agents.list(options())],
     ['memory queue', c => c.memories.getEmbeddingQueueStats(options())],
   ];
   for (const [name, call] of shared) {
@@ -287,7 +296,9 @@ live('live read-only ak/ek permissions and getToken(context)', async t => {
       assert.equal(detail.id, agent.id);
       assert.equal(detail.runner_profile_id, agent.runner_profile_id);
     });
-    await independentCheck('Coding Agent detail with ek', () => expectForbidden('Coding Agent detail with ek', user.coding.agents.get(agent.id, options())));
+    await independentCheck('Coding Agent detail with ek', async () => {
+      assert.equal((await user.coding.agents.get(agent.id, options())).id, agent.id);
+    });
     t.diagnostic('Existing Coding Agent detail permissions checked without changing the Agent.');
   } else {
     t.diagnostic('No active Coding Agent available; read-only detail permission check not covered.');
@@ -337,7 +348,8 @@ live('live Chat CRUD, both JSON/SSE endpoints and file extraction', async (t, cl
   const input = {content: 'Reply with exactly OK. Do not use tools or read files.', thinking_option_id: null, tools: [], tool_execution_mode: 'schema-only' as const};
   const reply = await client.chat.messages.send(conversation.id, input, options(60_000));
   assert.ok(reply.content?.trim(), 'Chat JSON must return text.');
-  if (reply.usage_metrics) assert.ok(['turn', 'provider'].includes(reply.usage_metrics.token_scope));
+  if (reply.usage_metrics) assert.ok(['turn', 'provider', 'session'].includes(reply.usage_metrics.token_scope));
+  if (reply.turn_usage_metrics) assert.equal(reply.turn_usage_metrics.token_scope, 'turn');
   observations.push({name: 'Chat usage', values: {usageMetrics: !!reply.usage_metrics, reasoning: reply.reasoning_content !== undefined}});
   await consume(await client.chat.messages.stream(conversation.id, input, options(60_000)));
   assert.ok((await client.chat.send({...input, conversation_id: conversation.id}, options(60_000))).content?.trim(), 'Convenience Chat JSON must return text.');
@@ -385,7 +397,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   track(codingResources.agentIds, agent.id);
   console.log('Coding live: temporary Agent created; checking permissions and shared user configuration.');
   assert.equal((await client.coding.agents.get(agent.id, options())).runner_profile_id, agent.runner_profile_id);
-  await expectForbidden('Coding Agent detail with ek', user.coding.agents.get(agent.id, options()));
+  assert.equal((await user.coding.agents.get(agent.id, options())).id, agent.id);
   await expectForbidden('Runner Profile detail with ek', user.coding.runners.get(agent.runner_profile_id, options()));
   await expectForbidden('Runner instances with ek', user.coding.runners.instances.list(agent.runner_profile_id, undefined, options()));
   await expectForbidden('SSH public key with ak', admin.coding.keys.getPublic(agent.id, options()));
@@ -535,13 +547,13 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   await client.coding.interactions.list(session.id, undefined, options());
   assert.equal((await client.coding.agents.getStatus(agent.id, {session_id: session.id}, options())).status, 'ready');
   console.log('Coding live: checking 0.4.0 commands, goals, recovery and isolated repository writes.');
-  await independentCheck('Coding session recovery uses ak and reuses its idempotency key', async () => {
+  await independentCheck('Coding session recovery uses ek and reuses its idempotency key', async () => {
     const key = `${marker}-recover`;
     const recovered = await client.coding.sessions.ensureRunnerInstance(session.id, {}, {...options(), idempotencyKey: key});
     assert.equal(recovered.id, instance.id);
     assert.equal((await client.coding.sessions.ensureRunnerInstance(session.id, {}, {...options(), idempotencyKey: key})).id, instance.id);
   });
-  await independentCheck('Coding session recovery rejects ek', () => expectForbidden('session recovery with ek', user.coding.sessions.ensureRunnerInstance(session.id, {}, options())));
+  await independentCheck('Coding session recovery rejects ak', () => expectForbidden('session recovery with ak', admin.coding.sessions.ensureRunnerInstance(session.id, {}, options())));
   await independentCheck('Coding command catalogs and non-inference goal controls', async () => {
     for (const tokenType of ['user', 'admin'] as const) {
       assert.ok(Array.isArray((await client.coding.sessions.listCommands(session.id, {...options(), tokenType})).commands));
@@ -612,6 +624,17 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
     const filtered = await client.coding.git.diff(session.id, {repo_key: 'sdk-live', path: emptyPath, include_diff: 'true'}, options());
     assert.ok(filtered.diffs.every(item => item.path === emptyPath));
   });
+  await independentCheck('Coding preview creation, listing and stop within the session', async () => {
+    assert.ok(repositoryFileWritten);
+    const preview = await client.coding.previews.create(session.id, {kind: 'download', root: 'sdk-live', entry: repositoryPath}, options());
+    try {
+      const {previews} = await client.coding.previews.list(session.id, {...options(), tokenType: 'admin'});
+      assert.ok(previews.some(item => item.preview_id === preview.preview_id && item.kind === 'download'));
+    } finally {
+      assert.ok((await client.coding.previews.stop(session.id, preview.preview_id, options())).stopped);
+    }
+    assert.ok(!(await client.coding.previews.list(session.id, options())).previews.some(item => item.preview_id === preview.preview_id));
+  });
   const text = 'ZAI SDK 0.3.0 live attachment — 你好\n';
   const file = await client.coding.sessions.uploadFile(session.id, {name: 'sdk-live.txt'}, new Blob([text], {type: 'text/plain'}), options());
   track(codingResources.fileIds, file.id);
@@ -666,7 +689,7 @@ live('live isolated Coding workspace, turn and event stream', async (t, cleanup)
   assert.ok(message.trim(), 'Coding message.delta payload.text must contain a response.');
   await independentCheck('Coding Turn superseded and usage fields', async () => {
     assert.equal(final.superseded_at, null);
-    if (final.usage_metrics) assert.ok(['turn', 'provider'].includes(final.usage_metrics.token_scope));
+    if (final.usage_metrics) assert.ok(['turn', 'provider', 'session'].includes(final.usage_metrics.token_scope));
     observations.push({name: 'Coding usage', values: {usageMetrics: !!final.usage_metrics, eventUsageMetrics: events.some(item => !!item.data.usage_metrics)}});
   });
   const replay = await client.coding.events.list(session.id, {after_seq: '0', limit: '100'}, options());

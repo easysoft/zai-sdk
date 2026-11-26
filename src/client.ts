@@ -6,6 +6,7 @@ import {parseZAIStream, parseZAICodingStream, parseZAIRunnerStatusStream, type Z
 import {runZAIDoctor, type ZAIDoctorOptions, type ZAIDoctorResult} from './doctor.js';
 
 export type MeGetQuotaResponse = paths["/me/quota"]["get"]['responses'][200]['content']['application/json'];
+export type AppGetResponse = paths["/app"]["get"]['responses'][200]['content']['application/json'];
 export type AgentsListResponse = paths["/agents"]["get"]['responses'][200]['content']['application/json'];
 export type AgentsCreateResponse = paths["/agents"]["post"]['responses'][201]['content']['application/json'];
 export type AgentsCreateInput = NonNullable<paths["/agents"]["post"]['requestBody']>['content']['application/json'];
@@ -182,6 +183,10 @@ export type CodingSessionsDownloadFileResponse = Blob;
 export type CodingSessionsDownloadFileQuery = {file_id: string; path?: never} | {path: string; file_id?: never};
 export type CodingSessionsCreateDownloadLinkResponse = paths["/coding/sessions/{session_id}/files/download-link"]["post"]['responses'][200]['content']['application/json'];
 export type CodingSessionsCreateDownloadLinkInput = {file_id: string; path?: never} | {path: string; file_id?: never};
+export type CodingPreviewsCreateResponse = paths["/coding/sessions/{session_id}/previews"]["post"]['responses'][201]['content']['application/json'];
+export type CodingPreviewsCreateInput = NonNullable<paths["/coding/sessions/{session_id}/previews"]["post"]['requestBody']>['content']['application/json'];
+export type CodingPreviewsListResponse = paths["/coding/sessions/{session_id}/previews"]["get"]['responses'][200]['content']['application/json'];
+export type CodingPreviewsStopResponse = paths["/coding/sessions/{session_id}/previews/{preview_id}"]["delete"]['responses'][200]['content']['application/json'];
 export type CodingToolCallsResolveResponse = paths["/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result"]["post"]['responses'][200]['content']['application/json'];
 export type CodingToolCallsResolveInput = {output: unknown; error?: never} | {error: {code: string; message: string}; output?: never};
 export type CodingTurnsStartResponse = paths["/coding/sessions/{session_id}/turns"]["post"]['responses'][200]['content']['application/json'] | paths["/coding/sessions/{session_id}/turns"]["post"]['responses'][202]['content']['application/json'];
@@ -277,6 +282,13 @@ export function createZAIClient(options: CreateZAIClientOptions) {
        */
       getQuota(options?: ZAIRequestOptions): Promise<MeGetQuotaResponse> { return transport.request<MeGetQuotaResponse>({method: "get", path: "/me/quota", auth: "user", successStatuses: [200], options}); }
     },
+    app: {
+      /** Get the current app
+       * Authentication: ak-* or ek-*; auto uses ek-*.
+       * @see ../zai-openapi.json#/paths/~1app/get
+       */
+      get(options?: ZAIRequestOptions): Promise<AppGetResponse> { return transport.request<AppGetResponse>({method: "get", path: "/app", auth: "user", successStatuses: [200], options}); }
+    },
     agents: {
       /** List agents
        * Authentication: ak-* or ek-*; auto uses ek-*.
@@ -284,25 +296,25 @@ export function createZAIClient(options: CreateZAIClientOptions) {
        */
       list(options?: ZAIRequestOptions): Promise<AgentsListResponse> { return transport.request<AgentsListResponse>({method: "get", path: "/agents", auth: "user", successStatuses: [200], options}); },
       /** Create agent
-       * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
+       * Authentication: ak-* required.
+       * @see ../zai-openapi.json#/paths/~1agents/post
        */
-      create(input: AgentsCreateInput, options?: ZAIRequestOptions): Promise<AgentsCreateResponse> { return transport.request<AgentsCreateResponse>({method: "post", path: "/agents", auth: "user", successStatuses: [201], body: input, options}); },
+      create(input: AgentsCreateInput, options?: ZAIRequestOptions): Promise<AgentsCreateResponse> { return transport.request<AgentsCreateResponse>({method: "post", path: "/agents", auth: "admin", successStatuses: [201], body: input, options}); },
       /** Get agent
        * Authentication: ak-* or ek-*; auto uses ek-*.
        * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
        */
       get(agentId: string, options?: ZAIRequestOptions): Promise<AgentsGetResponse> { return transport.request<AgentsGetResponse>({method: "get", path: "/agents/{agent_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, options}); },
       /** Update agent
-       * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
+       * Authentication: ak-* required.
+       * @see ../zai-openapi.json#/paths/~1agents~1{agent_id}/put
        */
-      update(agentId: string, input?: AgentsUpdateInput, options?: ZAIRequestOptions): Promise<AgentsUpdateResponse> { return transport.request<AgentsUpdateResponse>({method: "put", path: "/agents/{agent_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); },
+      update(agentId: string, input?: AgentsUpdateInput, options?: ZAIRequestOptions): Promise<AgentsUpdateResponse> { return transport.request<AgentsUpdateResponse>({method: "put", path: "/agents/{agent_id}", auth: "admin", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); },
       /** Delete agent
-       * Authentication: ak-* or ek-*; auto uses ek-*.
-       * @see https://zai-dev.sh.oop.cc/docs/authentication/app-api
+       * Authentication: ak-* required.
+       * @see ../zai-openapi.json#/paths/~1agents~1{agent_id}/delete
        */
-      delete(agentId: string, input?: AgentsDeleteInput, options?: ZAIRequestOptions): Promise<AgentsDeleteResponse> { return transport.request<AgentsDeleteResponse>({method: "delete", path: "/agents/{agent_id}", auth: "user", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); }
+      delete(agentId: string, input?: AgentsDeleteInput, options?: ZAIRequestOptions): Promise<AgentsDeleteResponse> { return transport.request<AgentsDeleteResponse>({method: "delete", path: "/agents/{agent_id}", auth: "admin", successStatuses: [200], pathParams: {"agent_id": agentId}, body: input, options}); }
     },
     coding: {
       keys: {
@@ -467,20 +479,20 @@ export function createZAIClient(options: CreateZAIClientOptions) {
       },
       agents: {
         /** List coding agents
-         * Authentication: ak-* required.
+         * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see ../zai-openapi.json#/paths/~1coding~1agents/get
          */
-        list(options?: ZAIRequestOptions): Promise<CodingAgentsListResponse> { return transport.request<CodingAgentsListResponse>({method: "get", path: "/coding/agents", auth: "admin", successStatuses: [200, 201, 202], options}); },
+        list(options?: ZAIRequestOptions): Promise<CodingAgentsListResponse> { return transport.request<CodingAgentsListResponse>({method: "get", path: "/coding/agents", auth: "user", successStatuses: [200, 201, 202], options}); },
         /** Create a coding agent
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1agents/post
          */
         create(input: CodingAgentsCreateInput, options?: ZAIRequestOptions): Promise<CodingAgentsCreateResponse> { return transport.request<CodingAgentsCreateResponse>({method: "post", path: "/coding/agents", auth: "admin", successStatuses: [200, 201, 202], body: input, options}); },
         /** Get a coding agent
-         * Authentication: ak-* required.
+         * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see ../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/get
          */
-        get(agentId: string, options?: ZAIRequestOptions): Promise<CodingAgentsGetResponse> { return transport.request<CodingAgentsGetResponse>({method: "get", path: "/coding/agents/{agent_id}", auth: "admin", successStatuses: [200, 201, 202], pathParams: {"agent_id": agentId}, options}); },
+        get(agentId: string, options?: ZAIRequestOptions): Promise<CodingAgentsGetResponse> { return transport.request<CodingAgentsGetResponse>({method: "get", path: "/coding/agents/{agent_id}", auth: "user", successStatuses: [200, 201, 202], pathParams: {"agent_id": agentId}, options}); },
         /** Update or rebind a coding agent
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/patch
@@ -554,52 +566,69 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          */
         getForkHistory(sessionId: string, options?: ZAIRequestOptions): Promise<CodingSessionsGetForkHistoryResponse> { return transport.request<CodingSessionsGetForkHistoryResponse>({method: "get", path: "/coding/sessions/{session_id}/fork-history", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
         /** Ensure the current session's bound runner instance
-         * Authentication: ak-* required.
+         * Authentication: ek-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1runner-instance/post
          */
-        ensureRunnerInstance(sessionId: string, input?: CodingSessionsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingSessionsEnsureRunnerInstanceResponse> { return transport.request<CodingSessionsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/sessions/{session_id}/runner-instance", auth: "admin", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"session_id": sessionId}, body: input, options}); },
+        ensureRunnerInstance(sessionId: string, input?: CodingSessionsEnsureRunnerInstanceInput, options?: ZAIRequestOptions): Promise<CodingSessionsEnsureRunnerInstanceResponse> { return transport.request<CodingSessionsEnsureRunnerInstanceResponse>({method: "post", path: "/coding/sessions/{session_id}/runner-instance", auth: "user-only", successStatuses: [200, 201, 202], idempotencyKeyLocation: 'header', pathParams: {"session_id": sessionId}, body: input, options}); },
         /** Generate a coding session title
          * Authentication: ak-* or ek-*; auto uses ek-*.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
         generateTitle(sessionId: string, query?: CodingSessionsGenerateTitleQuery, options?: ZAIRequestOptions): Promise<CodingSessionsGenerateTitleResponse> { return transport.request<CodingSessionsGenerateTitleResponse>({method: "post", path: "/coding/sessions/{session_id}/generate-title", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
         /** List the session workspace directory
-         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * Authentication: ek-* required.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        listFiles(sessionId: string, query?: CodingSessionsListFilesQuery, options?: ZAIRequestOptions): Promise<CodingSessionsListFilesResponse> { return transport.request<CodingSessionsListFilesResponse>({method: "get", path: "/coding/sessions/{session_id}/files", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
+        listFiles(sessionId: string, query?: CodingSessionsListFilesQuery, options?: ZAIRequestOptions): Promise<CodingSessionsListFilesResponse> { return transport.request<CodingSessionsListFilesResponse>({method: "get", path: "/coding/sessions/{session_id}/files", auth: "user-only", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
         /** Upload a file to the session workspace
-         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * Authentication: ek-* required.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        uploadFile(sessionId: string, query: CodingSessionsUploadFileQuery, input?: CodingSessionsUploadFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsUploadFileResponse> { return transport.request<CodingSessionsUploadFileResponse>({method: "post", path: "/coding/sessions/{session_id}/files", auth: "user", successStatuses: [201], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
+        uploadFile(sessionId: string, query: CodingSessionsUploadFileQuery, input?: CodingSessionsUploadFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsUploadFileResponse> { return transport.request<CodingSessionsUploadFileResponse>({method: "post", path: "/coding/sessions/{session_id}/files", auth: "user-only", successStatuses: [201], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
         /** Create or replace a repository file
          * Authentication: ek-* required.
          * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1repository-files/post
          */
         writeRepositoryFile(sessionId: string, query: CodingSessionsWriteRepositoryFileQuery, input?: CodingSessionsWriteRepositoryFileInput, options?: ZAIRequestOptions): Promise<CodingSessionsWriteRepositoryFileResponse> { return transport.request<CodingSessionsWriteRepositoryFileResponse>({method: "post", path: "/coding/sessions/{session_id}/repository-files", auth: "user-only", successStatuses: [200], pathParams: {"session_id": sessionId}, query, body: input, encoding: 'binary', options}); },
         /** Preview a session workspace file (up to 128 KiB)
-         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * Authentication: ek-* required.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        readFile(sessionId: string, query: CodingSessionsReadFileQuery, options?: ZAIRequestOptions): Promise<CodingSessionsReadFileResponse> { return transport.request<CodingSessionsReadFileResponse>({method: "get", path: "/coding/sessions/{session_id}/files/content", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
+        readFile(sessionId: string, query: CodingSessionsReadFileQuery, options?: ZAIRequestOptions): Promise<CodingSessionsReadFileResponse> { return transport.request<CodingSessionsReadFileResponse>({method: "get", path: "/coding/sessions/{session_id}/files/content", auth: "user-only", successStatuses: [200], pathParams: {"session_id": sessionId}, query, options}); },
         /** Download a workspace file or an immutable attachment as a binary stream
          * Authentication: ek-* required.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
         downloadFile(sessionId: string, query: CodingSessionsDownloadFileQuery, options?: ZAIRequestOptions): Promise<CodingSessionsDownloadFileResponse> { return transport.request<CodingSessionsDownloadFileResponse>({method: "get", path: "/coding/sessions/{session_id}/files/download", auth: "user-only", successStatuses: [200], validation: "file-query", pathParams: {"session_id": sessionId}, query, responseType: 'blob', options}); },
         /** Prepare a single-use browser download
-         * Authentication: ak-* or ek-*; auto uses ek-*.
-         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
-         */
-        createDownloadLink(sessionId: string, input: CodingSessionsCreateDownloadLinkInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateDownloadLinkResponse> { return transport.request<CodingSessionsCreateDownloadLinkResponse>({method: "post", path: "/coding/sessions/{session_id}/files/download-link", auth: "user", successStatuses: [200], validation: "file-body", pathParams: {"session_id": sessionId}, body: input, options}); }
-      },
-      toolCalls: {
-        /** Resolve a client function call
          * Authentication: ek-* required.
          * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
          */
-        resolve(sessionId: string, toolCallId: string, input: CodingToolCallsResolveInput, options?: ZAIRequestOptions): Promise<CodingToolCallsResolveResponse> { return transport.request<CodingToolCallsResolveResponse>({method: "post", path: "/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result", auth: "user-only", successStatuses: [200], validation: "tool-result", pathParams: {"session_id": sessionId, "tool_call_id": toolCallId}, body: input, options}); }
+        createDownloadLink(sessionId: string, input: CodingSessionsCreateDownloadLinkInput, options?: ZAIRequestOptions): Promise<CodingSessionsCreateDownloadLinkResponse> { return transport.request<CodingSessionsCreateDownloadLinkResponse>({method: "post", path: "/coding/sessions/{session_id}/files/download-link", auth: "user-only", successStatuses: [200], validation: "file-body", pathParams: {"session_id": sessionId}, body: input, options}); }
+      },
+      previews: {
+        /** Create or reuse a workspace preview or download
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1previews/post
+         */
+        create(sessionId: string, input: CodingPreviewsCreateInput, options?: ZAIRequestOptions): Promise<CodingPreviewsCreateResponse> { return transport.request<CodingPreviewsCreateResponse>({method: "post", path: "/coding/sessions/{session_id}/previews", auth: "user", successStatuses: [201], pathParams: {"session_id": sessionId}, body: input, options}); },
+        /** List workspace previews and downloads for a session
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1previews/get
+         */
+        list(sessionId: string, options?: ZAIRequestOptions): Promise<CodingPreviewsListResponse> { return transport.request<CodingPreviewsListResponse>({method: "get", path: "/coding/sessions/{session_id}/previews", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId}, options}); },
+        /** Stop a workspace preview or download
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see ../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1previews~1{preview_id}/delete
+         */
+        stop(sessionId: string, previewId: string, options?: ZAIRequestOptions): Promise<CodingPreviewsStopResponse> { return transport.request<CodingPreviewsStopResponse>({method: "delete", path: "/coding/sessions/{session_id}/previews/{preview_id}", auth: "user", successStatuses: [200], pathParams: {"session_id": sessionId, "preview_id": previewId}, options}); }
+      },
+      toolCalls: {
+        /** Resolve a client function call
+         * Authentication: ak-* or ek-*; auto uses ek-*.
+         * @see https://zai-dev.sh.oop.cc/docs/zai/coding/api
+         */
+        resolve(sessionId: string, toolCallId: string, input: CodingToolCallsResolveInput, options?: ZAIRequestOptions): Promise<CodingToolCallsResolveResponse> { return transport.request<CodingToolCallsResolveResponse>({method: "post", path: "/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result", auth: "user", successStatuses: [200], validation: "tool-result", pathParams: {"session_id": sessionId, "tool_call_id": toolCallId}, body: input, options}); }
       },
       turns: {
         /** Start a turn
@@ -1130,7 +1159,7 @@ export function createZAIClient(options: CreateZAIClientOptions) {
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1models~1{id}/patch
          */
-        update(id: string, input: SettingsModelsUpdateInput, options?: ZAIRequestOptions): Promise<SettingsModelsUpdateResponse> { return transport.request<SettingsModelsUpdateResponse>({method: "patch", path: "/models/{id}", auth: "admin", successStatuses: [200], pathParams: {"id": id}, body: input, options}); },
+        update(id: string, input: SettingsModelsUpdateInput, options?: ZAIRequestOptions): Promise<SettingsModelsUpdateResponse> { return transport.request<SettingsModelsUpdateResponse>({method: "patch", path: "/models/{id}", auth: "admin", successStatuses: [200], validation: "model-update", pathParams: {"id": id}, body: input, options}); },
         /** Release this app's ownership of a model
          * Authentication: ak-* required.
          * @see ../zai-openapi.json#/paths/~1models~1{id}/delete

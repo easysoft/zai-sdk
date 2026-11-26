@@ -1,6 +1,6 @@
 # ZAI SDK
 
-面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。0.4.0 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **110 条路径、163 个 HTTP 操作、166 个资源方法**。
+面向 Node.js 22+ 和现代浏览器的 TypeScript SDK，提供 ESM 和 UMD 单文件。SDK 使用 `/v1/zai`，覆盖当前原始 OpenAPI（含 Coding SSE）的 **113 条路径、167 个 HTTP 操作、170 个资源方法**。
 
 中文完整文档在 [`docs/index.html`](./docs/index.html)，包含每个接口的权限、来源、字段、调用签名和可复制示例。页面可离线打开，无需启动服务。升级旧项目请先阅读 [`docs/MIGRATION.md`](./docs/MIGRATION.md)。
 
@@ -260,10 +260,12 @@ await adminClient.settings.models.list({tokenType: 'admin'});
 
 | 资源 | 能力 |
 | --- | --- |
+| `app.get`、`me.getQuota` | 应用信息与默认模型、当前用户额度 |
 | `agents`、`sessions`、`messages` | 普通 Agent 会话、JSON/SSE 消息、上下文、文件及图片 |
 | `chat.conversations`、`chat.messages`、`chat.send/stream` | 独立 Chat 会话，文本及 attachments |
 | `coding.workspaces/repositories/keys` | 工作区、仓库文件、AGENTS.md、公钥 |
 | `coding.sessions/turns/events/interactions/toolCalls` | 编码会话、附件、异步 turn、持续事件流、交互审批与客户端工具回填 |
+| `coding.previews.create/list/stop` | 会话工作区的静态站点预览和单文件下载 |
 | `coding.git/models/modes` | Git 身份与操作、Coding 模型及执行模式 |
 | `coding.agents/runners/runners.instances` | Coding Agent、Runner 配置与用户实例、状态查询及状态流 |
 | `skills`、`agentSkills` | 技能包、版本、校验与挂载 |
@@ -297,7 +299,7 @@ for await (const event of stream) {
 }
 ```
 
-先在应用控制台保存 Coding 环境，使用 ak 创建 Coding Agent（只需 `name`），再用 ek 确保 SSH 密钥、配置 Git 身份、创建工作区和会话。查询状态就绪后启动 Turn。旧 Profile 创建及镜像策略列表接口返回 503 / `runner_legacy_policy_unsupported`，镜像配置改在应用控制台维护。
+普通 Agent 的创建、更新和删除需要 ak。Coding Agent 的列表与详情支持 ak 或 ek。先在应用控制台保存 Coding 环境，使用 ak 创建 Coding Agent（只需 `name`），再用 ek 确保 SSH 密钥、配置 Git 身份、创建工作区和会话。查询状态就绪后启动 Turn。旧 Profile 创建及镜像策略列表接口返回 503 / `runner_legacy_policy_unsupported`，镜像配置改在应用控制台维护。
 
 Coding turn 启动可能返回 HTTP 202 的 Turn，或 HTTP 200 的目标控制结果；后者没有 Turn ID，也不启动推理。仓库更新的 HTTP 202 只表示接受请求。`coding.events.stream()` 已纳入正式 OpenAPI：保留 `id/event/rawData` 及完整事件对象，忽略约每 20 秒一次的心跳；连接约 60 秒关闭。合法 `error` 事件仍需继续读取后续 `turn.failed`；turn 完成、失败或取消仍是数据事件，不结束流；不要求 `[DONE]`，EOF 只表示连接结束。调用者保存处理完的事件游标，通过 `after_seq` 或 `options.headers` 中的 `Last-Event-ID` 手动恢复，并按 seq 去重。[Coding 事件协议](https://zai-dev.sh.oop.cc/docs/zai/coding/events)
 
@@ -332,7 +334,7 @@ while (!terminal) {
 console.log(afterSeq);
 ```
 
-`coding.agents.streamStatus()` 返回独立的 Runner 状态流，保留 `event/id/rawData`，`data` 是 `unknown`，正常 EOF 结束，不要求 `[DONE]`。状态查询和状态流默认 ek；admin 查询须传 `external_user_id`，普通用户不可覆盖用户范围。`coding.agents.ensureRunnerInstance()` 仅允许 ek 操作当前用户；`coding.sessions.ensureRunnerInstance()` 仅允许 ak 恢复既有会话绑定实例，重试时复用幂等键。
+`coding.agents.streamStatus()` 返回独立的 Runner 状态流，保留 `event/id/rawData`，`data` 是 `unknown`，正常 EOF 结束，不要求 `[DONE]`。状态查询和状态流默认 ek；admin 查询须传 `external_user_id`，普通用户不可覆盖用户范围。`coding.agents.ensureRunnerInstance()` 和 `coding.sessions.ensureRunnerInstance()` 均使用 ek，分别准备当前用户的实例和恢复会话绑定实例。重试时复用幂等键。
 
 三种流都支持 AbortSignal，迭代中 `break` 会释放连接；取得流但未开始迭代时可调用 `await stream.return()`。通道错误、无效 JSON/UTF-8、超过 1 MiB 的解析缓冲和读取异常会报错。消息流缺少 `[DONE]` 的 EOF 报错，Coding 流的 EOF 正常结束迭代；均不自动重连。
 
@@ -350,7 +352,7 @@ const text = await client.files.extract({
 });
 ```
 
-Coding 上传使用原始 Blob，文件名放在 query，随后通过 `attachment_ids` 引用；原件下载仅允许 ek。下载与创建下载链接时 `file_id/path` 恰好提供一项。单次下载链接不要保存到消息中。
+Coding 会话文件的列举、上传、读取、下载和创建下载链接均使用 ek。上传时将文件名放在 query，正文传原始 Blob，随后通过 `attachment_ids` 引用。下载与创建下载链接时，`file_id` 和 `path` 恰好提供一项。单次下载链接不要保存到消息中。
 
 ```ts
 const uploaded = await client.coding.sessions.uploadFile('coding-session-id', {name: 'report.txt'}, new Blob(['报告']));
@@ -358,7 +360,7 @@ await client.coding.turns.start('coding-session-id', {content: '总结附件', a
 await client.coding.toolCalls.resolve('coding-session-id', 'tool-call-id', {output: null});
 ```
 
-工具结果回填仅允许 ek，`output/error` 恰好一项；`output: null` 合法，`error` 必须有 `code/message`。模型测试、标题生成与记忆重建可能消耗额度，保持显式调用。
+会话所属应用和外部用户可用 ak 或 ek 回填工具结果，`output/error` 恰好一项；`output: null` 合法，`error` 必须有 `code/message`。模型测试、标题生成与记忆重建可能消耗额度，保持显式调用。
 
 `doctor()` 默认检查配置、协议、连接和 Agent，不请求管理员模型目录。Agent 列表支持 runner；聊天探针仍选择活跃 custom Agent。仅显式 `chat:true` 才创建临时普通会话验证 JSON 对话，`model` 仅传入探针。失败和取消仍使用独立超时清理临时会话，清理失败使整体 `pass:false`。诊断不验证 SSE、Coding、文件或技能。
 

@@ -16,13 +16,13 @@ pnpm docs:check
 - `../scripts/generate-docs.ts`：通过 `scripts/openapi.ts` 读取原始规范与 add-only 补充规范，再读取真实 SDK 导出，生成 HTML；校验 HTTP 操作与资源方法全覆盖、全部公开导出、示例的 TypeScript 类型和锚点。Coding SSE 已纳入原始规范，当前补充规范的 paths 为空。
 - `index.html`：生成产物，不单独手改。源码或 OpenAPI 更新后重新生成并提交该文件。
 
-接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。共享本地 `$ref` 解析用于字段展开和调用示例。上传类型、消息流开关、持续 Coding SSE 等 SDK 行为另作说明。当前原始规范含 Coding SSE，共 110 条路径、163 个 HTTP 操作、166 个资源方法；三个消息发送端点各有 send/stream 两种方法。每个操作展示仅 ak、共享 ak/ek 或仅 ek 权限、自动模式选择、幂等键要求和来源；消息 SSE、Coding 会话 SSE 与 Runner 状态 SSE 分别生成协议说明和示例，原始二进制上传使用 Blob 示例。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
+接口字段与完整原始定义来自 OpenAPI，SDK 签名来自 TypeScript AST。共享本地 `$ref` 解析用于字段展开和调用示例。上传类型、消息流开关、持续 Coding SSE 等 SDK 行为另作说明。当前原始规范含 Coding SSE，共 113 条路径、167 个 HTTP 操作、170 个资源方法；三个消息发送端点各有 send/stream 两种方法。每个操作展示仅 ak、共享 ak/ek 或仅 ek 权限、自动模式选择、幂等键要求和来源；消息 SSE、Coding 会话 SSE 与 Runner 状态 SSE 分别生成协议说明和示例，原始二进制上传使用 Blob 示例。额外的 `client.doctor()` 辅助方法复用这些资源，见“连接与功能检查”指南，不计入 HTTP 资源方法数。导出总数由生成器实时计算。
 
 嵌套资源以完整点路径标识，例如 `coding.sessions.create`；类型按每段首字母大写，锚点将全部点替换为连字符。资源分组、操作名称及公开导出均要覆盖，不能只处理两层路径。补充规范只允许新增路径，原始规范保持不变。
 
 新增操作时先在 `scripts/operations.ts` 显式配置权限和来源，再按仓库流程运行 `pnpm generate:api`，再补充 `content.ts` 的中文方法名，运行 `pnpm docs:build` 和 `pnpm check`。公开导出或方法遗漏、示例类型错误、断链、重复锚点和陈旧产物均会使文档检查失败。生成与测试不会调用真实 ZAI 服务。
 
-类型生成设置 `defaultNonNullable: false`，可选参数的 default 不应变成调用方必填项。Memory 空内容查询的 `undefined` 返回及失败重试选择器的互斥类型在生成器中维护，原始契约保持不变；对应运行时行为和类型边界均有回归。会话级实例恢复仅 ak，Agent 级实例准备仅 ek，不按名称推断权限。
+类型生成设置 `defaultNonNullable: false`，可选参数的 default 不应变成调用方必填项。Memory 空内容查询的 `undefined` 返回及失败重试选择器的互斥类型在生成器中维护，原始契约保持不变；对应运行时行为和类型边界均有回归。模型更新的 capabilities 按契约说明生成为单元素元组。权限按操作或全局 security 核对，准备用户实例和恢复会话绑定实例均仅限 ek。
 
 真实部署的取消 Turn 和仓库同步路由需要空 JSON，即使原始规范没有 requestBody；在生成器中维护此适配，不增加无用的公开 input 参数。仓库文件写入仅 ek，已由维护者确认；与共享 ak/ek 的仓库文件下载分别维护权限。真实服务差异与证据见 [LIVE-VALIDATION.md](./LIVE-VALIDATION.md)。
 

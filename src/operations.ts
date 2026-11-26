@@ -22,6 +22,26 @@ export const ZAI_OPERATIONS = [
     ]
   },
   {
+    "group": "app",
+    "name": "get",
+    "method": "get",
+    "path": "/app",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1app/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
     "group": "agents",
     "name": "list",
     "method": "get",
@@ -46,8 +66,8 @@ export const ZAI_OPERATIONS = [
     "name": "create",
     "method": "post",
     "path": "/agents",
-    "auth": "user",
-    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1agents/post",
     "streamName": null,
     "streamKind": null,
     "pathParams": [],
@@ -88,8 +108,8 @@ export const ZAI_OPERATIONS = [
     "name": "update",
     "method": "put",
     "path": "/agents/{agent_id}",
-    "auth": "user",
-    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1agents~1{agent_id}/put",
     "streamName": null,
     "streamKind": null,
     "pathParams": [
@@ -110,8 +130,8 @@ export const ZAI_OPERATIONS = [
     "name": "delete",
     "method": "delete",
     "path": "/agents/{agent_id}",
-    "auth": "user",
-    "source": "https://zai-dev.sh.oop.cc/docs/authentication/app-api",
+    "auth": "admin",
+    "source": "../zai-openapi.json#/paths/~1agents~1{agent_id}/delete",
     "streamName": null,
     "streamKind": null,
     "pathParams": [
@@ -2008,7 +2028,7 @@ export const ZAI_OPERATIONS = [
     "name": "list",
     "method": "get",
     "path": "/coding/agents",
-    "auth": "admin",
+    "auth": "user",
     "source": "../zai-openapi.json#/paths/~1coding~1agents/get",
     "streamName": null,
     "streamKind": null,
@@ -2052,7 +2072,7 @@ export const ZAI_OPERATIONS = [
     "name": "get",
     "method": "get",
     "path": "/coding/agents/{agent_id}",
-    "auth": "admin",
+    "auth": "user",
     "source": "../zai-openapi.json#/paths/~1coding~1agents~1{agent_id}/get",
     "streamName": null,
     "streamKind": null,
@@ -2402,7 +2422,7 @@ export const ZAI_OPERATIONS = [
     "name": "ensureRunnerInstance",
     "method": "post",
     "path": "/coding/sessions/{session_id}/runner-instance",
-    "auth": "admin",
+    "auth": "user-only",
     "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1runner-instance/post",
     "streamName": null,
     "streamKind": null,
@@ -2450,7 +2470,7 @@ export const ZAI_OPERATIONS = [
     "name": "listFiles",
     "method": "get",
     "path": "/coding/sessions/{session_id}/files",
-    "auth": "user",
+    "auth": "user-only",
     "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
     "streamKind": null,
@@ -2474,7 +2494,7 @@ export const ZAI_OPERATIONS = [
     "name": "uploadFile",
     "method": "post",
     "path": "/coding/sessions/{session_id}/files",
-    "auth": "user",
+    "auth": "user-only",
     "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
     "streamKind": null,
@@ -2523,7 +2543,7 @@ export const ZAI_OPERATIONS = [
     "name": "readFile",
     "method": "get",
     "path": "/coding/sessions/{session_id}/files/content",
-    "auth": "user",
+    "auth": "user-only",
     "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
     "streamKind": null,
@@ -2572,7 +2592,7 @@ export const ZAI_OPERATIONS = [
     "name": "createDownloadLink",
     "method": "post",
     "path": "/coding/sessions/{session_id}/files/download-link",
-    "auth": "user",
+    "auth": "user-only",
     "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
     "streamKind": null,
@@ -2590,11 +2610,78 @@ export const ZAI_OPERATIONS = [
     ]
   },
   {
+    "group": "coding.previews",
+    "name": "create",
+    "method": "post",
+    "path": "/coding/sessions/{session_id}/previews",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1previews/post",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": true,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      201
+    ]
+  },
+  {
+    "group": "coding.previews",
+    "name": "list",
+    "method": "get",
+    "path": "/coding/sessions/{session_id}/previews",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1previews/get",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
+    "group": "coding.previews",
+    "name": "stop",
+    "method": "delete",
+    "path": "/coding/sessions/{session_id}/previews/{preview_id}",
+    "auth": "user",
+    "source": "../zai-openapi.json#/paths/~1coding~1sessions~1{session_id}~1previews~1{preview_id}/delete",
+    "streamName": null,
+    "streamKind": null,
+    "pathParams": [
+      "session_id",
+      "preview_id"
+    ],
+    "query": [],
+    "hasBody": false,
+    "encoding": "json",
+    "idempotencyRequired": false,
+    "validation": null,
+    "responseType": "json",
+    "statuses": [
+      200
+    ]
+  },
+  {
     "group": "coding.toolCalls",
     "name": "resolve",
     "method": "post",
     "path": "/coding/sessions/{session_id}/tool-calls/{tool_call_id}/result",
-    "auth": "user-only",
+    "auth": "user",
     "source": "https://zai-dev.sh.oop.cc/docs/zai/coding/api",
     "streamName": null,
     "streamKind": null,
@@ -3587,7 +3674,7 @@ export const ZAI_OPERATIONS = [
     "hasBody": true,
     "encoding": "json",
     "idempotencyRequired": false,
-    "validation": null,
+    "validation": "model-update",
     "responseType": "json",
     "statuses": [
       200
