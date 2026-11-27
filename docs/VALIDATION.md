@@ -1,3 +1,18 @@
+# ZAI SDK 0.4.1 发布前验证（2026-11-27）
+
+使用 pnpm 11.24.0 在 Node.js 22.18.0 和 24.15.0 下分别运行 `ZAI_TEST_PORT=64325 pnpm check`，两次均通过。
+
+| 检查 | 结果 |
+| --- | --- |
+| 契约与文档 | 167 个 HTTP 操作、170 个资源方法与生成产物一致，197 段示例通过类型检查，内部锚点全部有效 |
+| 静态检查与单元测试 | ESLint、TypeScript 和 1,144 项单元测试通过，行覆盖率 99.70% |
+| 浏览器 | Chromium、Firefox 和 WebKit 共 75 项测试通过 |
+| 打包消费 | ESM 导入、类型声明、单文件 UMD（global/CommonJS/AMD）和浏览器构建通过 |
+
+`npm publish --dry-run ./zai-sdk-0.4.1.tgz` 通过，压缩包为 564.7 kB，共 41 个文件。真实服务最近一轮验收的接口及结果见 [2026-11-26 实例验收记录](./LIVE-VALIDATION.md)。
+
+---
+
 # ZAI SDK 0.4.0 真实验收修复后复核（2026-11-02）
 
 真实环境验证发现并修复仓库同步缺少空 JSON、仓库文件写入权限应为仅 ek 两处 SDK 问题。补充聚焦验收脚本，并将 Playwright 输出隔离到 `test-results/browser/`，避免浏览器启动时清理真实验收证据。

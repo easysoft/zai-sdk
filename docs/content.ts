@@ -631,8 +631,10 @@ console.log(models, channels);`, 'typescript', true)}
 <p><code>settings.signingSecret.get()</code> 读取 ek 签名密钥。仅在主动安排轮换时调用 <code>regenerate()</code>；成功后对相关 provider 或自动客户端的 <code>client.auth</code> 调用 <code>invalidate({signingSecret: true})</code>，让下次获取重新读取密钥。SDK 不自动轮换，也不在鉴权失败后改用更高权限重放。</p>`,
     },
     {
-      id: 'migration', title: '升级到 0.4.0', description: '技能查询签名、Turn 联合响应、Memory 必填项与新增接口。',
-      body: `<h3>从 0.3.x 升级</h3><p>skills.list 新增 query，请求选项移到第二个参数；无过滤时使用 skills.list(undefined, options)。coding.turns.start 可能返回不带 id 的目标控制结果，先判断是否存在 id 再观察或取消 Turn。Memory 补齐 name、status、content、contents、query 等必填要求，带默认值的可选字段仍可省略；getContent 的空体 HTTP 200 返回 undefined。</p>
+      id: 'migration', title: '升级到 0.4.1', description: '接口权限、工作区创建幂等键与各版本迁移说明。',
+      body: `<h3>从 0.4.0 升级</h3><p>普通 Agent 的创建、更新和删除需要 ak。Coding 会话实例恢复和文件操作需要 ek。显式指定 tokenType 的调用需同步调整。创建工作区时，SDK 会把幂等键写入 JSON 的 idempotency_key 字段，原有 options.idempotencyKey 和请求头写法仍可用。</p>
+<p>新增 app.get() 和 coding.previews.create/list/stop，可读取应用默认模型、创建静态预览或单文件下载。Memory 集合返回同步进度，Chat 可通过 turn_usage_metrics 读取单轮用量。</p>
+<h3>从 0.3.x 升级</h3><p>skills.list 新增 query，请求选项移到第二个参数；无过滤时使用 skills.list(undefined, options)。coding.turns.start 可能返回不带 id 的目标控制结果，先判断是否存在 id 再观察或取消 Turn。Memory 补齐 name、status、content、contents、query 等必填要求，带默认值的可选字段仍可省略；getContent 的空体 HTTP 200 返回 undefined。</p>
 <p>新增思考选项、用量、用户额度、命令目录、Fork/Rewind、仓库文件写入与同步、会话实例恢复及 Memory 失败重试。当前规范要求实例准备和会话恢复都使用 ek，共 12 个操作要求幂等键。旧 Runner Profile 创建和镜像策略列表返回 503 / runner_legacy_policy_unsupported。响应新增必填字段，消费方的类型化测试数据也需要更新。</p>
 <h3>从 0.2.x 升级的历史变化</h3><p>0.3.0 调整了 Coding 会话的 provider/runner_id 覆盖，响应新增 Profile、Instance 和版本信息；创建 Agent 仅需 name。模型列表默认使用 ek，管理目录显式传 tokenType: "admin"。密钥轮换需要 fingerprint，Coding 模型查询需要 agent_id。</p>
 <p>0.3.0 当时的 11 个写操作自动生成幂等键；重试应复用原键。仓库更新与 Turn 的 202 表示接受，不表示就绪或完成。普通附件可用 file_id/path，Coding 上传后以 attachment_ids 引用；原件下载仅允许 ek，单次链接不持久化到消息。合法 Coding error 事件继续传递，仍需读取 turn.failed；只拼接 message.delta，空文本事件也推进游标。</p>

@@ -11,7 +11,7 @@ pnpm install
 pnpm build
 pnpm pack --pack-destination /tmp/zai-sdk-pack
 # 在消费项目中执行：
-pnpm add /tmp/zai-sdk-pack/zai-sdk-0.4.0.tgz
+pnpm add /tmp/zai-sdk-pack/zai-sdk-0.4.1.tgz
 ```
 
 服务端使用应用 API Key，SDK 按接口权限自动选择令牌：

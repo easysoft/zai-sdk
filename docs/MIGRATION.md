@@ -1,10 +1,11 @@
-# 适配 2026-11-26 的 OpenAPI
+# 从 0.4.0 升级到 0.4.1
 
-当前规范含 113 条路径、167 个 HTTP 操作和 61 个公共 Schema。SDK 提供 170 个资源方法。
+0.4.1 适配 2026-11-26 的 OpenAPI，含 113 条路径、167 个 HTTP 操作和 61 个公共 Schema。SDK 提供 170 个资源方法。
 
 - `app.get()` 返回 `{app}`。应用信息包含默认对话模型、嵌入模型、Coding 开关和 Coding 默认模型。
 - `coding.previews.create(sessionId, {kind: 'static', root: 'docs', entry: 'index.html'})` 返回预览地址和有效期。`kind: 'download'` 用于单文件下载。`list(sessionId)` 列出登记，`stop(sessionId, previewId)` 撤销登记。管理操作使用会话所属用户的 ak 或 ek。
 - 普通 Agent 的创建、更新、删除仅限 ak。Coding Agent 的列表、详情支持 ak 和 ek。恢复会话实例和操作会话文件仅限 ek。客户端工具结果可以用会话所属用户的 ak 或 ek 回填。
+- `coding.workspaces.create` 在 JSON 正文的 `idempotency_key` 字段发送幂等键。原来通过 `options.idempotencyKey` 或 `Idempotency-Key` 请求头传键的调用可继续使用，SDK 会将键写入正文。升级前请确认目标服务的 `POST /coding/agents/{agent_id}/workspaces` 支持该字段，重试时复用原键和相同的业务参数。
 - Memory 集合的列表项和详情都包含 `content_count` 和 `content_sync`。前者包含已禁用内容，后者统计启用内容，并给出排队数和最近一轮同步的起止时间、耗时。
 - `usage_metrics.token_scope` 的 `session` 表示会话累计用量。Chat 返回的可选 `turn_usage_metrics` 表示单轮用量。
 - `settings.models.update(id, input)` 增加 `coding_enabled`。显式传 `capabilities` 时，数组中只能有 `'text.chat'` 或 `'text.embeddings'` 其中一个值。省略用途时保留服务端现有设置。
@@ -98,7 +99,7 @@ Runner adapter 收窄为 `codex`。旧 `coding.runners.create/listImagePolicies`
 
 # 从 0.2.x 升级到 0.3.0（历史说明）
 
-0.3.0 直接适配当时的契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。以下保留当时的迁移说明与统计；当前版本以本文 0.4.0 部分为准。
+0.3.0 直接适配当时的契约，包含破坏性变化，不提供旧服务兼容层。API 根地址保持 `/v1/zai`。以下保留当时的迁移说明与统计。
 
 ## 认证错误脱敏
 
